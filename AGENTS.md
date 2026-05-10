@@ -44,7 +44,7 @@ docs/                    # 文档、ADR、指南
 
 1. **模块化优先**：综合能力不等于大杂烩；每个能力是独立模块
 2. **安全默认**：readonly、depth=1、LSP mutating actions 默认受限
-3. **渐进增强**：LSP 或 web 不可用时，退回基础工具
+3. **渐进增强**：readonly LSP 可作为子代理增强；LSP 或 web 不可用时，退回基础工具
 4. **主代理编排**：子代理不调度其他子代理
 5. **模块可关闭**：subagents、web、lsp、commands 都可独立启停
 
@@ -52,11 +52,11 @@ docs/                    # 文档、ADR、指南
 
 | Agent | 职责 | 权限 |
 |-------|------|------|
-| `explorer` | 代码导航、文件搜索 | readonly |
+| `explorer` | 代码导航、文件搜索、LSP 符号导航 | readonly |
 | `researcher` | 文档/API 研究 | readonly |
-| `reviewer` | 代码/架构审查 | readonly |
-| `implementer` | 实现规划 | readonly（默认） |
-| `tester` | 测试规划 | readonly（默认） |
+| `reviewer` | 代码/架构审查、LSP diagnostics 辅助 | readonly |
+| `implementer` | 实现规划、LSP definition/references 辅助 | readonly（默认） |
+| `tester` | 测试规划、LSP symbols/diagnostics 辅助 | readonly（默认） |
 
 ### 子代理约束
 

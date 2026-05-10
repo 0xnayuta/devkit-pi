@@ -50,6 +50,8 @@ Config file: `~/.pi/agent/extensions/devkit-pi/config.json`
     "maxDepth": 1,
     "timeoutMs": 120000,
     "allowWrite": false,
+    "allowLspTools": true,
+    "allowedLspActions": ["definition", "references", "hover", "signature", "symbols", "diagnostics", "workspace-diagnostics", "servers"],
     "injectDelegationPolicy": true
   },
   "web": {
@@ -76,11 +78,11 @@ Config file: `~/.pi/agent/extensions/devkit-pi/config.json`
 
 | Agent | Specialty | Permission |
 |-------|-----------|------------|
-| **explorer** | Code navigation, file search | readonly |
+| **explorer** | Code navigation, file search, LSP symbol navigation | readonly |
 | **researcher** | Documentation, API research | readonly |
-| **reviewer** | Code review, architecture analysis | readonly |
-| **implementer** | Implementation planning | readonly |
-| **tester** | Test strategy, edge case planning | readonly |
+| **reviewer** | Code review, architecture analysis, LSP diagnostics | readonly |
+| **implementer** | Implementation planning with LSP definition/reference support | readonly |
+| **tester** | Test strategy, edge case planning, LSP diagnostics | readonly |
 
 ## Error Codes
 

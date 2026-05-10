@@ -25,7 +25,11 @@ import * as path from "node:path";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import type { LspToolConfig } from "../../shared/types.ts";
-import { PI_SUBAGENT_CHILD } from "../../shared/types.ts";
+import {
+  PI_SUBAGENT_ALLOW_LSP,
+  PI_SUBAGENT_CHILD,
+  PI_SUBAGENT_LSP_ACTIONS,
+} from "../../shared/types.ts";
 import {
   collectSymbols,
   diagnosticsWaitMsForFile,
@@ -232,8 +236,31 @@ function formatCodeActions(actions: any[]): string[] {
   });
 }
 
+function isSubagentChild(): boolean {
+  return process.env[PI_SUBAGENT_CHILD] === "1";
+}
+
 function canRunPrivilegedAction(config: Required<LspToolConfig>): boolean {
-  return config.allowMutatingActions && process.env[PI_SUBAGENT_CHILD] !== "1";
+  return config.allowMutatingActions && !isSubagentChild();
+}
+
+function assertSubagentLspActionAllowed(action: string): void {
+  if (!isSubagentChild()) return;
+
+  if (process.env[PI_SUBAGENT_ALLOW_LSP] !== "1") {
+    throw new Error("LSP tool is disabled for this subagent process.");
+  }
+
+  const allowedActions = new Set(
+    (process.env[PI_SUBAGENT_LSP_ACTIONS] ?? "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+  );
+
+  if (!allowedActions.has(action)) {
+    throw new Error(`LSP action "${action}" is not allowed for this subagent process.`);
+  }
 }
 
 export function registerLspTool(pi: ExtensionAPI, config: Required<LspToolConfig>): void {
@@ -252,7 +279,6 @@ Use read/grep/find/ls to locate files before calling lsp.`,
       async execute(_toolCallId, params, signalArg, onUpdateArg, ctxArg) {
         const { signal, ctx } = normalizeExecuteArgs(onUpdateArg, ctxArg, signalArg);
         if (signal?.aborted) return cancelledToolResult();
-        const manager = getOrCreateManager(ctx.cwd);
         const {
           action,
           file,
@@ -266,13 +292,14 @@ Use read/grep/find/ls to locate files before calling lsp.`,
           severity,
           server,
         } = params as LspParamsType;
+        assertSubagentLspActionAllowed(action);
         if (PRIVILEGED_ACTIONS.has(action) && !canRunPrivilegedAction(config)) {
-          const reason =
-            process.env[PI_SUBAGENT_CHILD] === "1"
-              ? "privileged LSP actions are disabled in subagent processes"
-              : "lsp.tool.allowMutatingActions is false";
+          const reason = isSubagentChild()
+            ? "privileged LSP actions are disabled in subagent processes"
+            : "lsp.tool.allowMutatingActions is false";
           throw new Error(`Action "${action}" is disabled: ${reason}.`);
         }
+        const manager = getOrCreateManager(ctx.cwd);
         const sevFilter: SeverityFilter = severity || "all";
         const needsFile =
           action !== "workspace-diagnostics" && action !== "restart" && action !== "servers";

@@ -21,6 +21,7 @@ import { Text } from "@earendil-works/pi-tui";
 import { DELEGATION_EXAMPLES, DELEGATION_POLICY } from "../../shared/delegation-policy.ts";
 import { resolveCurrentSessionId } from "../../shared/session-identity.ts";
 import {
+  type CommandsConfig,
   checkSubagentDepth,
   type Details,
   PI_SUBAGENT_CHILD,
@@ -64,7 +65,11 @@ function ensureAccessibleDir(dirPath: string): void {
 // Module Registration
 // ============================================================================
 
-export function registerSubagentsModule(pi: ExtensionAPI, config: ResolvedSubagentsConfig): void {
+export function registerSubagentsModule(
+  pi: ExtensionAPI,
+  config: ResolvedSubagentsConfig,
+  commandsConfig: Required<CommandsConfig> = { enabled: true }
+): void {
   // Prevent child processes from registering the subagent tool.
   if (process.env[PI_SUBAGENT_CHILD] === "1") return;
 
@@ -188,7 +193,9 @@ Example:
   pi.registerTool(tool);
 
   // Register developer commands
-  registerDeveloperCommands(pi);
+  if (commandsConfig.enabled) {
+    registerDeveloperCommands(pi);
+  }
 
   // Inject delegation policy into parent agent's system prompt
   pi.on("before_agent_start", async (event) => {

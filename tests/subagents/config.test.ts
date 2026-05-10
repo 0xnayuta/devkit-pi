@@ -16,6 +16,17 @@ describe("Devkit Config Loading", () => {
 			assert.equal(DEFAULT_CONFIG.subagents.maxDepth, 1);
 			assert.equal(DEFAULT_CONFIG.subagents.timeoutMs, 120_000);
 			assert.equal(DEFAULT_CONFIG.subagents.allowWrite, false);
+			assert.equal(DEFAULT_CONFIG.subagents.allowLspTools, true);
+			assert.deepEqual(DEFAULT_CONFIG.subagents.allowedLspActions, [
+				"definition",
+				"references",
+				"hover",
+				"signature",
+				"symbols",
+				"diagnostics",
+				"workspace-diagnostics",
+				"servers",
+			]);
 			assert.equal(DEFAULT_CONFIG.web.enabled, true);
 			assert.equal(DEFAULT_CONFIG.web.provider, "ddgs");
 			assert.equal(DEFAULT_CONFIG.lsp.enabled, true);
@@ -64,6 +75,16 @@ describe("Devkit Config Loading", () => {
 	});
 
 	describe("Config Field Validation", () => {
+		it("normalizes subagent LSP action whitelist", () => {
+			const config = mergeConfig({
+				subagents: {
+					allowedLspActions: ["symbols", "rename" as any, "symbols", "restart" as any],
+				},
+			});
+
+			assert.deepEqual(config.subagents.allowedLspActions, ["symbols"]);
+		});
+
 		it("normalizes LSP hook config to disabled during Phase 3", () => {
 			const config = mergeConfig({
 				lsp: {

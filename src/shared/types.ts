@@ -204,11 +204,23 @@ export interface SubagentRetryConfig {
   maxAttempts?: number;
 }
 
+export type LspReadonlyAction =
+  | "definition"
+  | "references"
+  | "hover"
+  | "signature"
+  | "symbols"
+  | "diagnostics"
+  | "workspace-diagnostics"
+  | "servers";
+
 export interface SubagentsConfig {
   enabled?: boolean;
   maxDepth?: number;
   timeoutMs?: number;
   allowWrite?: boolean;
+  allowLspTools?: boolean;
+  allowedLspActions?: LspReadonlyAction[];
   retry?: SubagentRetryConfig;
   /**
    * Inject delegation policy + few-shot examples into the parent agent's
@@ -295,6 +307,8 @@ export const SUBAGENT_ACTIONS = ["list", "get", "doctor"] as const;
 export const PI_SUBAGENT_CHILD = "PI_SUBAGENT_CHILD";
 export const PI_SUBAGENT_DEPTH = "PI_SUBAGENT_DEPTH";
 export const PI_SUBAGENT_MAX_DEPTH = "PI_SUBAGENT_MAX_DEPTH";
+export const PI_SUBAGENT_ALLOW_LSP = "PI_SUBAGENT_ALLOW_LSP";
+export const PI_SUBAGENT_LSP_ACTIONS = "PI_SUBAGENT_LSP_ACTIONS";
 
 export const DEFAULT_FORK_PREAMBLE =
   "You are a delegated subagent running from a fork of the parent session. " +

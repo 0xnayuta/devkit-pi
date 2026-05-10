@@ -42,6 +42,7 @@ describe("Built-in Agents Discovery", () => {
 		assert.ok(explorer.tools?.includes("grep"));
 		assert.ok(explorer.tools?.includes("find"));
 		assert.ok(explorer.tools?.includes("ls"));
+		assert.ok(explorer.tools?.includes("lsp"));
 	});
 
 	it("[SUBAGENTS] researcher has web search, reviewer has read/grep", () => {
@@ -53,6 +54,7 @@ describe("Built-in Agents Discovery", () => {
 		assert.ok(reviewer);
 		assert.ok(reviewer.tools?.includes("read"));
 		assert.ok(reviewer.tools?.includes("grep"));
+		assert.ok(reviewer.tools?.includes("lsp"));
 	});
 
 	it("[SUBAGENTS] implementer and tester are readonly (no edit/write)", () => {

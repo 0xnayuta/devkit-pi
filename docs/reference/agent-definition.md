@@ -45,11 +45,11 @@ Your job:
 
 | Agent | 职责 | 默认工具 |
 |---|---|---|
-| `explorer` | 搜索代码、定位文件、梳理调用链 | `read, grep, find, ls` |
+| `explorer` | 搜索代码、定位文件、梳理调用链 | `read, grep, find, ls, lsp` |
 | `researcher` | 文档/API/外部资料研究 | `web_search, fetch_content, get_search_content` |
-| `reviewer` | 架构、代码、方案审查 | `read, grep, find, ls` |
-| `implementer` | 返回 patch plan 或 implementation plan（不直接写文件） | `read, grep, find, ls` |
-| `tester` | 返回 test plan 或测试建议（不直接写文件） | `read, grep, find, ls` |
+| `reviewer` | 架构、代码、方案审查 | `read, grep, find, ls, lsp` |
+| `implementer` | 返回 patch plan 或 implementation plan（不直接写文件） | `read, grep, find, ls, lsp` |
+| `tester` | 返回 test plan 或测试建议（不直接写文件） | `read, grep, find, ls, lsp` |
 
 ## 自定义 agents
 
@@ -59,6 +59,12 @@ Your job:
 - 项目级：`.agents/` 或 `.pi/agents/`
 
 自定义 agents 同样使用简单 frontmatter，支持 `name`、`description`、`readonly`、`tools`。
+
+### LSP tool
+
+`lsp` 是 readonly code intelligence 的可选增强。内置 `explorer`、`reviewer`、`implementer`、`tester` 会声明 `lsp`，但实际是否暴露给子代理由 `subagents.allowLspTools` 和 `subagents.allowedLspActions` 决定。
+
+子代理只允许 readonly-safe actions：`definition`、`references`、`hover`、`signature`、`symbols`、`diagnostics`、`workspace-diagnostics`、`servers`。`rename`、`codeAction`、`restart` 在子代理进程中始终禁用。
 
 ### Web tools
 

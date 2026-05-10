@@ -167,7 +167,7 @@ export function getWebToolStats(): WebToolStats {
 }
 
 // ============================================================================
-// Legacy Stats API (for backward compatibility)
+// Raw Stats API
 // ============================================================================
 
 export function recordSearchCall(provider: string): number {
@@ -249,7 +249,7 @@ export function webDebugLog(message: string, details?: unknown): void {
 }
 
 // ============================================================================
-// High-level Activity Recording (combines legacy + activity log)
+// High-level Activity Recording (combines stats + activity log)
 // ============================================================================
 
 export function recordSearchActivity(
@@ -285,7 +285,7 @@ export function recordSearchActivity(
   const effectiveStartTs = startTs ?? Date.now();
   const duration = Date.now() - effectiveStartTs;
 
-  // Legacy stats - call must happen first to increment counter
+  // Stats call must happen first to increment counter
   recordSearchCall(provider);
   if (effectiveStatus === "success") {
     recordSearchSuccess(provider, effectiveStartTs);
@@ -315,7 +315,7 @@ export function recordFetchActivity(
 ): void {
   const startTs = Date.now();
 
-  // Legacy stats - call must happen first to increment counter
+  // Stats call must happen first to increment counter
   recordFetchCall();
   if (status === "success") {
     recordFetchSuccess();

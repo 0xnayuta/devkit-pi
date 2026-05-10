@@ -22,6 +22,17 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。
     "maxDepth": 1,
     "timeoutMs": 120000,
     "allowWrite": false,
+    "allowLspTools": true,
+    "allowedLspActions": [
+      "definition",
+      "references",
+      "hover",
+      "signature",
+      "symbols",
+      "diagnostics",
+      "workspace-diagnostics",
+      "servers"
+    ],
     "injectDelegationPolicy": true,
     "retry": {
       "enabled": true,
@@ -70,6 +81,8 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。
 | `subagents.maxDepth` | number | `1` | 子代理最大深度；默认禁止 nested subagents |
 | `subagents.timeoutMs` | number | `120000` | 单次子代理执行超时 |
 | `subagents.allowWrite` | boolean | `false` | 是否允许子代理使用写工具 |
+| `subagents.allowLspTools` | boolean | `true` | 是否允许子代理使用 readonly LSP tool |
+| `subagents.allowedLspActions` | string[] | readonly-safe actions | 子代理允许调用的 LSP action 白名单；非法值会被丢弃 |
 | `subagents.injectDelegationPolicy` | boolean | `true` | 是否向主代理注入委托策略 |
 | `subagents.retry.enabled` | boolean | `true` | 是否启用子代理重试 |
 | `subagents.retry.maxAttempts` | number | `2` | 最大尝试次数 |
@@ -103,7 +116,7 @@ Phase 3 只启用显式 `lsp` tool，不启用自动 diagnostics hook。
 | `lsp.hook.enabled` | boolean | `false` | Phase 3 不启用 hook |
 | `lsp.hook.mode` | `"disabled"` | `"disabled"` | Phase 3 固定为禁用语义 |
 
-Readonly-safe LSP actions：`definition`、`references`、`hover`、`signature`、`symbols`、`diagnostics`、`workspace-diagnostics`、`servers`。
+Readonly-safe LSP actions：`definition`、`references`、`hover`、`signature`、`symbols`、`diagnostics`、`workspace-diagnostics`、`servers`。这些 action 可通过 `subagents.allowedLspActions` 暴露给子代理。
 
 Privileged actions：`rename`、`codeAction`、`restart`。
 

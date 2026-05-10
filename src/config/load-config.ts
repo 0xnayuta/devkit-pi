@@ -5,6 +5,7 @@ import type {
   CommandsConfig,
   DebugLevel,
   LspConfig,
+  LspReadonlyAction,
   ResolvedSubagentsConfig,
   ResolvedToolkitConfig,
   ResolvedWebConfig,
@@ -63,11 +64,24 @@ export const DEFAULT_WEB_CONFIG: ResolvedWebConfig = {
   },
 };
 
+export const DEFAULT_SUBAGENT_LSP_ACTIONS: LspReadonlyAction[] = [
+  "definition",
+  "references",
+  "hover",
+  "signature",
+  "symbols",
+  "diagnostics",
+  "workspace-diagnostics",
+  "servers",
+];
+
 export const DEFAULT_SUBAGENTS_CONFIG: ResolvedSubagentsConfig = {
   enabled: true,
   maxDepth: 1,
   timeoutMs: 120000,
   allowWrite: false,
+  allowLspTools: true,
+  allowedLspActions: DEFAULT_SUBAGENT_LSP_ACTIONS,
   injectDelegationPolicy: true,
   retry: {
     enabled: true,
@@ -259,12 +273,24 @@ function normalizeWebConfig(base: WebConfig | undefined): ResolvedWebConfig {
   };
 }
 
+function normalizeLspReadonlyActions(value: unknown): LspReadonlyAction[] {
+  if (!Array.isArray(value)) return [...DEFAULT_SUBAGENT_LSP_ACTIONS];
+  const allowed = new Set<LspReadonlyAction>(DEFAULT_SUBAGENT_LSP_ACTIONS);
+  const filtered = value.filter(
+    (item): item is LspReadonlyAction =>
+      typeof item === "string" && allowed.has(item as LspReadonlyAction)
+  );
+  return [...new Set(filtered)];
+}
+
 function normalizeSubagentsConfig(base: SubagentsConfig | undefined): ResolvedSubagentsConfig {
   return {
     enabled: booleanValue(base?.enabled, DEFAULT_SUBAGENTS_CONFIG.enabled),
     maxDepth: nonNegativeInteger(base?.maxDepth, DEFAULT_SUBAGENTS_CONFIG.maxDepth),
     timeoutMs: positiveInteger(base?.timeoutMs, DEFAULT_SUBAGENTS_CONFIG.timeoutMs),
     allowWrite: booleanValue(base?.allowWrite, DEFAULT_SUBAGENTS_CONFIG.allowWrite),
+    allowLspTools: booleanValue(base?.allowLspTools, DEFAULT_SUBAGENTS_CONFIG.allowLspTools),
+    allowedLspActions: normalizeLspReadonlyActions(base?.allowedLspActions),
     injectDelegationPolicy: booleanValue(
       base?.injectDelegationPolicy,
       DEFAULT_SUBAGENTS_CONFIG.injectDelegationPolicy

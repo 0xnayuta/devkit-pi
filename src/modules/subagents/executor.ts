@@ -12,8 +12,10 @@ import {
   checkSubagentDepth,
   DEFAULT_MAX_OUTPUT,
   type Details,
+  PI_SUBAGENT_ALLOW_LSP,
   PI_SUBAGENT_CHILD,
   PI_SUBAGENT_DEPTH,
+  PI_SUBAGENT_LSP_ACTIONS,
   PI_SUBAGENT_MAX_DEPTH,
   type ResolvedSubagentsConfig,
   type SingleResult,
@@ -78,8 +80,11 @@ function loadAgent(
   return agent;
 }
 
-function filterToolsForReadonly(agent: AgentConfig, config: ResolvedSubagentsConfig): string[] {
-  const readonlyTools = [
+export function filterToolsForReadonly(
+  agent: AgentConfig,
+  config: ResolvedSubagentsConfig
+): string[] {
+  const readonlyTools = new Set([
     "read",
     "grep",
     "find",
@@ -87,15 +92,19 @@ function filterToolsForReadonly(agent: AgentConfig, config: ResolvedSubagentsCon
     "web_search",
     "fetch_content",
     "get_search_content",
-  ];
+  ]);
+  if (config.allowLspTools && config.allowedLspActions.length > 0) {
+    readonlyTools.add("lsp");
+  }
+
   const configuredTools = agent.tools ?? [];
 
   if (agent.readonly) {
-    return configuredTools.filter((tool) => readonlyTools.includes(tool));
+    return configuredTools.filter((tool) => readonlyTools.has(tool));
   }
 
   if (!config.allowWrite) {
-    return configuredTools.filter((tool) => readonlyTools.includes(tool));
+    return configuredTools.filter((tool) => readonlyTools.has(tool));
   }
 
   return configuredTools;
@@ -268,6 +277,8 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
       [PI_SUBAGENT_CHILD]: "1",
       [PI_SUBAGENT_DEPTH]: String(depth + 1),
       [PI_SUBAGENT_MAX_DEPTH]: String(maxDepth),
+      [PI_SUBAGENT_ALLOW_LSP]: deps.config.allowLspTools ? "1" : "0",
+      [PI_SUBAGENT_LSP_ACTIONS]: deps.config.allowedLspActions.join(","),
     };
 
     // Build session directory

@@ -28,6 +28,14 @@ export default function registerExtension(pi: ExtensionAPI): void {
   // are gated by lsp.tool.allowMutatingActions and are disabled for subagents.
   registerLspModule(pi, effectiveConfig.lsp);
 
+  const subagentsConfig = {
+    ...effectiveConfig.subagents,
+    allowLspTools:
+      effectiveConfig.subagents.allowLspTools &&
+      effectiveConfig.lsp.enabled &&
+      effectiveConfig.lsp.tool.enabled,
+  };
+
   // Subagents module handles PI_SUBAGENT_CHILD check internally.
-  registerSubagentsModule(pi, effectiveConfig.subagents);
+  registerSubagentsModule(pi, subagentsConfig, effectiveConfig.commands);
 }

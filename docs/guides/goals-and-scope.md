@@ -24,6 +24,7 @@ subagents + web tools + LSP tool + developer commands
 - 子代理递归保护：`subagents.maxDepth = 1`
 - bundled readonly web tools：`web_search`、`fetch_content`、`get_search_content`
 - LSP tool：definitions、references、hover、signature、symbols、diagnostics、workspace diagnostics、servers
+- 可选的子代理 readonly LSP：通过 `subagents.allowLspTools` 和 `subagents.allowedLspActions` 控制
 - developer commands：doctor、list、logs、activity
 - namespace 化配置：`subagents` / `web` / `lsp` / `commands`
 

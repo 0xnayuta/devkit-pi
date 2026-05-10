@@ -6,7 +6,11 @@ import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/load-config.ts";
 import { registerLspModule } from "../../src/modules/lsp/register.ts";
 import { LSP_ACTIONS } from "../../src/modules/lsp/tool.ts";
-import { PI_SUBAGENT_CHILD } from "../../src/shared/types.ts";
+import {
+  PI_SUBAGENT_ALLOW_LSP,
+  PI_SUBAGENT_CHILD,
+  PI_SUBAGENT_LSP_ACTIONS,
+} from "../../src/shared/types.ts";
 
 function createPiMock() {
   const tools: any[] = [];
@@ -26,10 +30,16 @@ function createPiMock() {
 
 describe("lsp module", () => {
   const originalChild = process.env[PI_SUBAGENT_CHILD];
+  const originalAllowLsp = process.env[PI_SUBAGENT_ALLOW_LSP];
+  const originalLspActions = process.env[PI_SUBAGENT_LSP_ACTIONS];
 
   afterEach(() => {
     if (originalChild === undefined) delete process.env[PI_SUBAGENT_CHILD];
     else process.env[PI_SUBAGENT_CHILD] = originalChild;
+    if (originalAllowLsp === undefined) delete process.env[PI_SUBAGENT_ALLOW_LSP];
+    else process.env[PI_SUBAGENT_ALLOW_LSP] = originalAllowLsp;
+    if (originalLspActions === undefined) delete process.env[PI_SUBAGENT_LSP_ACTIONS];
+    else process.env[PI_SUBAGENT_LSP_ACTIONS] = originalLspActions;
   });
 
   it("registers the lsp tool when enabled and does not register hook events", () => {
@@ -122,8 +132,48 @@ describe("lsp module", () => {
     );
   });
 
+  it("allows whitelisted readonly LSP actions in subagent processes", async () => {
+    process.env[PI_SUBAGENT_CHILD] = "1";
+    process.env[PI_SUBAGENT_ALLOW_LSP] = "1";
+    process.env[PI_SUBAGENT_LSP_ACTIONS] = "servers,symbols,diagnostics";
+    const pi = createPiMock();
+    registerLspModule(pi as any, mergeConfig({}).lsp);
+
+    const result = await pi.tools[0].execute(
+      "call-1",
+      { action: "servers" },
+      undefined,
+      undefined,
+      { cwd: process.cwd() }
+    );
+
+    assert.match(result.content[0].text, /action: servers/);
+  });
+
+  it("blocks non-whitelisted LSP actions in subagent processes", async () => {
+    process.env[PI_SUBAGENT_CHILD] = "1";
+    process.env[PI_SUBAGENT_ALLOW_LSP] = "1";
+    process.env[PI_SUBAGENT_LSP_ACTIONS] = "servers,symbols,diagnostics";
+    const pi = createPiMock();
+    registerLspModule(pi as any, mergeConfig({}).lsp);
+
+    await assert.rejects(
+      () =>
+        pi.tools[0].execute(
+          "call-1",
+          { action: "references", file: "src/index.ts", line: 1, column: 1 },
+          undefined,
+          undefined,
+          { cwd: process.cwd() }
+        ),
+      /not allowed for this subagent process/
+    );
+  });
+
   it("blocks privileged actions in subagent processes even when explicitly allowed", async () => {
     process.env[PI_SUBAGENT_CHILD] = "1";
+    process.env[PI_SUBAGENT_ALLOW_LSP] = "1";
+    process.env[PI_SUBAGENT_LSP_ACTIONS] = "restart";
     const pi = createPiMock();
     registerLspModule(
       pi as any,
