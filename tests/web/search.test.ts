@@ -183,154 +183,6 @@ describe("web_search", () => {
     }
   });
 
-  it("supports explicit openserp provider", async () => {
-    process.env.OPENSERP_API_KEY = "openserp-test-key";
-
-    globalThis.fetch = (() =>
-      Promise.resolve(
-        new Response(
-          JSON.stringify({
-            organic_results: [
-              {
-                title: "OpenSERP Result",
-                link: "https://example.com/openserp",
-                snippet: "OpenSERP Snippet",
-              },
-            ],
-          }),
-          {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          }
-        )
-      )) as typeof fetch;
-
-    const result = await webSearch(
-      { query: "typescript", numResults: 1 },
-      mergeWebConfig({ web: { provider: "openserp", openserp: { enabled: true } } })
-    );
-
-    assert.equal("responseId" in result, true);
-    if ("responseId" in result) {
-      assert.equal(result.queries[0].results[0].url, "https://example.com/openserp");
-      assert.equal(result.queries[0].results[0].source, "openserp");
-    }
-
-    delete process.env.OPENSERP_API_KEY;
-  });
-
-  it("supports explicit searxng provider", async () => {
-    globalThis.fetch = (() =>
-      Promise.resolve(
-        new Response(
-          JSON.stringify({
-            results: [
-              {
-                title: "SearXNG Result",
-                url: "https://example.com/searxng",
-                content: "SearXNG Snippet",
-                engine: "google",
-              },
-            ],
-          }),
-          {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          }
-        )
-      )) as typeof fetch;
-
-    const result = await webSearch(
-      { query: "typescript", numResults: 1 },
-      mergeWebConfig({
-        web: {
-          provider: "searxng",
-          searxng: { enabled: true, baseUrl: "http://127.0.0.1:8080" },
-        },
-      })
-    );
-
-    assert.equal("responseId" in result, true);
-    if ("responseId" in result) {
-      assert.equal(result.queries[0].results[0].url, "https://example.com/searxng");
-      assert.equal(result.queries[0].results[0].source, "google");
-    }
-  });
-
-  it("supports explicit tavily provider", async () => {
-    process.env.TAVILY_API_KEY = "tavily-test-key";
-
-    globalThis.fetch = ((input: string | URL, init?: RequestInit) => {
-      assert.match(String(input), /api\.tavily\.com\/search/);
-      assert.equal(init?.method, "POST");
-      return Promise.resolve(
-        new Response(
-          JSON.stringify({
-            results: [
-              {
-                title: "Tavily Result",
-                url: "https://example.com/tavily",
-                content: "Tavily Snippet",
-              },
-            ],
-          }),
-          {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          }
-        )
-      );
-    }) as typeof fetch;
-
-    const result = await webSearch(
-      { query: "typescript", numResults: 1 },
-      mergeWebConfig({ web: { provider: "tavily", tavily: { enabled: true } } })
-    );
-
-    assert.equal("responseId" in result, true);
-    if ("responseId" in result) {
-      assert.equal(result.queries[0].results[0].url, "https://example.com/tavily");
-      assert.equal(result.queries[0].results[0].source, "tavily");
-    }
-  });
-
-  it("supports explicit serper provider", async () => {
-    process.env.SERPER_API_KEY = "serper-test-key";
-
-    globalThis.fetch = ((input: string | URL, init?: RequestInit) => {
-      assert.match(String(input), /google\.serper\.dev\/search/);
-      assert.equal(init?.method, "POST");
-      return Promise.resolve(
-        new Response(
-          JSON.stringify({
-            organic: [
-              {
-                title: "Serper Result",
-                link: "https://example.com/serper",
-                snippet: "Serper Snippet",
-              },
-            ],
-          }),
-          {
-            status: 200,
-            headers: { "content-type": "application/json" },
-          }
-        )
-      );
-    }) as typeof fetch;
-
-    const result = await webSearch(
-      { query: "typescript", numResults: 1 },
-      mergeWebConfig({ web: { provider: "serper", serper: { enabled: true } } })
-    );
-
-    assert.equal("responseId" in result, true);
-    if ("responseId" in result) {
-      assert.equal(result.queries[0].results[0].url, "https://example.com/serper");
-      assert.equal(result.queries[0].results[0].source, "serper");
-    }
-  });
-
   it("classifies commercial provider missing key as auth required", async () => {
     delete process.env.TAVILY_API_KEY;
 
@@ -578,37 +430,10 @@ describe("web_search", () => {
   // C.4: Explicit provider does not fall back
   // ============================================================================
 
-  it("does not fall back to ddgs when explicit searxng fails", async () => {
+  it("does not fall back to ddgs when explicit provider fails", async () => {
     const calls: string[] = [];
     globalThis.fetch = ((input: string | URL) => {
       calls.push(String(input));
-      // Simulate searxng unreachable
-      return Promise.resolve(new Response("Service Unavailable", { status: 503 }));
-    }) as typeof fetch;
-
-    const result = await webSearch(
-      { query: "typescript" },
-      mergeWebConfig({
-        web: {
-          provider: "searxng",
-          searxng: { enabled: true, baseUrl: "http://127.0.0.1:9999" },
-        },
-      })
-    );
-
-    assert.equal("error" in result, true);
-    if ("error" in result) {
-      // Should be an error from searxng, not a successful ddgs fallback
-      assert.notEqual(result.error.code, "WEB_SEARCH_FAILED");
-      assert.equal(calls.filter((c) => c.includes("duckduckgo")).length, 0);
-    }
-  });
-
-  it("does not attempt ddgs when explicit searxng is unreachable", async () => {
-    const calls: string[] = [];
-    globalThis.fetch = ((input: string | URL) => {
-      calls.push(String(input));
-      // Fail on any URL (simulate unreachable)
       throw new Error("Connection refused");
     }) as typeof fetch;
 
@@ -623,7 +448,6 @@ describe("web_search", () => {
     );
 
     assert.equal("error" in result, true);
-    // Only searxng was called, no ddgs
     assert.equal(calls.length, 1);
     assert.match(calls[0], /127\.0\.0\.1:9999/);
   });

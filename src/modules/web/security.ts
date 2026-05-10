@@ -35,6 +35,21 @@ function isPrivateIPv4(address: string): boolean {
   );
 }
 
+/**
+ * Try to interpret a hex-encoded IPv4 from two 16-bit groups.
+ *
+ * Node.js normalizes `::ffff:127.0.0.1` → `::ffff:7f00:1`.
+ * The two groups (0x7f00, 0x0001) encode the four IPv4 octets.
+ */
+function hexGroupsToIpv4(hex: string): string | undefined {
+  const parts = hex.split(":");
+  if (parts.length !== 2) return undefined;
+  const high = Number.parseInt(parts[0], 16);
+  const low = Number.parseInt(parts[1], 16);
+  if (Number.isNaN(high) || Number.isNaN(low)) return undefined;
+  return `${(high >> 8) & 0xff}.${high & 0xff}.${(low >> 8) & 0xff}.${low & 0xff}`;
+}
+
 function isPrivateIPv6(address: string): boolean {
   const normalized = address.toLowerCase();
 
@@ -50,7 +65,13 @@ function isPrivateIPv6(address: string): boolean {
 
   if (normalized.startsWith("::ffff:")) {
     const mapped = normalized.slice("::ffff:".length);
+    // Standard dotted-quad form: ::ffff:127.0.0.1
     if (isIP(mapped) === 4) return isPrivateIPv4(mapped);
+
+    // Hex-encoded form produced by Node.js normalization:
+    // ::ffff:127.0.0.1 → ::ffff:7f00:1
+    const ipv4 = hexGroupsToIpv4(mapped);
+    if (ipv4 && isIP(ipv4) === 4) return isPrivateIPv4(ipv4);
   }
 
   return false;
