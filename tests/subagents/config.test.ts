@@ -19,6 +19,10 @@ describe("Devkit Config Loading", () => {
 			assert.equal(DEFAULT_CONFIG.web.enabled, true);
 			assert.equal(DEFAULT_CONFIG.web.provider, "ddgs");
 			assert.equal(DEFAULT_CONFIG.lsp.enabled, true);
+			assert.equal(DEFAULT_CONFIG.lsp.tool.enabled, true);
+			assert.equal(DEFAULT_CONFIG.lsp.tool.allowMutatingActions, false);
+			assert.equal(DEFAULT_CONFIG.lsp.hook.enabled, false);
+			assert.equal(DEFAULT_CONFIG.lsp.hook.mode, "disabled");
 			assert.equal(DEFAULT_CONFIG.commands.enabled, true);
 		});
 
@@ -60,6 +64,17 @@ describe("Devkit Config Loading", () => {
 	});
 
 	describe("Config Field Validation", () => {
+		it("normalizes LSP hook config to disabled during Phase 3", () => {
+			const config = mergeConfig({
+				lsp: {
+					hook: { enabled: true, mode: "agent_end" as any },
+				},
+			});
+
+			assert.equal(config.lsp.hook.enabled, false);
+			assert.equal(config.lsp.hook.mode, "disabled");
+		});
+
 		it("normalizes invalid subagent fields through mergeConfig", () => {
 			const config = mergeConfig({
 				subagents: {

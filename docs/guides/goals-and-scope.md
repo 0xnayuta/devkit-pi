@@ -1,62 +1,56 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-08
+last_verified: 2026-05-10
 ---
 
 # 目标与范围
 
 ## 项目目标
 
-将 `pi-subagents` 简化为一个面向 pi 的轻量扩展：
+`devkit-pi` 是面向个人工作流的综合 pi coding toolkit：
 
 ```text
-1 个主代理
-+ 1 个 subagent 工具
-+ 5 个内置子代理
-+ foreground 单次执行
-+ max depth = 1
+subagents + web tools + LSP tool + developer commands
 ```
 
-目标不是完整多代理框架，而是让主代理可以在需要时委托一个专职子代理完成聚焦任务。
+目标不是完整多代理框架，而是把高频 coding 辅助能力模块化地合入一个 pi extension。
 
-## MVP 包含
+## 当前包含
 
-- 注册 `subagent` 工具
-- 支持参数：`agent`、`task`
-- 支持 5 个内置 agents：`explorer`、`researcher`、`reviewer`、`implementer`、`tester`
-- 支持 markdown frontmatter agent 定义（简单 `key: value` 格式，逗号分隔 tools）
-- 支持 user/project 自定义 markdown agents（仅保留简单 frontmatter，不含 management/overrides/chains）
-- foreground 同步执行
-- 递归保护：子代理不能再调子代理（`maxSubagentDepth = 1`）
-- 所有 agents 默认 readonly
-- 最小 child session file（用于调试和排查，不做复杂 artifact/session 管理）
-- 简单配置、简单错误处理、简单结果返回
+- `subagent` 工具与 5 个内置 readonly agents：`explorer`、`researcher`、`reviewer`、`implementer`、`tester`
+- user/project markdown agent 定义（简单 frontmatter）
+- foreground 单次子代理执行
+- 子代理递归保护：`subagents.maxDepth = 1`
+- bundled readonly web tools：`web_search`、`fetch_content`、`get_search_content`
+- LSP tool：definitions、references、hover、signature、symbols、diagnostics、workspace diagnostics、servers
+- developer commands：doctor、list、logs、activity
+- namespace 化配置：`subagents` / `web` / `lsp` / `commands`
 
-## MVP 不包含
+## 当前不包含
 
 - background/async jobs
 - chain workflow
 - parallel execution
 - intercom
 - worktree 管理
-- TUI widget
-- slash bridge（`/subagents` 命令）
-- skills 目录 / skills 注入
 - complex artifact system
 - fallback model chain
 - 多代理编排引擎
 - agent management actions（create/update/delete）
-- bash 工具在 readonly agents 中
-- implementer / tester 写文件能力
+- LSP hook / 自动 diagnostics（Phase 3 暂不启用）
+- 子代理中的 privileged LSP actions：`rename`、`codeAction`、`restart`
 
-## MVP 边界决策
+## 设计边界
 
-### 1. user/project 自定义 agents
+1. 主代理是唯一 orchestrator。
+2. 子代理不能调度其他子代理。
+3. 默认 readonly；写能力必须显式配置。
+4. LSP readonly actions 可作为 read/grep/find 的渐进增强。
+5. `rename`、`codeAction`、`restart` 默认禁用，且在子代理进程中始终禁用。
+6. 各模块必须可独立启停。
 
-保留简单 markdown agents，但不保留 management/overrides/chains/packaged agents。
-
-自定义 agent 示例：
+## 自定义 agent 示例
 
 ```md
 ---
@@ -68,30 +62,3 @@ tools: read, grep, find, ls
 
 You are a custom review subagent.
 ```
-
-### 2. `/subagents` 命令
-
-第一版不保留。主入口是 LLM tool `subagent({ agent, task })`。slash 命令会牵出 slash bridge、live state、TUI 渲染等复杂能力，与简化目标冲突。
-
-### 3. `bash` 在 readonly agents 中
-
-默认不允许。readonly agents 只允许安全工具：`read, grep, find, ls`。researcher 可额外允许：`web_search, fetch_content, get_search_content`。
-
-`bash` 无法技术上保证只读，模型仍可能执行写文件或修改系统的命令。因此 readonly agents 中不开放 `bash`。如未来需要恢复该能力，必须新增 ADR 并引入显式配置。
-
-### 4. `skills` 目录
-
-第一版不保留或不注册。当前 `skills/pi-subagents` 包含旧复杂编排能力说明，会把模型引向多代理 workflow。package.json 中移除 `pi.skills` 和 `skills/**/*`。
-
-### 5. session 文件
-
-保留最小 child session file，但不做复杂管理。不保留 artifact tree、metadata、progress file、async result file、session sharing、resume、watcher、cleanup manager。
-
-### 6. `implementer` / `tester` 写文件
-
-第一版不允许。两者均 readonly。
-
-- `implementer`：返回 patch plan / implementation plan / exact files to change
-- `tester`：返回 test plan / suggested tests / test commands / optional test code snippets
-
-后续可通过 `allowWriteSubagents: true` 显式开启。

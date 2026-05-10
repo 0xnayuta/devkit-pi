@@ -11,9 +11,9 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { loadConfig, mergeConfig } from "./config/load-config.ts";
+import { registerLspModule } from "./modules/lsp/register.ts";
 import { registerSubagentsModule } from "./modules/subagents/register.ts";
 import { registerWebTools } from "./modules/web/register.ts";
-// TODO: Phase 3 — import { registerLspModule } from "./modules/lsp/register.ts";
 
 export default function registerExtension(pi: ExtensionAPI): void {
   const config = loadConfig();
@@ -24,8 +24,10 @@ export default function registerExtension(pi: ExtensionAPI): void {
   // Web tools are available in both parent and child processes.
   registerWebTools(pi, effectiveConfig.web);
 
+  // LSP tool is available in both parent and child processes; privileged actions
+  // are gated by lsp.tool.allowMutatingActions and are disabled for subagents.
+  registerLspModule(pi, effectiveConfig.lsp);
+
   // Subagents module handles PI_SUBAGENT_CHILD check internally.
   registerSubagentsModule(pi, effectiveConfig.subagents);
-
-  // TODO: Phase 3 — registerLspModule(pi, effectiveConfig.lsp);
 }

@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-08
+last_verified: 2026-05-10
 ---
 
 # 结果 Schema
@@ -35,7 +35,7 @@ last_verified: 2026-05-08
 }
 ```
 
-## MVP 错误码
+## Subagent 错误码
 
 | Code | 说明 |
 |------|------|

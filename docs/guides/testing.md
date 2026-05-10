@@ -1,49 +1,46 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-09
+last_verified: 2026-05-10
 ---
 
 # 测试策略
 
 ## 核心测试范围
 
-- 工具注册：`subagent` 可被主代理发现
-- 参数校验：缺少 agent/task 时返回稳定错误
-- agent 加载：frontmatter 解析正确
-- unknown agent：返回清晰错误
-- foreground 执行：能启动并返回结果
-- 递归保护：子代理不能再调用 `subagent`
-- readonly 默认值：写入能力默认禁用
-- sanitize：敏感信息不会出现在最终结果中
+- subagents：工具注册、schema、agent 加载、递归保护、输出收集、prompt runtime
+- web：provider 选择、fetch 安全限制、缓存、并发、observability、storage、renderers
+- lsp：模块注册、`servers` action、privileged action gating、hook 不注册
+- shared/config：namespace 配置 merge、路径处理、错误码、package manifest
 
-## 建议测试分层
+## 测试目录
 
-MVP 实际只维护 `tests/unit/`（单元测试）：
+测试目录镜像模块结构：
 
 ```text
-tests/unit/     # 独立模块测试（frontmatter、config、schema、sanitize 等）
-tests/mvp/unit/ # MVP 行为验证（默认配置、内置 agents、移除的功能确认）
+tests/subagents/          # subagents module
+tests/subagents/commands/ # subagent developer commands
+tests/web/                # web module
+tests/lsp/                # lsp module
+tests/shared/             # shared utilities
+tests/package-manifest.test.ts
 ```
 
-**暂不维护集成测试**（`tests/integration/`）。原因是：
+## 当前策略
 
-| 原因 | 说明 |
-|------|------|
-| 需要真实 pi 进程 | 集成测试依赖启动 `pi` 子进程，难以在 CI 中可靠运行 |
-| 覆盖成本高 | 集成路径涉及完整工具注册 → child session 启动 → JSONL 输出解析 |
-| 单元测试已覆盖关键路径 | `web-search.test.ts`、`subagent-prompt-runtime.test.ts` 等已覆盖主要行为 |
+当前主要维护 unit tests，不依赖真实 pi 子进程或真实 language server。
 
-如后续需补充集成测试，建议用 mock/stub 模拟 pi 扩展 API，而非真实启动子进程。
+如后续需要 LSP smoke/integration tests，应使用小型 fixture project，并明确标记为可选集成测试，避免 CI 因本机未安装 language server 而失败。
 
-## 不再维护的测试方向
+## 不支持能力的回归测试
 
-随着功能裁剪，以下测试应删除或迁移为“明确不支持”的测试：
+以下能力不应悄悄恢复；如需恢复必须新增 ADR：
 
-- async/background
+- background/async jobs
 - chain execution
 - parallel execution
 - intercom
 - worktree
-- TUI widget
-- slash bridge
+- nested subagents
+- 子代理 privileged LSP actions
+- Phase 3 中的 LSP hook

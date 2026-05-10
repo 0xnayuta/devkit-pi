@@ -1,32 +1,24 @@
 /**
  * LSP Module Registration
  *
- * Registers:
- * - "lsp" tool — query language server for code intelligence
- * - LSP hook — automatic diagnostics feedback (default: agent_end)
- * - "/lsp" developer command — hook mode settings
- *
- * TODO: Phase 3 — migrate code from pi-lsp
+ * Phase 3 registers only the explicit `lsp` tool. Hook-driven automatic
+ * diagnostics are intentionally not enabled in this phase.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ResolvedLspConfig } from "../../shared/types.ts";
+import { shutdownManager } from "./core.ts";
+import { registerLspTool } from "./tool.ts";
 
-export interface LspConfig {
-  enabled?: boolean;
-  tool?: {
-    enabled?: boolean;
-    allowMutatingActions?: boolean;
-  };
-  hook?: {
-    enabled?: boolean;
-    mode?: "edit_write" | "agent_end" | "disabled";
-  };
-}
+export function registerLspModule(pi: ExtensionAPI, config: ResolvedLspConfig): void {
+  if (!config.enabled) return;
 
-export function registerLspModule(_pi: ExtensionAPI, _config: LspConfig): void {
-  // TODO: Phase 3
-  // 1. Register "lsp" tool (from lsp-tool.ts)
-  // 2. Register LSP hook (from lsp.ts)
-  // 3. Register "/lsp" command
-  // 4. Register session_shutdown for LSP server cleanup
+  registerLspTool(pi, config.tool);
+
+  const piAny = pi as any;
+  if (typeof piAny.on === "function") {
+    piAny.on("session_shutdown", () => {
+      void shutdownManager();
+    });
+  }
 }

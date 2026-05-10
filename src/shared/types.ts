@@ -227,7 +227,7 @@ export interface LspToolConfig {
 
 export interface LspHookConfig {
   enabled?: boolean;
-  mode?: "edit_write" | "agent_end" | "disabled";
+  mode?: "disabled";
 }
 
 export interface LspConfig {

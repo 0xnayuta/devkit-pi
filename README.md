@@ -2,7 +2,7 @@
 
 Personal all-in-one pi coding toolkit for agentic coding workflows.
 
-Combines subagents, web research, LSP code intelligence, auto diagnostics, and developer commands into a single modular pi extension.
+Combines subagents, web research, LSP code intelligence, and developer commands into a single modular pi extension. Automatic diagnostics hooks are planned but not enabled in Phase 3.
 
 ## Modules
 
@@ -65,8 +65,8 @@ Config file: `~/.pi/agent/extensions/devkit-pi/config.json`
       "allowMutatingActions": false
     },
     "hook": {
-      "enabled": true,
-      "mode": "agent_end"
+      "enabled": false,
+      "mode": "disabled"
     }
   }
 }

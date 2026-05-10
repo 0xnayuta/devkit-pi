@@ -99,7 +99,7 @@ last_verified: 2026-05-09
 | `SUBAGENTS_DISABLED` | 子代理功能已禁用 |
 | `UNKNOWN_AGENT` | 未知代理名称 |
 | `SUBAGENT_DISABLED` | 该代理已禁用 |
-| `SUBAGENT_DEPTH_EXCEEDED` | 递归深度超限（`maxSubagentDepth = 1`） |
+| `SUBAGENT_DEPTH_EXCEEDED` | 递归深度超限（`subagents.maxDepth = 1`） |
 | `SUBAGENT_TIMEOUT` | 执行超时 |
 | `SUBAGENT_FAILED` | 子代理执行失败 |
 | `SUBAGENT_OUTPUT_TRUNCATED` | 输出被截断 |

@@ -5,8 +5,7 @@
 ```
 subagents（任务委派）
 + web tools（搜索与网页获取）
-+ LSP code intelligence（代码智能）
-+ auto diagnostics（自动诊断）
++ LSP code intelligence（代码智能；Phase 3 仅启用 tool）
 + developer commands（开发者辅助命令）
 ```
 
@@ -24,7 +23,7 @@ src/
 │  │  └─ commands/       # doctor, list, logs, activity
 │  ├─ web/               # 搜索、网页内容获取
 │  │  └─ providers/      # ddgs, brave, tavily, serper, openserp, searxng
-│  └─ lsp/               # LSP tool, hook, server 管理
+│  └─ lsp/               # LSP tool 与 server 管理（hook 暂不启用）
 ├─ config/               # 配置加载与默认值
 └─ shared/               # 类型、错误码、通用工具
 
