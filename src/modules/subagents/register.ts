@@ -278,15 +278,11 @@ Example:
 
     renderCall(args: any, theme: any) {
       const agentName = args.agent || "...";
-      const preview = args.task
-        ? args.task.length > 60
-          ? `${args.task.slice(0, 60)}...`
-          : args.task
-        : "...";
+      const taskText = args.task || "...";
       const text =
         theme.fg("toolTitle", theme.bold("subagent ")) +
         theme.fg("accent", agentName) +
-        `\n  ${theme.fg("dim", preview)}`;
+        `\n  ${theme.fg("dim", taskText)}`;
       return new Text(text, 0, 0);
     },
 
