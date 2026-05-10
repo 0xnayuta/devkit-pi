@@ -1,0 +1,86 @@
+{
+  "name": "devkit-pi",
+  "version": "0.1.0",
+  "description": "Personal all-in-one pi coding toolkit: subagents, web research, LSP code intelligence, auto diagnostics, and developer commands",
+  "author": "Izayoi Nayuta",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xnayuta/devkit-pi.git"
+  },
+  "homepage": "https://github.com/0xnayuta/devkit-pi#readme",
+  "bugs": {
+    "url": "https://github.com/0xnayuta/devkit-pi/issues"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "devkit",
+    "subagents",
+    "lsp",
+    "language-server",
+    "web-tools",
+    "ai",
+    "agents",
+    "cli"
+  ],
+  "files": [
+    "src/**/*.ts",
+    "agents/",
+    "README.md",
+    "README.zh.md",
+    "CHANGELOG.md",
+    "docs/"
+  ],
+  "scripts": {
+    "test": "pnpm test:unit",
+    "test:unit": "node --experimental-strip-types --test tests/subagents/*.test.ts tests/subagents/commands/*.test.ts tests/web/*.test.ts tests/lsp/*.test.ts tests/shared/*.test.ts tests/package-manifest.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "format": "biome format --write src",
+    "docs:check": "node scripts/check-docs.mjs"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-agent-core": "^0.74.0",
+    "@earendil-works/pi-ai": "^0.74.0",
+    "@earendil-works/pi-coding-agent": "^0.74.0",
+    "@earendil-works/pi-tui": "^0.74.0"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-agent-core": {
+      "optional": true
+    },
+    "@earendil-works/pi-ai": {
+      "optional": true
+    },
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "@earendil-works/pi-tui": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "typebox": "^1.1.38",
+    "vscode-jsonrpc": "^8.2.0",
+    "vscode-languageserver-protocol": "^3.17.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.14",
+    "@earendil-works/pi-agent-core": "^0.74.0",
+    "@earendil-works/pi-ai": "^0.74.0",
+    "@earendil-works/pi-coding-agent": "^0.74.0",
+    "@earendil-works/pi-tui": "^0.74.0",
+    "@types/node": "^25.6.2",
+    "typescript": "^6.0.3"
+  },
+  "packageManager": "pnpm@11.0.9"
+}
