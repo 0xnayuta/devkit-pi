@@ -1,17 +1,10 @@
-/**
- * Session Identity Utilities
- *
- * TODO: Phase 2 — migrate from pi-subagents/src/shared/session-identity.ts
- */
+interface SessionIdentityManager {
+  getSessionFile(): string | null | undefined;
+  getSessionId(): string | null | undefined;
+}
 
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-
-/**
- * Resolve the current session ID from the session manager.
- */
-export function resolveCurrentSessionId(
-  _sessionManager: ExtensionContext["sessionManager"],
-): string | null {
-  // TODO: Phase 2 — migrate implementation
-  return null;
+export function resolveCurrentSessionId(sessionManager: SessionIdentityManager): string {
+  const sessionId = sessionManager.getSessionFile() ?? sessionManager.getSessionId();
+  if (!sessionId) throw new Error("Current session identity is unavailable.");
+  return sessionId;
 }

@@ -3,7 +3,7 @@
  *
  * Consolidates error codes from subagents and lsp modules.
  *
- * TODO: Phase 2 — migrate and extend from pi-subagents
+ * Unified error codes for devkit-pi
  */
 
 export const ERROR_CODES = {

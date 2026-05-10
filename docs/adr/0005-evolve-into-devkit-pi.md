@@ -1,3 +1,9 @@
+---
+status: accepted
+audience: maintainer
+last_verified: 2026-05-10
+---
+
 # 0005 — 从 pi-subagents 演进为 devkit-pi
 
 - **状态**: accepted

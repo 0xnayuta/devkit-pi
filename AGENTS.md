@@ -89,7 +89,7 @@ pnpm test:unit  # unit tests
 
 ```bash
 # 验证 schema 极简
-rg "Type.Object" src/extension/schemas.ts
+rg "Type.Object" src/modules/subagents/schemas.ts
 
 # 验证文档同步
 pnpm docs:check

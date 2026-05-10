@@ -82,6 +82,10 @@ Config file: `~/.pi/agent/extensions/devkit-pi/config.json`
 | **implementer** | Implementation planning | readonly |
 | **tester** | Test strategy, edge case planning | readonly |
 
+## Error Codes
+
+`INVALID_INPUT` | `SUBAGENTS_DISABLED` | `UNKNOWN_AGENT` | `SUBAGENT_DISABLED` | `SUBAGENT_DEPTH_EXCEEDED` | `SUBAGENT_TIMEOUT` | `SUBAGENT_FAILED` | `SUBAGENT_OUTPUT_TRUNCATED`
+
 ## Development
 
 ```bash

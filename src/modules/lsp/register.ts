@@ -23,10 +23,7 @@ export interface LspConfig {
   };
 }
 
-export function registerLspModule(
-  _pi: ExtensionAPI,
-  _config: LspConfig,
-): void {
+export function registerLspModule(_pi: ExtensionAPI, _config: LspConfig): void {
   // TODO: Phase 3
   // 1. Register "lsp" tool (from lsp-tool.ts)
   // 2. Register LSP hook (from lsp.ts)
