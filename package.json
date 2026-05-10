@@ -27,6 +27,7 @@
     "cli"
   ],
   "files": [
+    "index.ts",
     "src/**/*.ts",
     "agents/",
     "README.md",
@@ -45,7 +46,7 @@
   },
   "pi": {
     "extensions": [
-      "./src/index.ts"
+      "./index.ts"
     ]
   },
   "peerDependencies": {
