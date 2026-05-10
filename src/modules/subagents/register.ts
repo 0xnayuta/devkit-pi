@@ -16,6 +16,7 @@ import {
   type ExtensionAPI,
   type ExtensionContext,
   getMarkdownTheme,
+  keyHint,
 } from "@earendil-works/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { DELEGATION_EXAMPLES, DELEGATION_POLICY } from "../../shared/delegation-policy.ts";
@@ -109,24 +110,48 @@ type RenderItem =
   | { type: "text"; text: string }
   | { type: "toolCall"; name: string; args: Record<string, unknown> };
 
-function renderDisplayItems(
-  items: RenderItem[],
-  fg: (color: string, text: string) => string,
-  limit?: number
-): string {
-  const toShow = limit ? items.slice(-limit) : items;
-  const skipped = limit && items.length > limit ? items.length - limit : 0;
+const PREVIEW_TOOL_CALLS = 5;
+const PREVIEW_LINES = 5;
+
+function expandKeyHintFn(theme: any): string {
+  try {
+    return keyHint("app.tools.expand", "to expand");
+  } catch {
+    return theme.fg("dim", "ctrl+o") + theme.fg("muted", " to expand");
+  }
+}
+
+function hiddenHintFn(theme: any, message: string): string {
+  return theme.fg("muted", `\n... (${message}, `) + expandKeyHintFn(theme) + theme.fg("muted", ")");
+}
+
+function truncateLines(text: string, maxLines: number): { text: string; truncated: boolean } {
+  const lines = text.split("\n");
+  if (lines.length <= maxLines) return { text, truncated: false };
+  return { text: lines.slice(0, maxLines).join("\n"), truncated: true };
+}
+
+function getTextContent(result: AgentToolResult<any>): string {
+  return result.content
+    .map((item: any) => (item.type === "text" && typeof item.text === "string" ? item.text : ""))
+    .filter((text: string) => text.length > 0)
+    .join("\n");
+}
+
+function renderToolCalls(items: RenderItem[], theme: any, limit?: number): string {
+  const calls = items.filter((i) => i.type === "toolCall");
+  const toShow = limit ? calls.slice(-limit) : calls;
+  const skipped = limit && calls.length > limit ? calls.length - limit : 0;
   let text = "";
-  if (skipped > 0) text += fg("muted", `... ${skipped} earlier items\n`);
+  if (skipped > 0) text += theme.fg("muted", `... ${skipped} earlier`);
   for (const item of toShow) {
-    if (item.type === "text") {
-      const preview = item.text.split("\n").slice(0, 3).join("\n");
-      text += `${fg("toolOutput", preview)}\n`;
-    } else {
-      text += `${fg("muted", "→ ") + formatToolCall(item.name, item.args, fg)}\n`;
+    if (item.type === "toolCall") {
+      const line =
+        theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme));
+      text += text ? `\n${line}` : line;
     }
   }
-  return text.trimEnd();
+  return text;
 }
 
 // ============================================================================
@@ -258,25 +283,26 @@ Example:
           ? `${args.task.slice(0, 60)}...`
           : args.task
         : "...";
-      let text = theme.fg("toolTitle", theme.bold("subagent ")) + theme.fg("accent", agentName);
-      text += `\n  ${theme.fg("dim", preview)}`;
+      const text =
+        theme.fg("toolTitle", theme.bold("subagent ")) +
+        theme.fg("accent", agentName) +
+        `\n  ${theme.fg("dim", preview)}`;
       return new Text(text, 0, 0);
     },
 
     renderResult(result: any, { expanded }: { expanded?: boolean }, theme: any, _context: any) {
       const details = result.details as Details | undefined;
 
-      // --- Streaming view (during execution) ---
+      // --- Streaming (partial execution) ---
       if (details?.streaming) {
-        const icon = theme.fg("warning", "⏳");
         const sd: StreamingDisplay = details.streaming;
-        const displayItems: RenderItem[] = sd.displayItems;
+        const toolCalls: RenderItem[] = sd.displayItems.filter(
+          (i: RenderItem) => i.type === "toolCall"
+        );
 
-        let text = `${icon} ${theme.fg("toolTitle", theme.bold("subagent "))}${theme.fg("accent", details.results[0]?.agent || "...")}${theme.fg("warning", " (running...)")}`;
-
-        if (displayItems.length > 0) {
-          text += `\n${renderDisplayItems(displayItems, theme.fg.bind(theme), 10)}`;
-        }
+        let text = theme.fg("warning", "Running...");
+        const callsText = renderToolCalls(toolCalls, theme, PREVIEW_TOOL_CALLS);
+        if (callsText) text += `\n${callsText}`;
 
         const usageStr = formatUsageStats(sd.usage);
         if (usageStr) text += `\n${theme.fg("dim", usageStr)}`;
@@ -285,69 +311,57 @@ Example:
       }
 
       // --- Final result ---
-      const isError =
-        _context?.isError ||
-        Boolean(details?.error) ||
-        Boolean(details?.results?.some((r: SingleResult) => r.exitCode !== 0));
-      const icon = isError ? theme.fg("error", "✗") : theme.fg("success", "✓");
-
       const r = details?.results?.[0] as SingleResult | undefined;
       if (!r) {
-        const content = result.content
-          .filter((item: any): item is { type: "text"; text: string } => item.type === "text")
-          .map((item: any) => item.text)
-          .join("\n");
-        return new Text(`${icon} ${content || "(no output)"}`, 0, 0);
+        const content = getTextContent(result);
+        return new Text(content || "(no output)", 0, 0);
       }
 
-      const displayItems: RenderItem[] = r.displayItems || [];
+      const isError = _context?.isError || r.exitCode !== 0 || Boolean(details?.error);
       const agentLabel =
         theme.fg("toolTitle", theme.bold(r.agent)) +
-        (r.exitCode !== 0 ? ` ${theme.fg("error", `[exit ${r.exitCode}]`)}` : "");
+        (isError ? ` ${theme.fg("error", `[exit ${r.exitCode}]`)}` : "");
+      const toolCalls: RenderItem[] = (r.displayItems || []).filter(
+        (i: RenderItem) => i.type === "toolCall"
+      );
 
-      // Collapsed: agent + recent tool calls + usage
+      // --- Collapsed ---
       if (!expanded) {
-        let text = `${icon} ${agentLabel}`;
+        let text = agentLabel;
 
-        if (r.error) {
+        // Tool calls summary
+        const callsText = renderToolCalls(toolCalls, theme, PREVIEW_TOOL_CALLS);
+        if (callsText) text += `\n${callsText}`;
+
+        // Output preview or error
+        if (r.error && !r.output) {
           text += `\n${theme.fg("error", r.error.split("\n")[0])}`;
-        } else if (displayItems.length > 0) {
-          text += `\n${renderDisplayItems(displayItems, theme.fg.bind(theme), 8)}`;
-        } else {
-          const preview = (r.output || "").split("\n").slice(0, 3).join("\n");
-          if (preview) text += `\n${theme.fg("toolOutput", preview)}`;
+        } else if (r.output) {
+          const preview = truncateLines(r.output, PREVIEW_LINES);
+          text += `\n${theme.fg("toolOutput", preview.text)}`;
+          if (preview.truncated) {
+            const totalLines = r.output.split("\n").length;
+            text += hiddenHintFn(theme, `${totalLines - PREVIEW_LINES} more lines`);
+          }
         }
 
+        // Usage
         const usageStr = formatUsageStats(r.usage);
         if (usageStr) text += `\n${theme.fg("dim", usageStr)}`;
-
-        if (displayItems.length > 8 || (r.output || "").split("\n").length > 3) {
-          text += `\n${theme.fg("muted", "(Ctrl+O to expand)")}`;
-        }
 
         return new Text(text, 0, 0);
       }
 
-      // Expanded: full detail with markdown rendering
+      // --- Expanded ---
       const container = new Container();
       const mdTheme = getMarkdownTheme();
 
-      container.addChild(new Text(`${icon} ${agentLabel}`, 0, 0));
+      container.addChild(new Text(agentLabel, 0, 0));
 
-      if (r.task) {
+      // Tool calls
+      if (toolCalls.length > 0) {
         container.addChild(new Spacer(1));
-        container.addChild(new Text(theme.fg("muted", "─── Task ───"), 0, 0));
-        container.addChild(new Text(theme.fg("dim", r.task), 0, 0));
-      }
-
-      if (r.error) {
-        container.addChild(new Spacer(1));
-        container.addChild(new Text(theme.fg("muted", "─── Error ───"), 0, 0));
-        container.addChild(new Text(theme.fg("error", r.error), 0, 0));
-      } else if (displayItems.length > 0) {
-        container.addChild(new Spacer(1));
-        container.addChild(new Text(theme.fg("muted", "─── Execution ───"), 0, 0));
-        for (const item of displayItems) {
+        for (const item of toolCalls) {
           if (item.type === "toolCall") {
             container.addChild(
               new Text(
@@ -361,13 +375,16 @@ Example:
         }
       }
 
-      const outputText = r.output || "";
-      if (outputText) {
+      // Output
+      if (r.output) {
         container.addChild(new Spacer(1));
-        container.addChild(new Text(theme.fg("muted", "─── Output ───"), 0, 0));
-        container.addChild(new Markdown(outputText.trim(), 0, 0, mdTheme));
+        container.addChild(new Markdown(r.output.trim(), 0, 0, mdTheme));
+      } else if (r.error) {
+        container.addChild(new Spacer(1));
+        container.addChild(new Text(theme.fg("error", r.error), 0, 0));
       }
 
+      // Usage
       const usageStr = formatUsageStats(r.usage);
       if (usageStr) {
         container.addChild(new Spacer(1));
