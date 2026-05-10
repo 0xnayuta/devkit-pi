@@ -124,4 +124,4 @@ Privileged actions：`rename`、`codeAction`、`restart`。
 
 | 字段 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `commands.enabled` | boolean | `true` | 是否启用 developer commands |
+| `commands.enabled` | boolean | `true` | 是否启用统一 `/toolkit` developer command |

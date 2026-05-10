@@ -32,11 +32,11 @@ describe("subagents module registration", () => {
     else process.env[PI_SUBAGENT_CHILD] = originalChild;
   });
 
-  it("respects commands.enabled", () => {
+  it("registers subagent tool in main process", () => {
     const pi = createPiMock();
-    const config = mergeConfig({ commands: { enabled: false } });
+    const config = mergeConfig({});
 
-    registerSubagentsModule(pi as any, config.subagents, config.commands);
+    registerSubagentsModule(pi as any, config.subagents);
 
     assert.deepEqual(pi.tools.map((tool) => tool.name), ["subagent"]);
     assert.deepEqual(pi.commands, []);
@@ -47,7 +47,7 @@ describe("subagents module registration", () => {
     const pi = createPiMock();
     const config = mergeConfig({});
 
-    registerSubagentsModule(pi as any, config.subagents, config.commands);
+    registerSubagentsModule(pi as any, config.subagents);
 
     assert.equal(pi.tools.length, 0);
     assert.equal(pi.commands.length, 0);

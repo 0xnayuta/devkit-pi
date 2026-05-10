@@ -20,15 +20,16 @@ src/
 ├─ index.ts              # 薄入口，只做组合注册
 ├─ modules/
 │  ├─ subagents/         # 专职任务委派、agent 发现、执行
-│  │  └─ commands/       # doctor, list, logs, activity
+│  │  └─ commands/       # doctor/list/logs 诊断与格式化逻辑
 │  ├─ web/               # 搜索、网页内容获取
 │  │  └─ providers/      # ddgs, brave, tavily, serper, openserp, searxng
-│  └─ lsp/               # LSP tool、hook 与 server 管理
+│  ├─ lsp/               # LSP tool、hook 与 server 管理
+│  └─ commands/          # 统一 /toolkit 命令注册
 ├─ config/               # 配置加载与默认值
 └─ shared/               # 类型、错误码、通用工具
 
 agents/                  # 5 个内置 agent 定义（markdown）
-tests/                   # 镜像 src/modules 结构
+tests/                   # 镜像 src/modules 结构（含 tests/commands）
 docs/                    # 文档、ADR、指南
 ```
 

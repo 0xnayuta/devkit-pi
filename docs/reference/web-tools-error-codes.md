@@ -132,9 +132,9 @@ try {
 
 ```bash
 # 查看最近错误
-/subagents logs | grep "✗"
+/toolkit logs | grep "✗"
 
 /# 查看详细错误
-/subagents activity
+/toolkit activity
 # 选择错误条目查看详情
 ```

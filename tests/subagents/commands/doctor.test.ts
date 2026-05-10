@@ -25,7 +25,7 @@ describe("commands/doctor - runDoctorChecks", () => {
   it("includes all required check categories", async () => {
     const report = await runDoctorChecks(process.cwd());
 
-    const categories = ["config", "agents", "permissions", "web-tools"];
+    const categories = ["config", "agents", "permissions", "web-tools", "lsp"];
     for (const cat of categories) {
       assert.ok(report.items.find((i) => i.category === cat), `missing ${cat}`);
     }

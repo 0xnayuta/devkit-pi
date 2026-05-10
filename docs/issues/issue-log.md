@@ -23,3 +23,4 @@ Decision needed:
 - Phase 3: `workspace-diagnostics` input and LSP result output are capped.
 - Phase 4: subagents can optionally use readonly LSP actions through an explicit whitelist.
 - Phase 5: LSP hook is registered only in the main process, defaults to `agent_end`, and remains configurable under `lsp.hook`.
+- Phase 6: unified developer commands under `/toolkit`; removed legacy `/subagents` and `/lsp` commands.

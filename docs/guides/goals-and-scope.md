@@ -26,7 +26,7 @@ subagents + web tools + LSP tool + LSP diagnostics hook + developer commands
 - LSP tool：definitions、references、hover、signature、symbols、diagnostics、workspace diagnostics、servers
 - LSP diagnostics hook：默认在 `agent_end` 后对本轮修改文件自动诊断，可配置为 `edit_write` 或关闭
 - 可选的子代理 readonly LSP：通过 `subagents.allowLspTools` 和 `subagents.allowedLspActions` 控制
-- developer commands：doctor、list、logs、activity
+- unified developer command：`/toolkit`（doctor、modules、logs、agents、lsp、activity）
 - namespace 化配置：`subagents` / `web` / `lsp` / `commands`
 
 ## 当前不包含

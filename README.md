@@ -11,6 +11,7 @@ Combines subagents, web research, LSP code intelligence, automatic diagnostics h
 | **subagents** | Delegate tasks to 5 specialized readonly agents | enabled |
 | **web** | Web search, URL content fetch, external research | enabled |
 | **lsp** | Language Server Protocol: definitions, references, diagnostics, symbols, auto diagnostics hook | enabled |
+| **commands** | Unified `/toolkit` command center for doctor/modules/logs/agents/lsp/activity | enabled |
 
 ## Quick Start
 
@@ -112,7 +113,8 @@ src/
 ├─ modules/
 │  ├─ subagents/            # Task delegation module
 │  ├─ web/                  # Web research module
-│  └─ lsp/                  # LSP code intelligence module
+│  ├─ lsp/                  # LSP code intelligence module
+│  └─ commands/             # Unified /toolkit command module
 ├─ config/                  # Configuration loading
 └─ shared/                  # Types, errors, utilities
 agents/                     # Built-in agent definitions

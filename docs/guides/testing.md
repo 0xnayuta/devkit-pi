@@ -19,7 +19,8 @@ last_verified: 2026-05-10
 
 ```text
 tests/subagents/          # subagents module
-tests/subagents/commands/ # subagent developer commands
+tests/subagents/commands/ # doctor/list/logs formatters & checks
+tests/commands/           # unified toolkit command registration
 tests/web/                # web module
 tests/lsp/                # lsp module
 tests/shared/             # shared utilities

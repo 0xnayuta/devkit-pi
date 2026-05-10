@@ -36,7 +36,7 @@
   ],
   "scripts": {
     "test": "pnpm test:unit",
-    "test:unit": "node --experimental-strip-types --test tests/subagents/*.test.ts tests/subagents/commands/*.test.ts tests/web/*.test.ts tests/lsp/*.test.ts tests/shared/*.test.ts tests/package-manifest.test.ts",
+    "test:unit": "node --experimental-strip-types --test tests/subagents/*.test.ts tests/subagents/commands/*.test.ts tests/commands/*.test.ts tests/web/*.test.ts tests/lsp/*.test.ts tests/shared/*.test.ts tests/package-manifest.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src",
     "lint:fix": "biome check --write src",

@@ -3,7 +3,6 @@
  *
  * Registers:
  * - "subagent" tool — delegates tasks to specialized readonly agents
- * - Developer commands: doctor, list, logs, activity
  * - Event handlers: before_agent_start (delegation policy), session_start, session_shutdown
  *
  * Subagents module registration
@@ -21,7 +20,6 @@ import { Text } from "@earendil-works/pi-tui";
 import { DELEGATION_EXAMPLES, DELEGATION_POLICY } from "../../shared/delegation-policy.ts";
 import { resolveCurrentSessionId } from "../../shared/session-identity.ts";
 import {
-  type CommandsConfig,
   checkSubagentDepth,
   type Details,
   PI_SUBAGENT_CHILD,
@@ -31,10 +29,6 @@ import {
   type SubagentState,
 } from "../../shared/types.ts";
 import { discoverAgents } from "./agents.ts";
-import { createActivityPanel } from "./commands/activity.ts";
-import { formatDoctorReport, runDoctorChecks } from "./commands/doctor.ts";
-import { formatAgentList, getAgentList } from "./commands/list.ts";
-import { formatLogs, type LogsOptions } from "./commands/logs.ts";
 import { createSubagentExecutor, type SubagentParamsLike } from "./executor.ts";
 import { SubagentParams } from "./schemas.ts";
 
@@ -65,11 +59,7 @@ function ensureAccessibleDir(dirPath: string): void {
 // Module Registration
 // ============================================================================
 
-export function registerSubagentsModule(
-  pi: ExtensionAPI,
-  config: ResolvedSubagentsConfig,
-  commandsConfig: Required<CommandsConfig> = { enabled: true }
-): void {
+export function registerSubagentsModule(pi: ExtensionAPI, config: ResolvedSubagentsConfig): void {
   // Prevent child processes from registering the subagent tool.
   if (process.env[PI_SUBAGENT_CHILD] === "1") return;
 
@@ -192,11 +182,6 @@ Example:
   // Register the tool
   pi.registerTool(tool);
 
-  // Register developer commands
-  if (commandsConfig.enabled) {
-    registerDeveloperCommands(pi);
-  }
-
   // Inject delegation policy into parent agent's system prompt
   pi.on("before_agent_start", async (event) => {
     if (!config.injectDelegationPolicy) return;
@@ -224,104 +209,5 @@ Example:
   pi.on("session_shutdown", () => {
     state.lastUiContext = null;
     state.currentSessionId = null;
-  });
-}
-
-// ============================================================================
-// Developer Commands
-// ============================================================================
-
-function registerDeveloperCommands(pi: ExtensionAPI): void {
-  // /subagents doctor - Diagnostic check
-  pi.registerCommand("doctor", {
-    description: "Check subagent configuration, agents, and providers",
-    handler: async (_args: string, ctx) => {
-      const cwd = ctx.cwd;
-      try {
-        const report = await runDoctorChecks(cwd);
-        const output = formatDoctorReport(report);
-        console.log(output);
-        ctx.ui.notify(
-          `Doctor: ${report.summary.passed} passed, ${report.summary.warnings} warnings, ${report.summary.failed} failed`,
-          "info"
-        );
-      } catch (error) {
-        ctx.ui.notify(
-          `Doctor check failed: ${error instanceof Error ? error.message : error}`,
-          "error"
-        );
-      }
-    },
-  });
-
-  // /subagents list - List available agents
-  pi.registerCommand("list", {
-    description: "List all available subagents",
-    handler: async (_args: string, ctx) => {
-      try {
-        const report = getAgentList(ctx.cwd);
-        const output = formatAgentList(report);
-        console.log(output);
-        ctx.ui.notify(`Found ${report.total} agents`, "info");
-      } catch (error) {
-        ctx.ui.notify(`List failed: ${error instanceof Error ? error.message : error}`, "error");
-      }
-    },
-  });
-
-  // /subagents logs - Show recent activity logs
-  pi.registerCommand("logs", {
-    description: "Show recent web tool activity logs",
-    handler: async (args: string, ctx) => {
-      try {
-        const options: LogsOptions = {};
-        if (args.includes("--search")) {
-          options.type = "search";
-        } else if (args.includes("--fetch")) {
-          options.type = "fetch";
-        }
-        const match = args.match(/--limit\s+(\d+)/);
-        if (match) {
-          options.limit = Number.parseInt(match[1], 10);
-        }
-
-        const output = formatLogs(options);
-        console.log(output);
-        ctx.ui.notify("Activity logs printed to console", "info");
-      } catch (error) {
-        ctx.ui.notify(`Logs failed: ${error instanceof Error ? error.message : error}`, "error");
-      }
-    },
-  });
-
-  // /subagents activity - Show interactive activity panel (TUI)
-  pi.registerCommand("activity", {
-    description: "Show interactive activity panel (TUI)",
-    handler: async (_args: string, ctx) => {
-      try {
-        const panel = createActivityPanel({ maxEntries: 15, autoRefresh: true });
-
-        await ctx.ui.custom<void>((tui, _theme, _keybindings, done) => {
-          panel.setOnClose(() => done());
-
-          return {
-            render: (width: number) => panel.render(width),
-            invalidate: () => panel.invalidate(),
-            handleInput: (data: string) => {
-              panel.handleInput(data);
-              tui.requestRender();
-            },
-            dispose: () => panel.dispose(),
-          };
-        });
-
-        ctx.ui.notify("Activity panel closed", "info");
-      } catch (error) {
-        ctx.ui.notify(
-          `Activity panel error: ${error instanceof Error ? error.message : error}`,
-          "error"
-        );
-      }
-    },
   });
 }

@@ -38,7 +38,8 @@ export function registerModule(pi: ExtensionAPI): void {
 ```ts
 registerWebTools(pi, config.web);
 registerLspModule(pi, config.lsp);
-registerSubagentsModule(pi, config.subagents, config.commands);
+registerSubagentsModule(pi, config.subagents);
+registerToolkitCommands(pi, config);
 ```
 
 ## 事件监听

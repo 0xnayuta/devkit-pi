@@ -6,7 +6,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { getConfigPath, loadConfig, mergeConfig } from "../../../config/load-config.ts";
-import { RESULTS_DIR, type ResolvedWebConfig } from "../../../shared/types.ts";
+import {
+  RESULTS_DIR,
+  type ResolvedToolkitConfig,
+  type ResolvedWebConfig,
+} from "../../../shared/types.ts";
 import { getSearchProvider } from "../../web/providers/registry.ts";
 import type { SearchProviderAdapter } from "../../web/providers/types.ts";
 import { discoverAgents } from "../agents.ts";
@@ -136,7 +140,10 @@ async function checkProvider(
 // Main Diagnostic Function
 // ============================================================================
 
-export async function runDoctorChecks(cwd: string): Promise<DoctorReport> {
+export async function runDoctorChecks(
+  cwd: string,
+  resolvedConfig?: ResolvedToolkitConfig
+): Promise<DoctorReport> {
   const items: DiagnosticItem[] = [];
 
   // 1. Configuration check
@@ -224,7 +231,7 @@ export async function runDoctorChecks(cwd: string): Promise<DoctorReport> {
   }
 
   // 3. Provider checks
-  const config = mergeConfig(loadConfig());
+  const config = resolvedConfig ?? mergeConfig(loadConfig());
 
   // Check ddgs first (always available if installed)
   const ddgsProvider = getSearchProvider("ddgs");
@@ -289,6 +296,33 @@ export async function runDoctorChecks(cwd: string): Promise<DoctorReport> {
       : "Enable web.enabled in config to use web_search and fetch_content",
   });
 
+  // 6. LSP diagnostics/tool status
+  if (!config.lsp.enabled) {
+    items.push({
+      status: "warn",
+      category: "lsp",
+      message: "LSP module disabled",
+      details: "Enable lsp.enabled in config to use lsp tool and diagnostics hook",
+    });
+  } else {
+    items.push({
+      status: config.lsp.tool.enabled ? "pass" : "warn",
+      category: "lsp",
+      message: config.lsp.tool.enabled ? "LSP tool enabled" : "LSP tool disabled",
+      details: config.lsp.tool.allowMutatingActions
+        ? "Mutating actions allowed in main process"
+        : "Mutating actions blocked by default",
+    });
+
+    items.push({
+      status: config.lsp.hook.enabled ? "pass" : "info",
+      category: "lsp",
+      message: config.lsp.hook.enabled
+        ? `LSP diagnostics hook enabled (${config.lsp.hook.mode})`
+        : "LSP diagnostics hook disabled",
+    });
+  }
+
   // Calculate summary
   const summary = {
     passed: items.filter((i) => i.status === "pass").length,
@@ -309,7 +343,7 @@ export function formatDoctorReport(report: DoctorReport): string {
 
   // Header
   lines.push(`╔${"═".repeat(width)}╗`);
-  lines.push(`║${" Subagent Doctor - Diagnostic Report ".padEnd(width)}║`);
+  lines.push(`║${" Toolkit Doctor - Diagnostic Report ".padEnd(width)}║`);
   lines.push(`╠${"═".repeat(width)}╣`);
 
   // Group by category
