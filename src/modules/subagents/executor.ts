@@ -27,7 +27,7 @@ import {
 } from "../../shared/types.ts";
 import type { AgentConfig, AgentScope } from "./agents.ts";
 import { collectOutput } from "./collect-output.ts";
-import { type RunSyncResult, runSync } from "./execution.ts";
+import { type DisplayItem, type RunSyncResult, runSync, type StreamingState } from "./execution.ts";
 import { buildSubagentChildArgs, cleanupTempDir } from "./pi-args.ts";
 import { buildChildPrompt } from "./prompt-runtime.ts";
 import { sanitizeOutput } from "./sanitize.ts";
@@ -313,6 +313,7 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
     let partialOutput: string | undefined;
     let sessionFile = path.join(sessionDir, "session.jsonl");
     let attemptsUsed = 0;
+    let finalDisplayItems: DisplayItem[] | undefined;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       attemptsUsed = attempt;
@@ -342,12 +343,23 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
         const result: RunSyncResult = await runSync(cwd, piArgs.args, {
           signal: combinedSignal,
           env: piArgs.env,
-          onUpdate: (update) => {
-            onUpdate?.({
-              content: update.content as any,
+          onStreamingUpdate: (state: StreamingState) => {
+            if (!onUpdate) return;
+            onUpdate({
+              content: [
+                {
+                  type: "text",
+                  text: state.lastAssistantText || "(running...)",
+                },
+              ],
               details: {
                 mode: "single",
                 results: [],
+                streaming: {
+                  displayItems: buildDisplayItems(state),
+                  usage: state.usage,
+                  turnCount: state.usage.turns,
+                },
               },
             });
           },
@@ -358,6 +370,7 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
         usage = result.usage;
         providerError = result.error;
         partialOutput = result.partialOutput;
+        finalDisplayItems = result.displayItems;
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           if (signal.aborted) {
@@ -431,6 +444,7 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
       error: exitCode !== 0 ? sanitizedOutput : undefined,
       sessionFile,
       output: sanitizedOutput,
+      displayItems: finalDisplayItems,
     };
 
     // Determine if truncation occurred
@@ -477,4 +491,37 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
   };
 
   return { execute };
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Build display items from a streaming state snapshot.
+ * Deduplicates: only emits items not already sent in a previous snapshot.
+ * For simplicity, we rebuild the full list each time (the TUI replaces
+ * the display in-place, so duplicates are not visible).
+ */
+function buildDisplayItems(
+  state: StreamingState
+): Array<
+  { type: "text"; text: string } | { type: "toolCall"; name: string; args: Record<string, unknown> }
+> {
+  const items: Array<
+    | { type: "text"; text: string }
+    | { type: "toolCall"; name: string; args: Record<string, unknown> }
+  > = [];
+
+  // Add tool calls from the streaming state
+  for (const tc of state.toolCalls) {
+    items.push({ type: "toolCall", name: tc.name, args: tc.args });
+  }
+
+  // Add the latest assistant text
+  if (state.lastAssistantText) {
+    items.push({ type: "text", text: state.lastAssistantText });
+  }
+
+  return items;
 }

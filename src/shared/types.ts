@@ -87,6 +87,24 @@ export interface SingleResult {
   error?: string;
   sessionFile?: string;
   output?: string;
+  /** Display items from assistant messages (tool calls, text blocks). */
+  displayItems?: Array<
+    | { type: "text"; text: string }
+    | { type: "toolCall"; name: string; args: Record<string, unknown> }
+  >;
+}
+
+// ---------------------------------------------------------------------------
+// Streaming display (passed via onUpdate during execution)
+// ---------------------------------------------------------------------------
+
+export interface StreamingDisplay {
+  displayItems: Array<
+    | { type: "text"; text: string }
+    | { type: "toolCall"; name: string; args: Record<string, unknown> }
+  >;
+  usage: Usage;
+  turnCount: number;
 }
 
 // ============================================================================
@@ -104,6 +122,8 @@ export interface Details {
     code: SubagentErrorCode;
     message: string;
   };
+  /** Streaming display state (present during execution, absent in final result). */
+  streaming?: StreamingDisplay;
 }
 
 // TextContent type (copied from pi-agent-core for local use)
