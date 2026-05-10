@@ -7,6 +7,7 @@ export interface WebSecurityLimits {
   maxResponseBytes: number;
   maxContentChars: number;
   maxResults: number;
+  allowPrivateNetwork: boolean;
 }
 
 export function getWebSecurityLimits(config: ResolvedWebConfig): WebSecurityLimits {
@@ -15,6 +16,7 @@ export function getWebSecurityLimits(config: ResolvedWebConfig): WebSecurityLimi
     maxResponseBytes: config.maxResponseBytes,
     maxContentChars: config.maxContentChars,
     maxResults: config.maxResults,
+    allowPrivateNetwork: config.allowPrivateNetwork,
   };
 }
 
@@ -98,7 +100,17 @@ function isBlockedHostname(hostname: string): boolean {
   );
 }
 
-export async function validatePublicHttpUrl(input: string): Promise<URL> {
+export function isPrivateNetworkHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase().replace(/\.$/, "");
+  const hostForIp = normalizeHostForIp(normalized);
+  if (isIP(hostForIp)) return isBlockedAddress(hostForIp);
+  return isBlockedHostname(normalized);
+}
+
+export async function validatePublicHttpUrl(
+  input: string,
+  options?: { allowPrivateNetwork?: boolean }
+): Promise<URL> {
   let parsed: URL;
   try {
     parsed = new URL(input);
@@ -108,6 +120,12 @@ export async function validatePublicHttpUrl(input: string): Promise<URL> {
 
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new Error(`Unsupported URL protocol: ${parsed.protocol}`);
+  }
+
+  // When allowPrivateNetwork is enabled, skip all private address blocking.
+  // Protocol and URL format validation still apply.
+  if (options?.allowPrivateNetwork) {
+    return parsed;
   }
 
   if (isBlockedHostname(parsed.hostname)) {

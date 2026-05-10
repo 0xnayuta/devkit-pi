@@ -27,6 +27,8 @@ export const DEFAULT_WEB_CONFIG: ResolvedWebConfig = {
   jinaTimeoutMs: 8000,
   maxStoredResults: 100,
   maxStoredContentChars: 200000,
+  allowPrivateNetwork: false,
+  jinaTriggers: ["short-html", "js-heavy-html"],
   debug: false,
   cache: {
     enabled: false,
@@ -198,6 +200,15 @@ function trimString(value: unknown, fallback: string): string {
   return typeof value === "string" ? value.trim() : fallback;
 }
 
+function normalizeJinaTriggers(value: unknown): string[] {
+  if (!Array.isArray(value)) return [...DEFAULT_WEB_CONFIG.jinaTriggers];
+  return [
+    ...new Set(
+      value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    ),
+  ];
+}
+
 function normalizeWebConfig(base: WebConfig | undefined): ResolvedWebConfig {
   return {
     enabled: booleanValue(base?.enabled, DEFAULT_WEB_CONFIG.enabled),
@@ -217,6 +228,11 @@ function normalizeWebConfig(base: WebConfig | undefined): ResolvedWebConfig {
       base?.maxStoredContentChars,
       DEFAULT_WEB_CONFIG.maxStoredContentChars
     ),
+    allowPrivateNetwork: booleanValue(
+      base?.allowPrivateNetwork,
+      DEFAULT_WEB_CONFIG.allowPrivateNetwork
+    ),
+    jinaTriggers: normalizeJinaTriggers(base?.jinaTriggers),
     debug: normalizeDebugLevel(base?.debug),
     cache: {
       enabled: booleanValue(base?.cache?.enabled, DEFAULT_WEB_CONFIG.cache.enabled),

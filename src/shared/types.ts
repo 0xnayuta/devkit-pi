@@ -209,6 +209,10 @@ export interface WebConfig {
   jinaTimeoutMs?: number;
   maxStoredResults?: number;
   maxStoredContentChars?: number;
+  /** Phase 4: allow fetching from localhost / private IPs. Default: false. */
+  allowPrivateNetwork?: boolean;
+  /** Phase 5: which conditions trigger Jina Reader fallback. Default: ["short-html", "js-heavy-html"]. */
+  jinaTriggers?: string[];
   debug?: DebugLevel;
   cache?: CacheConfig;
   concurrency?: ConcurrencyConfig;

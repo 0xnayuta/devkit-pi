@@ -3,6 +3,8 @@ import { Type } from "typebox";
 export const FetchContentParams = Type.Object({
   url: Type.Optional(Type.String()),
   urls: Type.Optional(Type.Array(Type.String())),
+  /** Phase 5: explicitly request Jina Reader for HTML content. */
+  preferReader: Type.Optional(Type.Boolean()),
 });
 
 export const WebSearchParams = Type.Object({

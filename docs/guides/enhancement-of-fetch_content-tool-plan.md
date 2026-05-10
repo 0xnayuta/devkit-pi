@@ -1,3 +1,9 @@
+---
+status: proposed
+audience: maintainer
+last_verified: 2026-05-10
+---
+
 # 一、扩展 / 增强 `fetch_content` 工具功能计划
 
 ## 目标定位

@@ -108,3 +108,6 @@ pnpm docs:check
 - `docs/guides/goals-and-scope.md` - 目标与范围
 - `docs/guides/extension-api.md` - 扩展 API 参考
 - `docs/adr/` - 架构决策记录
+
+## 输出结果要求
+在每轮输出的最后必须给出对下一轮的建议

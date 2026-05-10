@@ -82,9 +82,23 @@ export function isLikelyJsRendered(html: string): boolean {
   return textContent.length < MIN_USEFUL_HTML_CONTENT && scriptCount > 3;
 }
 
+/** Automatic Jina trigger types (excludes "user-request" which is handled separately). */
+export type JinaTrigger = "short-html" | "js-heavy-html";
+
+/**
+ * Detect which automatic Jina Reader trigger condition applies.
+ * Returns the trigger name or null if no automatic trigger matches.
+ * "user-request" (preferReader) is checked separately in fetch.ts.
+ */
+export function detectJinaTrigger(html: string, extractedContent: string): JinaTrigger | null {
+  if (extractedContent.length < MIN_USEFUL_HTML_CONTENT) return "short-html";
+  if (isLikelyJsRendered(html)) return "js-heavy-html";
+  return null;
+}
+
+/** @deprecated Use detectJinaTrigger() for Phase 5+ logic. */
 export function shouldTryJinaFallback(html: string, extractedContent: string): boolean {
-  if (extractedContent.length < MIN_USEFUL_HTML_CONTENT) return true;
-  return isLikelyJsRendered(html);
+  return detectJinaTrigger(html, extractedContent) !== null;
 }
 
 export function extractPlainText(

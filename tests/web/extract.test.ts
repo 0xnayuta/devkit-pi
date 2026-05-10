@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  detectJinaTrigger,
   extractHeadingTitle,
   extractHtml,
   extractPlainText,
@@ -192,7 +193,48 @@ describe("extract - isLikelyJsRendered", () => {
 // shouldTryJinaFallback
 // ---------------------------------------------------------------------------
 
-describe("extract - shouldTryJinaFallback", () => {
+describe("extract - detectJinaTrigger", () => {
+  it("returns 'short-html' when extracted content is very short", () => {
+    assert.equal(detectJinaTrigger("<html><body>x</body></html>", "x"), "short-html");
+  });
+
+  it("returns 'js-heavy-html' when page is JS-heavy but extracted content is substantial", () => {
+    // SPA-like page: many scripts, minimal visible body text
+    const html = `
+      <html><body>
+        <script src="a.js"></script>
+        <script src="b.js"></script>
+        <script src="c.js"></script>
+        <script src="d.js"></script>
+        <div id="app"></div>
+      </body></html>
+    `;
+    // Extracted content is substantial (from Jina or earlier processing),
+    // but the raw HTML body is JS-heavy (few visible chars, many scripts)
+    const longContent = "word ".repeat(100); // 500 chars > 200 threshold
+    assert.equal(detectJinaTrigger(html, longContent), "js-heavy-html");
+  });
+
+  it("returns null when content is substantial and page is not JS-heavy", () => {
+    const longContent = "word ".repeat(100);
+    assert.equal(detectJinaTrigger("<html><body><p>ok</p></body></html>", longContent), null);
+  });
+
+  it("prefers short-html over js-heavy-html when both apply", () => {
+    const html = `
+      <html><body>
+        <script src="a.js"></script>
+        <script src="b.js"></script>
+        <script src="c.js"></script>
+        <script src="d.js"></script>
+      </body></html>
+    `;
+    // Short content + JS-heavy → short-html takes priority
+    assert.equal(detectJinaTrigger(html, "hi"), "short-html");
+  });
+});
+
+describe("extract - shouldTryJinaFallback (legacy)", () => {
   it("returns true when extracted content is very short", () => {
     assert.equal(shouldTryJinaFallback("<html><body>x</body></html>", "x"), true);
   });

@@ -315,3 +315,84 @@ describe("security - validatePublicHttpUrl: hostname DNS resolution", () => {
     assert.equal(url.hostname, "example.com");
   });
 });
+
+describe("security - validatePublicHttpUrl: allowPrivateNetwork", () => {
+  it("allows localhost when enabled", async () => {
+    const url = await validatePublicHttpUrl("http://localhost:3000", {
+      allowPrivateNetwork: true,
+    });
+    assert.equal(url.hostname, "localhost");
+    assert.equal(url.port, "3000");
+  });
+
+  it("allows 127.0.0.1 when enabled", async () => {
+    const url = await validatePublicHttpUrl("http://127.0.0.1:8080/api", {
+      allowPrivateNetwork: true,
+    });
+    assert.equal(url.hostname, "127.0.0.1");
+  });
+
+  it("allows private 10.x.x.x when enabled", async () => {
+    const url = await validatePublicHttpUrl("http://10.0.0.1/", {
+      allowPrivateNetwork: true,
+    });
+    assert.equal(url.hostname, "10.0.0.1");
+  });
+
+  it("allows 192.168.x.x when enabled", async () => {
+    const url = await validatePublicHttpUrl("http://192.168.1.100:3000", {
+      allowPrivateNetwork: true,
+    });
+    assert.equal(url.hostname, "192.168.1.100");
+  });
+
+  it("allows .local hostname when enabled", async () => {
+    const url = await validatePublicHttpUrl("http://myhost.local:8080", {
+      allowPrivateNetwork: true,
+    });
+    assert.equal(url.hostname, "myhost.local");
+  });
+
+  it("still rejects invalid URL format even when enabled", async () => {
+    await assert.rejects(
+      () => validatePublicHttpUrl("not a url", { allowPrivateNetwork: true }),
+      /Invalid URL/
+    );
+  });
+
+  it("still rejects unsupported protocol even when enabled", async () => {
+    await assert.rejects(
+      () => validatePublicHttpUrl("ftp://localhost/file", { allowPrivateNetwork: true }),
+      /Unsupported URL protocol: ftp:/
+    );
+  });
+
+  it("still rejects file:// protocol even when enabled", async () => {
+    await assert.rejects(
+      () => validatePublicHttpUrl("file:///etc/passwd", { allowPrivateNetwork: true }),
+      /Unsupported URL protocol: file:/
+    );
+  });
+
+  it("blocks localhost by default (allowPrivateNetwork not set)", async () => {
+    await assert.rejects(
+      () => validatePublicHttpUrl("http://localhost:3000"),
+      /Blocked private hostname/
+    );
+  });
+
+  it("blocks localhost when explicitly false", async () => {
+    await assert.rejects(
+      () =>
+        validatePublicHttpUrl("http://localhost:3000", { allowPrivateNetwork: false }),
+      /Blocked private hostname/
+    );
+  });
+});
+
+describe("security - getWebSecurityLimits: allowPrivateNetwork", () => {
+  it("defaults to false", () => {
+    const limits = getWebSecurityLimits(DEFAULT_WEB_CONFIG);
+    assert.equal(limits.allowPrivateNetwork, false);
+  });
+});
