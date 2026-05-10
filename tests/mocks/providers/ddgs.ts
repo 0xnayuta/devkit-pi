@@ -3,7 +3,7 @@
  * Phase 3: Test Framework - Mock providers for testing
  */
 
-import type { SearchProviderAdapter } from "../../../src/modules/web/providers/types.ts";
+import type { SearchProviderAdapter, WebSearchProviderName } from "../../../src/modules/web/providers/types.ts";
 
 /**
  * Mock DDGS provider for testing
@@ -60,7 +60,7 @@ export function createMockFailingProvider(
   message = "Mock provider failure"
 ): SearchProviderAdapter {
   return {
-    name: "failing",
+    name: "failing" as WebSearchProviderName,
     isAvailable: async () => {
       throw new Error("Provider unavailable");
     },
@@ -77,7 +77,7 @@ export function createMockFailingProvider(
  */
 export function createMockRateLimitedProvider(): SearchProviderAdapter {
   return {
-    name: "rate-limited",
+    name: "rate-limited" as WebSearchProviderName,
     isAvailable: async () => true,
     search: async () => {
       const error = new Error("Too Many Requests");
@@ -92,7 +92,7 @@ export function createMockRateLimitedProvider(): SearchProviderAdapter {
  */
 export function createMockAuthFailedProvider(): SearchProviderAdapter {
   return {
-    name: "auth-failed",
+    name: "auth-failed" as WebSearchProviderName,
     isAvailable: async () => true,
     search: async () => {
       const error = new Error("Unauthorized");

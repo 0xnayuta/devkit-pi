@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
+import type { ExtractedContent, QueryResultData } from "../../src/modules/web/types.ts";
 import {
   WEB_RESULTS_CUSTOM_TYPE,
   WEB_RESULTS_TTL_MS,
@@ -71,8 +72,8 @@ describe("web storage get_search_content", () => {
     const result = getSearchContent({ responseId, urlIndex: 1 }, 30_000);
     assert.equal("result" in result, true);
     if ("result" in result) {
-      assert.equal(result.result.type, undefined);
-      assert.equal(result.result.url, "https://example.com/b");
+      assert.equal((result.result as { type?: string }).type, undefined);
+      assert.equal((result.result as ExtractedContent).url, "https://example.com/b");
     }
   });
 
@@ -81,7 +82,7 @@ describe("web storage get_search_content", () => {
     const result = getSearchContent({ responseId, url: "https://example.com/a" }, 30_000);
     assert.equal("result" in result, true);
     if ("result" in result) {
-      assert.equal(result.result.url, "https://example.com/a");
+      assert.equal((result.result as ExtractedContent).url, "https://example.com/a");
     }
   });
 
@@ -90,7 +91,7 @@ describe("web storage get_search_content", () => {
     const result = getSearchContent({ responseId, queryIndex: 0 }, 30_000);
     assert.equal("result" in result, true);
     if ("result" in result) {
-      assert.equal(result.result.query, "alpha");
+      assert.equal((result.result as QueryResultData).query, "alpha");
     }
   });
 
@@ -99,7 +100,7 @@ describe("web storage get_search_content", () => {
     const result = getSearchContent({ responseId, query: "alpha" }, 30_000);
     assert.equal("result" in result, true);
     if ("result" in result) {
-      assert.equal(result.result.query, "alpha");
+      assert.equal((result.result as QueryResultData).query, "alpha");
     }
   });
 
@@ -173,8 +174,8 @@ describe("web storage get_search_content", () => {
     assert.equal("result" in third, true);
 
     if ("result" in second) {
-      assert.equal(second.result.content, "22222");
-      assert.equal(second.result.truncated, true);
+      assert.equal((second.result as ExtractedContent).content, "22222");
+      assert.equal((second.result as ExtractedContent).truncated, true);
     }
   });
 
@@ -190,10 +191,10 @@ describe("web storage get_search_content", () => {
     assert.equal("result" in truncated, true);
     assert.equal("result" in full, true);
     if ("result" in truncated && "result" in full) {
-      assert.equal(truncated.result.content, "01234");
-      assert.equal(truncated.result.truncated, true);
-      assert.equal(full.result.content, "0123456789");
-      assert.equal(full.result.truncated, false);
+      assert.equal((truncated.result as ExtractedContent).content, "01234");
+      assert.equal((truncated.result as ExtractedContent).truncated, true);
+      assert.equal((full.result as ExtractedContent).content, "0123456789");
+      assert.equal((full.result as ExtractedContent).truncated, false);
     }
   });
 });

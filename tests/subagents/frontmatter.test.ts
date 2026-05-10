@@ -67,7 +67,7 @@ describe("Removed Frontmatter Features", () => {
 		assert.equal((discoverAgents(skillDir, "project").agents.find((a) => a.name === "skill-agent") as any)?.inheritSkills, undefined);
 
 		const ctxDir = tempAgent("ctx-agent", "name: ctx-agent\ndescription: Delegate\ndefaultContext: fork");
-		assert.equal(discoverAgents(ctxDir, "project").agents.find((a) => a.name === "ctx-agent")?.defaultContext, undefined);
+		assert.equal((discoverAgents(ctxDir, "project").agents.find((a) => a.name === "ctx-agent") as any)?.defaultContext, undefined);
 	});
 });
 

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import registerSubagentPromptRuntime, {
 	CHILD_SUBAGENT_BOUNDARY_INSTRUCTIONS,
 	buildChildPrompt,
@@ -116,7 +117,7 @@ describe("subagent prompt runtime", () => {
 			on(event: string, handler: (payload: { systemPrompt: string }) => Promise<{ systemPrompt: string } | undefined>) {
 				if (event === "before_agent_start") beforeAgentStart = handler;
 			},
-		} as { on(event: string, handler: (payload: { systemPrompt: string }) => Promise<{ systemPrompt: string } | undefined>): void });
+		} as unknown as ExtensionAPI);
 
 		assert.ok(beforeAgentStart);
 		process.env.PI_SUBAGENT_INHERIT_PROJECT_CONTEXT = "0";
@@ -134,7 +135,7 @@ describe("subagent prompt runtime", () => {
 			on(event: string, handler: (payload: { messages: unknown[] }) => { messages: unknown[] } | undefined) {
 				if (event === "context") contextHandler = handler;
 			},
-		} as { on(event: string, handler: (payload: { messages: unknown[] }) => { messages: unknown[] } | undefined): void });
+		} as unknown as ExtensionAPI);
 
 		const msg = { role: "user", content: "Task" };
 		const instruction = { role: "custom", customType: "subagent-orchestration-instructions", content: "enabled" };

@@ -15,7 +15,7 @@ const BUILTIN_AGENTS = ["explorer", "researcher", "reviewer", "implementer", "te
 const LEGACY_AGENTS = ["planner", "worker", "delegate", "oracle", "scout", "context-builder"];
 
 function getBuiltinAgents(): AgentConfig[] {
-	return discoverAgents(PROJECT_ROOT, "builtin").agents;
+	return discoverAgents(PROJECT_ROOT, "project").agents.filter((a) => a.source === "builtin");
 }
 
 describe("Built-in Agents Discovery", () => {

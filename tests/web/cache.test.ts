@@ -35,7 +35,7 @@ describe("cache - SearchResultCache", () => {
     assert.equal(disabledCache.get("test", "ddgs", 5), null);
 
     // store and retrieve
-    const results = [{ query: "test", results: [{ title: "Test" }] }];
+    const results = [{ query: "test", results: [{ title: "Test", url: "https://example.com/test" }] }];
     cache.set("test", "ddgs", 5, results);
     const cached = cache.get("test", "ddgs", 5);
     assert.ok(cached);
@@ -56,9 +56,9 @@ describe("cache - SearchResultCache", () => {
   });
 
   it("differentiates by provider and numResults, normalizes case", () => {
-    cache.set("test", "ddgs", 5, [{ query: "test", results: [{ title: "DDGS" }] }]);
-    cache.set("test", "tavily", 5, [{ query: "test", results: [{ title: "Tavily" }] }]);
-    cache.set("test", "ddgs", 10, [{ query: "test", results: [{ title: "10 results" }] }]);
+    cache.set("test", "ddgs", 5, [{ query: "test", results: [{ title: "DDGS", url: "https://example.com/ddgs" }] }]);
+    cache.set("test", "tavily", 5, [{ query: "test", results: [{ title: "Tavily", url: "https://example.com/tavily" }] }]);
+    cache.set("test", "ddgs", 10, [{ query: "test", results: [{ title: "10 results", url: "https://example.com/10" }] }]);
 
     assert.equal(cache.get("test", "ddgs", 5)![0].results[0].title, "DDGS");
     assert.equal(cache.get("test", "tavily", 5)![0].results[0].title, "Tavily");

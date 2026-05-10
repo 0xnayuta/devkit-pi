@@ -77,7 +77,7 @@ describe("fetch_content", () => {
 	it("falls back to Jina reader for JS-heavy pages when enabled", async () => {
 		const calls: string[] = [];
 
-		globalThis.fetch = ((input: RequestInfo | URL) => {
+		globalThis.fetch = ((input: string | URL) => {
 			const url = String(input);
 			calls.push(url);
 			if (url.startsWith("https://r.jina.ai/")) {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/load-config.ts";
 import { webSearch } from "../../src/modules/web/search.ts";
+import type { QueryResultData } from "../../src/modules/web/types.ts";
 import { clearResults, getSearchContent } from "../../src/modules/web/storage.ts";
 
 const mergeWebConfig = (config: Parameters<typeof mergeConfig>[0]) => mergeConfig(config).web;
@@ -32,7 +33,7 @@ function braveResponse(urls = ["https://example.com/a", "https://example.com/b"]
 }
 
 function mockBraveFetch(calls: string[]) {
-  globalThis.fetch = ((input: RequestInfo | URL) => {
+  globalThis.fetch = ((input: string | URL) => {
     calls.push(String(input));
     return Promise.resolve(braveResponse());
   }) as typeof fetch;
@@ -117,7 +118,7 @@ describe("web_search", () => {
     delete process.env.BRAVE_SEARCH_API_KEY;
 
     const calls: string[] = [];
-    globalThis.fetch = ((input: RequestInfo | URL) => {
+    globalThis.fetch = ((input: string | URL) => {
       calls.push(String(input));
       return Promise.resolve(
         new Response(
@@ -150,7 +151,7 @@ describe("web_search", () => {
     process.env.TAVILY_API_KEY = "tavily-test-key";
 
     const calls: string[] = [];
-    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = ((input: string | URL, init?: RequestInit) => {
       calls.push(String(input));
       assert.equal(init?.method, "POST");
       return Promise.resolve(
@@ -259,7 +260,7 @@ describe("web_search", () => {
   it("supports explicit tavily provider", async () => {
     process.env.TAVILY_API_KEY = "tavily-test-key";
 
-    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = ((input: string | URL, init?: RequestInit) => {
       assert.match(String(input), /api\.tavily\.com\/search/);
       assert.equal(init?.method, "POST");
       return Promise.resolve(
@@ -296,7 +297,7 @@ describe("web_search", () => {
   it("supports explicit serper provider", async () => {
     process.env.SERPER_API_KEY = "serper-test-key";
 
-    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = ((input: string | URL, init?: RequestInit) => {
       assert.match(String(input), /google\.serper\.dev\/search/);
       assert.equal(init?.method, "POST");
       return Promise.resolve(
@@ -364,7 +365,7 @@ describe("web_search", () => {
     delete process.env.BRAVE_SEARCH_API_KEY;
 
     const calls: string[] = [];
-    globalThis.fetch = ((input: RequestInfo | URL) => {
+    globalThis.fetch = ((input: string | URL) => {
       calls.push(String(input));
       if (String(input).includes("127.0.0.1:8080")) {
         return Promise.resolve(
@@ -417,13 +418,13 @@ describe("web_search", () => {
       const stored = getSearchContent({ responseId: result.responseId, query: "node" }, 30_000);
       assert.equal("result" in stored, true);
       if ("result" in stored) {
-        assert.equal(stored.result.query, "node");
+        assert.equal((stored.result as QueryResultData).query, "node");
       }
     }
   });
 
   it("stores fetched content when includeContent is true", async () => {
-    globalThis.fetch = ((input: RequestInfo | URL) => {
+    globalThis.fetch = ((input: string | URL) => {
       const url = String(input);
       if (url.startsWith("https://api.search.brave.com/")) {
         return Promise.resolve(braveResponse(["https://93.184.216.34/a", "https://93.184.216.34/b"]));
@@ -485,7 +486,7 @@ describe("web_search", () => {
     let active = 0;
     let maxActive = 0;
 
-    globalThis.fetch = ((input: RequestInfo | URL) => {
+    globalThis.fetch = ((input: string | URL) => {
       const url = String(input);
       if (url.startsWith("https://api.search.brave.com/")) {
         return Promise.resolve(
@@ -534,7 +535,7 @@ describe("web_search", () => {
     delete process.env.SERPER_API_KEY;
 
     const calls: string[] = [];
-    globalThis.fetch = ((input: RequestInfo | URL) => {
+    globalThis.fetch = ((input: string | URL) => {
       calls.push(String(input));
       return Promise.resolve(
         new Response(
@@ -579,7 +580,7 @@ describe("web_search", () => {
 
   it("does not fall back to ddgs when explicit searxng fails", async () => {
     const calls: string[] = [];
-    globalThis.fetch = ((input: RequestInfo | URL) => {
+    globalThis.fetch = ((input: string | URL) => {
       calls.push(String(input));
       // Simulate searxng unreachable
       return Promise.resolve(new Response("Service Unavailable", { status: 503 }));
@@ -605,7 +606,7 @@ describe("web_search", () => {
 
   it("does not attempt ddgs when explicit searxng is unreachable", async () => {
     const calls: string[] = [];
-    globalThis.fetch = ((input: RequestInfo | URL) => {
+    globalThis.fetch = ((input: string | URL) => {
       calls.push(String(input));
       // Fail on any URL (simulate unreachable)
       throw new Error("Connection refused");
@@ -633,7 +634,7 @@ describe("web_search", () => {
 
   it("caps ddgs results at 5 regardless of numResults request", async () => {
     const calls: string[] = [];
-    globalThis.fetch = ((input: RequestInfo | URL) => {
+    globalThis.fetch = ((input: string | URL) => {
       calls.push(String(input));
       // Simulate ddgs returning many links
       const manyLinks = Array.from({ length: 10 }, (_, i) =>
