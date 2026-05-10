@@ -14,14 +14,23 @@ export function registerLspModule(pi: ExtensionAPI, config: ResolvedLspConfig): 
   if (!config.enabled) return;
 
   registerLspTool(pi, config.tool);
-  if (process.env[PI_SUBAGENT_CHILD] !== "1") {
+
+  const isMainProcess = process.env[PI_SUBAGENT_CHILD] !== "1";
+  const hookRegistersShutdown =
+    isMainProcess && config.hook.enabled && config.hook.mode !== "disabled";
+
+  if (isMainProcess) {
     registerLspHook(pi, config.hook);
   }
 
-  const piAny = pi as any;
-  if (typeof piAny.on === "function") {
-    piAny.on("session_shutdown", () => {
-      void shutdownManager();
-    });
+  // When the hook is active it already owns session_shutdown cleanup.
+  // Register a standalone shutdown handler only when the hook is absent.
+  if (!hookRegistersShutdown) {
+    const piAny = pi as any;
+    if (typeof piAny.on === "function") {
+      piAny.on("session_shutdown", () => {
+        void shutdownManager();
+      });
+    }
   }
 }

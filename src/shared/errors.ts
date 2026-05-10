@@ -24,3 +24,13 @@ export const ERROR_CODES = {
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
+
+export class LspError extends Error {
+  readonly code: ErrorCode;
+
+  constructor(code: ErrorCode, message: string) {
+    super(message);
+    this.name = "LspError";
+    this.code = code;
+  }
+}

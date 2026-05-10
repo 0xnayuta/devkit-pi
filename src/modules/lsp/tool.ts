@@ -24,6 +24,7 @@
 import * as path from "node:path";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { ERROR_CODES, LspError } from "../../shared/errors.ts";
 import type { LspToolConfig } from "../../shared/types.ts";
 import {
   PI_SUBAGENT_ALLOW_LSP,
@@ -248,7 +249,10 @@ function assertSubagentLspActionAllowed(action: string): void {
   if (!isSubagentChild()) return;
 
   if (process.env[PI_SUBAGENT_ALLOW_LSP] !== "1") {
-    throw new Error("LSP tool is disabled for this subagent process.");
+    throw new LspError(
+      ERROR_CODES.LSP_ACTION_NOT_ALLOWED,
+      "LSP tool is disabled for this subagent process."
+    );
   }
 
   const allowedActions = new Set(
@@ -259,7 +263,10 @@ function assertSubagentLspActionAllowed(action: string): void {
   );
 
   if (!allowedActions.has(action)) {
-    throw new Error(`LSP action "${action}" is not allowed for this subagent process.`);
+    throw new LspError(
+      ERROR_CODES.LSP_ACTION_NOT_ALLOWED,
+      `LSP action "${action}" is not allowed for this subagent process.`
+    );
   }
 }
 
@@ -297,7 +304,10 @@ Use read/grep/find/ls to locate files before calling lsp.`,
           const reason = isSubagentChild()
             ? "privileged LSP actions are disabled in subagent processes"
             : "lsp.tool.allowMutatingActions is false";
-          throw new Error(`Action "${action}" is disabled: ${reason}.`);
+          throw new LspError(
+            ERROR_CODES.LSP_ACTION_NOT_ALLOWED,
+            `Action "${action}" is disabled: ${reason}.`
+          );
         }
         const manager = getOrCreateManager(ctx.cwd);
         const sevFilter: SeverityFilter = severity || "all";
@@ -324,7 +334,8 @@ Use read/grep/find/ls to locate files before calling lsp.`,
           if (action === "restart") {
             const target = (server || "all").trim();
             if (target !== "all" && !SERVER_IDS.has(target)) {
-              throw new Error(
+              throw new LspError(
+                ERROR_CODES.LSP_SERVER_NOT_FOUND,
                 `Unknown server "${target}". Use one of: all, ${Array.from(SERVER_IDS).join(", ")}`
               );
             }
@@ -353,7 +364,11 @@ Use read/grep/find/ls to locate files before calling lsp.`,
             };
           }
 
-          if (needsFile && !file) throw new Error(`Action "${action}" requires a file path.`);
+          if (needsFile && !file)
+            throw new LspError(
+              ERROR_CODES.INVALID_INPUT,
+              `Action "${action}" requires a file path.`
+            );
 
           let rLine = line,
             rCol = column,
@@ -367,7 +382,8 @@ Use read/grep/find/ls to locate files before calling lsp.`,
             }
           }
           if (needsPos && (rLine === undefined || rCol === undefined)) {
-            throw new Error(
+            throw new LspError(
+              ERROR_CODES.INVALID_INPUT,
               `Action "${action}" requires line/column or a query matching a symbol.`
             );
           }
@@ -491,9 +507,13 @@ Use read/grep/find/ls to locate files before calling lsp.`,
             }
             case "workspace-diagnostics": {
               if (!files?.length)
-                throw new Error('Action "workspace-diagnostics" requires a "files" array.');
+                throw new LspError(
+                  ERROR_CODES.INVALID_INPUT,
+                  'Action "workspace-diagnostics" requires a "files" array.'
+                );
               if (files.length > MAX_WORKSPACE_DIAGNOSTIC_FILES) {
-                throw new Error(
+                throw new LspError(
+                  ERROR_CODES.INVALID_INPUT,
                   `Action "workspace-diagnostics" accepts at most ${MAX_WORKSPACE_DIAGNOSTIC_FILES} files.`
                 );
               }
@@ -576,7 +596,11 @@ Use read/grep/find/ls to locate files before calling lsp.`,
               };
             }
             case "rename": {
-              if (!newName) throw new Error('Action "rename" requires a "newName" parameter.');
+              if (!newName)
+                throw new LspError(
+                  ERROR_CODES.INVALID_INPUT,
+                  'Action "rename" requires a "newName" parameter.'
+                );
               const result = await abortable(manager.rename(file!, rLine!, rCol!, newName), signal);
               if (!result)
                 return {

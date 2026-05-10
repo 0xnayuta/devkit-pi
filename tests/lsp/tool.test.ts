@@ -59,7 +59,7 @@ describe("lsp module", () => {
     assert.deepEqual(pi.tools.map((tool) => tool.name), ["lsp"]);
     assert.equal(pi.listeners.agent_end?.length, 1);
     assert.equal(pi.listeners.tool_result?.length, 1);
-    assert.equal(pi.listeners.session_shutdown?.length, 2);
+    assert.equal(pi.listeners.session_shutdown?.length, 1);
     assert.deepEqual(pi.renderers, ["lsp-diagnostics"]);
   });
 
