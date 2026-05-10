@@ -268,7 +268,7 @@ Validation:
 - pnpm docs:check
 
 Git:
-- modified docs/guides/deferred-pi-lsp-merge-plan.md
+- modified docs/adr/0005-evolve-into-devkit-pi.md
 ```
 
 ### 实现建议
@@ -682,7 +682,7 @@ Merge pi-lsp into pi-subagents as personal pi coding toolkit.
 
 ## Changed Files
 
-- docs/guides/deferred-pi-lsp-merge-plan.md
+- docs/adr/0005-evolve-into-devkit-pi.md
 
 ## Next Steps
 

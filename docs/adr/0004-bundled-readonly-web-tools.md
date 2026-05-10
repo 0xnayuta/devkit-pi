@@ -6,6 +6,10 @@ last_verified: 2026-05-09
 
 # ADR 0004: 内置极简 readonly web tools
 
+## 状态
+
+Accepted（2026-05-10 实施完成）
+
 ## 背景
 
 内置 `researcher` agent 声明使用：

@@ -57,4 +57,4 @@ registerSubagentTool(pi);
 
 这样子代理进程可以使用 web tools，但仍不能递归调用 `subagent`。
 
-详见 [ADR 0004](../adr/0004-bundled-readonly-web-tools.md) 和 [实施路线](../archive/web-tools-implementation-plan.md)。
+详见 [ADR 0004](../adr/0004-bundled-readonly-web-tools.md)。

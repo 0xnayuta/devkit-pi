@@ -22,6 +22,3 @@ last_verified: 2026-05-10
 - [Release checklist](./guides/release-checklist.md)
 - [ADR index](./adr/README.md)
 
-## Archive
-
-`docs/archive/` 保留历史简化、迁移和方案文档，不作为当前代码结构或配置格式的 source of truth。

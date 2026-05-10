@@ -4,11 +4,11 @@ audience: maintainer
 last_verified: 2026-05-10
 ---
 
-# 0005 — 从 pi-subagents 演进为 devkit-pi
+# ADR 0004: 从 pi-subagents 演进为 devkit-pi
 
-- **状态**: accepted
-- **日期**: 2026-05-10
-- **决策者**: Izayoi Nayuta
+## 状态
+
+Accepted（2026-05-10 实施完成）
 
 ## 背景
 
@@ -46,6 +46,3 @@ last_verified: 2026-05-10
 - 旧仓库 `pi-subagents` 和 `pi-lsp` 归档，不再独立维护
 - 配置格式从 `ExtensionConfig` 演进为 namespace 化 `ToolkitConfig`
 
-## 参考
-
-- `docs/guides/deferred-pi-lsp-merge-plan.md`（原始合并计划文档，已归档于 pi-subagents）
