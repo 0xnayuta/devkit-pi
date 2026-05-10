@@ -17,8 +17,9 @@ Decision needed:
 1. remove the placeholder LSP codes until structured LSP errors are implemented, or
 2. implement structured LSP tool errors for not-found, timeout, and action-not-allowed paths.
 
-## Recently fixed in Phase 3 working tree
+## Recently fixed
 
-- LSP file access is bounded to the active workspace root.
-- `workspace-diagnostics` input and LSP result output are capped.
-- LSP hook configuration is normalized to disabled while hook support is not registered.
+- Phase 3: LSP file access is bounded to the active workspace root.
+- Phase 3: `workspace-diagnostics` input and LSP result output are capped.
+- Phase 4: subagents can optionally use readonly LSP actions through an explicit whitelist.
+- Phase 5: LSP hook is registered only in the main process, defaults to `agent_end`, and remains configurable under `lsp.hook`.

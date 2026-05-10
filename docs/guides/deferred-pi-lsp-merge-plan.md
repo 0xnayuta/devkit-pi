@@ -266,20 +266,15 @@ export default function registerExtension(pi: ExtensionAPI): void {
 }
 ```
 
-为避免破坏现有个人配置，配置加载层应支持 legacy migration：
-
-```ts
-function migrateLegacyConfig(raw: unknown): ToolkitConfig
-```
-
-需要兼容的旧字段包括：
+当前实现采用新设计，不提供旧配置迁移层。配置加载层只读取 namespace 化字段：
 
 - `enabled`
-- `maxSubagentDepth`
-- `timeoutMs`
-- `allowWriteSubagents`
-- `injectDelegationPolicy`
-- `webTools`
+- `subagents.*`
+- `web.*`
+- `lsp.*`
+- `commands.*`
+
+旧的扁平字段（例如 `maxSubagentDepth`、`allowWriteSubagents`、`webTools`）不会被读取或归一化。
 
 ## 主进程 / 子代理进程注册矩阵
 
@@ -416,7 +411,7 @@ registerDeveloperCommands(pi, config.commands, state);
 
 ### Phase 2：配置 namespace 化
 
-将当前 `ExtensionConfig` 演进为 `ToolkitConfig`。
+使用新的 `ToolkitConfig` 作为唯一配置模型。
 
 建议新增：
 
@@ -430,7 +425,7 @@ interface ToolkitConfig {
 }
 ```
 
-同时实现 legacy migration，兼容旧配置。
+不实现 legacy migration；旧扁平配置字段不再兼容。
 
 ### Phase 3：合入 LSP tool，不启用 hook 特性
 

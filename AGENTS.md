@@ -5,7 +5,7 @@
 ```
 subagents（任务委派）
 + web tools（搜索与网页获取）
-+ LSP code intelligence（代码智能；Phase 3 仅启用 tool）
++ LSP code intelligence（代码智能与自动 diagnostics hook）
 + developer commands（开发者辅助命令）
 ```
 
@@ -23,7 +23,7 @@ src/
 │  │  └─ commands/       # doctor, list, logs, activity
 │  ├─ web/               # 搜索、网页内容获取
 │  │  └─ providers/      # ddgs, brave, tavily, serper, openserp, searxng
-│  └─ lsp/               # LSP tool 与 server 管理（hook 暂不启用）
+│  └─ lsp/               # LSP tool、hook 与 server 管理
 ├─ config/               # 配置加载与默认值
 └─ shared/               # 类型、错误码、通用工具
 
@@ -46,7 +46,7 @@ docs/                    # 文档、ADR、指南
 2. **安全默认**：readonly、depth=1、LSP mutating actions 默认受限
 3. **渐进增强**：readonly LSP 可作为子代理增强；LSP 或 web 不可用时，退回基础工具
 4. **主代理编排**：子代理不调度其他子代理
-5. **模块可关闭**：subagents、web、lsp、commands 都可独立启停
+5. **模块可关闭**：subagents、web、lsp tool、lsp hook、commands 都可独立启停
 
 ### 内置 Agent 职责
 

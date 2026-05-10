@@ -9,3 +9,5 @@
 - Thin entry point: `src/index.ts`.
 - Tests mirror module structure: `tests/{subagents, web, lsp}`.
 - Namespace-based configuration: `ToolkitConfig`.
+- Added optional readonly LSP access for subagents.
+- Added LSP diagnostics hook with default `agent_end` mode.

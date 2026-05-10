@@ -10,7 +10,7 @@ last_verified: 2026-05-10
 
 - subagents：工具注册、schema、agent 加载、递归保护、输出收集、prompt runtime
 - web：provider 选择、fetch 安全限制、缓存、并发、observability、storage、renderers
-- lsp：模块注册、`servers` action、privileged action gating、hook 不注册
+- lsp：模块注册、`servers` action、privileged action gating、hook 注册/禁用/子进程隔离
 - shared/config：namespace 配置 merge、路径处理、错误码、package manifest
 
 ## 测试目录
@@ -43,4 +43,4 @@ tests/package-manifest.test.ts
 - worktree
 - nested subagents
 - 子代理 privileged LSP actions
-- Phase 3 中的 LSP hook
+- 子代理 LSP hook

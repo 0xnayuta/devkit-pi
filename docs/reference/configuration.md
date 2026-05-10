@@ -53,8 +53,8 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。
       "allowMutatingActions": false
     },
     "hook": {
-      "enabled": false,
-      "mode": "disabled"
+      "enabled": true,
+      "mode": "agent_end"
     }
   },
   "commands": {
@@ -70,7 +70,7 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。
 | `enabled` | boolean | `true` | 是否启用整个 devkit-pi 扩展 |
 | `subagents` | object | 见下方 | subagent 工具与内置 agents |
 | `web` | object | 见下方 | web search / fetch tools |
-| `lsp` | object | 见下方 | LSP tool 与后续 hook 配置 |
+| `lsp` | object | 见下方 | LSP tool 与自动 diagnostics hook 配置 |
 | `commands` | object | 见下方 | developer commands |
 
 ## Subagents
@@ -106,15 +106,15 @@ Provider 子配置使用 `web.openserp`、`web.searxng`、`web.tavily`、`web.se
 
 ## LSP
 
-Phase 3 只启用显式 `lsp` tool，不启用自动 diagnostics hook。
+LSP 模块包含显式 `lsp` tool 和主代理进程中的自动 diagnostics hook。hook 不会在子代理进程中注册。
 
 | 字段 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
 | `lsp.enabled` | boolean | `true` | 是否启用 LSP 模块 |
 | `lsp.tool.enabled` | boolean | `true` | 是否注册 `lsp` tool |
 | `lsp.tool.allowMutatingActions` | boolean | `false` | 是否允许 `rename` / `codeAction` / `restart`；子代理进程始终禁用 |
-| `lsp.hook.enabled` | boolean | `false` | Phase 3 不启用 hook |
-| `lsp.hook.mode` | `"disabled"` | `"disabled"` | Phase 3 固定为禁用语义 |
+| `lsp.hook.enabled` | boolean | `true` | 是否启用自动 diagnostics hook；仅主代理进程 |
+| `lsp.hook.mode` | `"agent_end"` / `"edit_write"` / `"disabled"` | `"agent_end"` | hook 触发时机；`disabled` 会禁用 hook |
 
 Readonly-safe LSP actions：`definition`、`references`、`hover`、`signature`、`symbols`、`diagnostics`、`workspace-diagnostics`、`servers`。这些 action 可通过 `subagents.allowedLspActions` 暴露给子代理。
 

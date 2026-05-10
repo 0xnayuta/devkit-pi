@@ -334,13 +334,13 @@ run_check({
 Typecheck failed: 3 errors
 
 1. src/config/load-config.ts:142:17
-   Property 'lsp' does not exist on type 'ExtensionConfig'.
+   Invalid hook mode: expected "agent_end", "edit_write", or "disabled".
 
 2. src/shared/types.ts:231:5
    Type 'undefined' is not assignable to type 'ResolvedLspConfig'.
 
 Suggested next step:
-- Update ExtensionConfig and ResolvedExtensionConfig.
+- Update ToolkitConfig normalization and ResolvedToolkitConfig types.
 ```
 
 ### 优先级
@@ -396,7 +396,7 @@ Changed files:
 
 Summary:
 - Added lsp config namespace.
-- Migrated legacy webTools config.
+- Updated web provider configuration.
 ```
 
 #### 自动 commit message
@@ -793,7 +793,7 @@ P2。与当前项目工作流高度匹配。
 
 ### 背景
 
-当前项目已有 readonly subagents 和 `allowWriteSubagents`，但综合 toolkit 可能需要更细粒度的权限。
+当前项目已有 readonly subagents 和 `subagents.allowWrite`，但综合 toolkit 可能需要更细粒度的权限。
 
 ### 简化配置
 

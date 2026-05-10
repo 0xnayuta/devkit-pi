@@ -15,7 +15,7 @@ last_verified: 2026-05-10
 - 子代理不应扩大任务范围
 - LSP privileged actions 默认禁用
 - 子代理只能使用 `subagents.allowedLspActions` 中的 readonly LSP actions
-- LSP hook / 自动 diagnostics 在 Phase 3 不启用
+- LSP hook 仅在主代理进程注册，不在子代理进程注册
 
 ## 输出清理
 
@@ -56,6 +56,8 @@ rename, codeAction, restart
 ```
 
 `lsp.tool.allowMutatingActions` 默认为 `false`。即使显式开启，子代理进程中仍禁止 privileged actions。
+
+LSP hook 默认启用 `agent_end` 模式，仅对主代理进程中本轮修改过的文件自动诊断；可通过 `lsp.hook.enabled: false` 或 `lsp.hook.mode: "disabled"` 关闭。hook 输出会限制文件数量和最大字符数。
 
 子代理 LSP 由 subagents namespace 控制：
 

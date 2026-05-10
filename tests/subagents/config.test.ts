@@ -32,8 +32,8 @@ describe("Devkit Config Loading", () => {
 			assert.equal(DEFAULT_CONFIG.lsp.enabled, true);
 			assert.equal(DEFAULT_CONFIG.lsp.tool.enabled, true);
 			assert.equal(DEFAULT_CONFIG.lsp.tool.allowMutatingActions, false);
-			assert.equal(DEFAULT_CONFIG.lsp.hook.enabled, false);
-			assert.equal(DEFAULT_CONFIG.lsp.hook.mode, "disabled");
+			assert.equal(DEFAULT_CONFIG.lsp.hook.enabled, true);
+			assert.equal(DEFAULT_CONFIG.lsp.hook.mode, "agent_end");
 			assert.equal(DEFAULT_CONFIG.commands.enabled, true);
 		});
 
@@ -85,15 +85,26 @@ describe("Devkit Config Loading", () => {
 			assert.deepEqual(config.subagents.allowedLspActions, ["symbols"]);
 		});
 
-		it("normalizes LSP hook config to disabled during Phase 3", () => {
-			const config = mergeConfig({
+		it("normalizes LSP hook config", () => {
+			const agentEnd = mergeConfig({
 				lsp: {
-					hook: { enabled: true, mode: "agent_end" as any },
+					hook: { enabled: true, mode: "agent_end" },
 				},
 			});
+			assert.equal(agentEnd.lsp.hook.enabled, true);
+			assert.equal(agentEnd.lsp.hook.mode, "agent_end");
 
-			assert.equal(config.lsp.hook.enabled, false);
-			assert.equal(config.lsp.hook.mode, "disabled");
+			const editWrite = mergeConfig({ lsp: { hook: { enabled: true, mode: "edit_write" } } });
+			assert.equal(editWrite.lsp.hook.enabled, true);
+			assert.equal(editWrite.lsp.hook.mode, "edit_write");
+
+			const disabled = mergeConfig({ lsp: { hook: { enabled: false, mode: "agent_end" } } });
+			assert.equal(disabled.lsp.hook.enabled, false);
+			assert.equal(disabled.lsp.hook.mode, "disabled");
+
+			const invalid = mergeConfig({ lsp: { hook: { enabled: true, mode: "turn_end" as any } } });
+			assert.equal(invalid.lsp.hook.enabled, true);
+			assert.equal(invalid.lsp.hook.mode, DEFAULT_CONFIG.lsp.hook.mode);
 		});
 
 		it("normalizes invalid subagent fields through mergeConfig", () => {

@@ -15,11 +15,21 @@ import {
 function createPiMock() {
   const tools: any[] = [];
   const listeners: Record<string, Array<(...args: unknown[]) => void>> = {};
+  const renderers: string[] = [];
+  const messages: any[] = [];
   return {
     tools,
     listeners,
+    renderers,
+    messages,
     registerTool(tool: any) {
       tools.push(tool);
+    },
+    registerMessageRenderer(name: string) {
+      renderers.push(name);
+    },
+    sendMessage(message: any, options: any) {
+      messages.push({ message, options });
     },
     on(event: string, handler: (...args: unknown[]) => void) {
       listeners[event] ??= [];
@@ -42,7 +52,49 @@ describe("lsp module", () => {
     else process.env[PI_SUBAGENT_LSP_ACTIONS] = originalLspActions;
   });
 
-  it("registers the lsp tool when enabled and does not register hook events", () => {
+  it("registers the lsp tool and default hook events when enabled", () => {
+    const pi = createPiMock();
+    registerLspModule(pi as any, mergeConfig({}).lsp);
+
+    assert.deepEqual(pi.tools.map((tool) => tool.name), ["lsp"]);
+    assert.equal(pi.listeners.agent_end?.length, 1);
+    assert.equal(pi.listeners.tool_result?.length, 1);
+    assert.equal(pi.listeners.session_shutdown?.length, 2);
+    assert.deepEqual(pi.renderers, ["lsp-diagnostics"]);
+  });
+
+  it("does not register hook events when lsp hook is disabled", () => {
+    const pi = createPiMock();
+    registerLspModule(pi as any, mergeConfig({ lsp: { hook: { enabled: false } } }).lsp);
+
+    assert.deepEqual(pi.tools.map((tool) => tool.name), ["lsp"]);
+    assert.equal(pi.listeners.agent_end, undefined);
+    assert.equal(pi.listeners.session_shutdown?.length, 1);
+    assert.equal(pi.renderers.length, 0);
+  });
+
+  it("does not register hook events when lsp hook mode is disabled", () => {
+    const pi = createPiMock();
+    registerLspModule(pi as any, mergeConfig({ lsp: { hook: { mode: "disabled" } } }).lsp);
+
+    assert.deepEqual(pi.tools.map((tool) => tool.name), ["lsp"]);
+    assert.equal(pi.listeners.agent_end, undefined);
+    assert.equal(pi.listeners.session_shutdown?.length, 1);
+    assert.equal(pi.renderers.length, 0);
+  });
+
+  it("registers edit_write hook events without agent_end diagnostics", () => {
+    const pi = createPiMock();
+    registerLspModule(pi as any, mergeConfig({ lsp: { hook: { mode: "edit_write" } } }).lsp);
+
+    assert.deepEqual(pi.tools.map((tool) => tool.name), ["lsp"]);
+    assert.equal(pi.listeners.tool_result?.length, 1);
+    assert.equal(pi.listeners.agent_end?.length, 1);
+    assert.deepEqual(pi.renderers, ["lsp-diagnostics"]);
+  });
+
+  it("does not register hook events in subagent child processes", () => {
+    process.env[PI_SUBAGENT_CHILD] = "1";
     const pi = createPiMock();
     registerLspModule(pi as any, mergeConfig({}).lsp);
 

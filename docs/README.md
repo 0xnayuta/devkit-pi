@@ -6,7 +6,7 @@ last_verified: 2026-05-10
 
 # devkit-pi 文档索引
 
-`devkit-pi` 是面向个人工作流的综合 pi coding toolkit，当前包含 subagents、web tools、LSP tool 与 developer commands。
+`devkit-pi` 是面向个人工作流的综合 pi coding toolkit，当前包含 subagents、web tools、LSP tool、LSP diagnostics hook 与 developer commands。
 
 ## 当前文档
 

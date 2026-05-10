@@ -100,8 +100,8 @@ export const DEFAULT_CONFIG: ResolvedToolkitConfig = {
       allowMutatingActions: false,
     },
     hook: {
-      enabled: false,
-      mode: "disabled",
+      enabled: true,
+      mode: "agent_end",
     },
   },
   commands: {
@@ -305,7 +305,15 @@ function normalizeSubagentsConfig(base: SubagentsConfig | undefined): ResolvedSu
   };
 }
 
+function normalizeLspHookMode(value: unknown): ResolvedToolkitConfig["lsp"]["hook"]["mode"] {
+  if (value === "agent_end" || value === "edit_write" || value === "disabled") return value;
+  return DEFAULT_CONFIG.lsp.hook.mode;
+}
+
 function normalizeLspConfig(base: LspConfig | undefined): ResolvedToolkitConfig["lsp"] {
+  const mode = normalizeLspHookMode(base?.hook?.mode);
+  const enabled = booleanValue(base?.hook?.enabled, DEFAULT_CONFIG.lsp.hook.enabled);
+
   return {
     enabled: booleanValue(base?.enabled, DEFAULT_CONFIG.lsp.enabled),
     tool: {
@@ -315,11 +323,9 @@ function normalizeLspConfig(base: LspConfig | undefined): ResolvedToolkitConfig[
         DEFAULT_CONFIG.lsp.tool.allowMutatingActions
       ),
     },
-    // Phase 3 intentionally does not enable LSP hooks. Keep this namespace
-    // present for the new config shape, but normalize all hook input to disabled.
     hook: {
-      enabled: false,
-      mode: "disabled",
+      enabled: enabled && mode !== "disabled",
+      mode: enabled ? mode : "disabled",
     },
   };
 }

@@ -26,7 +26,7 @@ last_verified: 2026-05-10
 - [ ] readonly agents 未暴露 `bash`、`edit`、`write`
 - [ ] 子代理仍无法注册或调用 `subagent` 工具
 - [ ] 子代理仍无法调用 privileged LSP actions
-- [ ] LSP hook 在 Phase 3 仍未注册
+- [ ] LSP hook 仅在主代理进程注册，且可通过配置关闭
 - [ ] sanitize 规则覆盖 token、Authorization header、绝对路径和 stack trace
 
 ## 包元数据

@@ -237,9 +237,11 @@ export interface LspToolConfig {
   allowMutatingActions?: boolean;
 }
 
+export type LspHookMode = "agent_end" | "edit_write" | "disabled";
+
 export interface LspHookConfig {
   enabled?: boolean;
-  mode?: "disabled";
+  mode?: LspHookMode;
 }
 
 export interface LspConfig {
@@ -279,9 +281,11 @@ export type ResolvedWebConfig = Required<
   connectionPool: Required<ConnectionPoolConfig>;
 };
 
+export type RequiredLspHookConfig = Required<LspHookConfig>;
+
 export type ResolvedLspConfig = Required<Omit<LspConfig, "tool" | "hook">> & {
   tool: Required<LspToolConfig>;
-  hook: Required<LspHookConfig>;
+  hook: RequiredLspHookConfig;
 };
 
 export interface ResolvedToolkitConfig {
