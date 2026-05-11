@@ -139,3 +139,49 @@ Rationale:
 3. Confirm CI workflow runs green on GitHub.
 4. Run `npm login` before publishing.
 5. Publish only after confirming npm version availability and release intent.
+
+---
+
+## Post-publish audit (2026-05-11)
+
+### npm publish confirmation
+
+- npm package: `devkit-pi`
+- Published version: `0.1.0`
+- npm package URL: https://www.npmjs.com/package/devkit-pi
+- Tarball: https://registry.npmjs.org/devkit-pi/-/devkit-pi-0.1.0.tgz
+
+### npm view check results
+
+| Check | Result |
+|---|---|
+| `npm view devkit-pi version` | `0.1.0` ✅ |
+| `npm view devkit-pi versions --json` | `["0.1.0"]` ✅ |
+| `npm view devkit-pi dist.tarball` | `https://registry.npmjs.org/devkit-pi/-/devkit-pi-0.1.0.tgz` ✅ |
+| `npm view devkit-pi homepage` | `https://github.com/0xnayuta/devkit-pi#readme` ✅ |
+| `npm view devkit-pi repository.url` | `git+https://github.com/0xnayuta/devkit-pi.git` ✅ |
+
+### Post-publish status
+
+- [x] npm publish completed.
+- [x] npm registry confirms version 0.1.0.
+- [x] CHANGELOG.md updated with 0.1.0 formal entry (2026-05-11).
+- [x] README.md and README.zh.md have npm package link.
+- [x] docs/README.md and docs/index.md have npm package link.
+- [x] Documentation site live at https://devkit-pi.wangyan.life/.
+- [x] CI workflow verified.
+
+### Git tag and GitHub Release recommendations
+
+- **Git tag `v0.1.0`**: recommended. Create tag on the commit used for npm publish:
+  ```bash
+  git tag v0.1.0
+  git push origin v0.1.0
+  ```
+- **GitHub Release**: recommended. Create from the `v0.1.0` tag on https://github.com/0xnayuta/devkit-pi/releases/new with release notes from CHANGELOG.md.
+
+### Next version guidance
+
+- If next changes are bug fixes or minor docs updates: start from `0.1.1`.
+- If next changes add new features or modules: start from `0.2.0`.
+- Do not bump version in this round.

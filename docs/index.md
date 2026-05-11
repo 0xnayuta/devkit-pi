@@ -14,6 +14,8 @@ The canonical current public contract / API reference lives in [`docs/reference/
 
 Online documentation site: https://devkit-pi.wangyan.life/
 
+npm package: https://www.npmjs.com/package/devkit-pi
+
 Local preview commands:
 
 ```bash

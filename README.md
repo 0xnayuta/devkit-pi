@@ -23,6 +23,8 @@ Combines subagents, web research, LSP code intelligence, automatic diagnostics h
 pi install devkit-pi
 ```
 
+npm package: [https://www.npmjs.com/package/devkit-pi](https://www.npmjs.com/package/devkit-pi)
+
 ### Or link locally for development
 
 ```json
@@ -170,6 +172,8 @@ pnpm docs:check   # Validate documentation
 ### Documentation site
 
 Online documentation site: https://devkit-pi.wangyan.life/
+
+npm package: https://www.npmjs.com/package/devkit-pi
 
 The VitePress documentation site can be previewed locally:
 

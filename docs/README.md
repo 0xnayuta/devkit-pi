@@ -23,6 +23,8 @@ last_verified: 2026-05-11
 
 线上文档站：https://devkit-pi.wangyan.life/
 
+npm 包：https://www.npmjs.com/package/devkit-pi
+
 VitePress 文档站可在本地预览：
 
 ```bash

@@ -23,6 +23,8 @@
 pi install devkit-pi
 ```
 
+npm 包：[https://www.npmjs.com/package/devkit-pi](https://www.npmjs.com/package/devkit-pi)
+
 ### 或本地链接开发
 
 ```json
@@ -170,6 +172,8 @@ pnpm docs:check   # 验证文档
 ### 文档站
 
 线上文档站：https://devkit-pi.wangyan.life/
+
+npm 包：https://www.npmjs.com/package/devkit-pi
 
 可以在本地预览 VitePress 文档站：
 
