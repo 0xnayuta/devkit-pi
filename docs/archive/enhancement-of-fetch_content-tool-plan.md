@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: historical
 audience: maintainer
 last_verified: 2026-05-10
 ---
