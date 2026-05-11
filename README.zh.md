@@ -54,7 +54,7 @@ pnpm test
 
 所有 agent 默认 readonly。主代理是唯一编排者 — 子代理不能再调度其他子代理。
 
-可写自定义 subagents 目前属于实验性能力。默认且推荐模式是 readonly；`subagents.allowWrite=true` 不代表完整沙箱、审计日志或自动回滚保证。详见 [Subagents 参考](docs/reference/subagents.md) 和 [安全模型](docs/guides/security-model.md)。
+可写自定义 subagents 目前属于实验性能力。默认且推荐模式是 readonly；`subagents.allowWrite=true` 不代表完整沙箱、审计日志或自动回滚保证。详见 [Subagents 参考](docs/zh/reference/subagents.md) 和 [安全模型](docs/zh/guides/security-model.md)。
 
 ### 自定义 agent
 
@@ -117,7 +117,7 @@ subagent({ agent: "explorer", task: "查找认证相关代码" })
 
 配置文件路径：`~/.pi/agent/extensions/devkit-pi/config.json`。
 
-每个模块均可独立启用或禁用。完整默认值与 normalize 规则见 [配置参考](docs/reference/configuration.md)。
+每个模块均可独立启用或禁用。完整默认值与 normalize 规则见 [配置参考](docs/zh/reference/configuration.md)。
 
 ## 错误码
 
@@ -129,7 +129,7 @@ subagent({ agent: "explorer", task: "查找认证相关代码" })
 
 Web 工具返回包含 `error.code` 和 `error.message` 的结构化错误。常见错误码包括 `INVALID_INPUT`、`WEB_SEARCH_INVALID_QUERY`、`WEB_SEARCH_FAILED`、`WEB_SEARCH_TIMEOUT`、`PROVIDER_AUTH_FAILED`、`PROVIDER_RATE_LIMITED`、`PROVIDER_UNAVAILABLE`、`NETWORK_ERROR`、`CONTENT_FETCH_INVALID_URL`、`CONTENT_FETCH_FAILED`、`CONTENT_FETCH_TIMEOUT` 和 `NOT_FOUND`。
 
-完整 canonical 清单见 [Web tools 错误码](docs/reference/web-tools-error-codes.md)。
+完整 canonical 清单见 [Web tools 错误码](docs/zh/reference/web-tools-error-codes.md)。
 
 ## 项目结构
 
@@ -185,22 +185,22 @@ pnpm docs:preview
 
 ## 文档
 
-- [文档总入口](docs/README.md)
-- [Reference 索引](docs/reference/README.md)
-- [目标与范围](docs/guides/goals-and-scope.md)
-- [架构](docs/guides/architecture.md)
-- [配置参考](docs/reference/configuration.md)
-- [Subagents 参考](docs/reference/subagents.md)
-- [Subagent tool 参考](docs/reference/subagent-tool.md)
-- [Agent 定义](docs/reference/agent-definition.md)
-- [结果 schema](docs/reference/result-schema.md)
-- [Toolkit commands 参考](docs/reference/toolkit-commands.md)
-- [LSP tools 参考](docs/reference/lsp-tools.md)
-- [Web tools 参考](docs/reference/web-tools.md)
-- [Web providers 参考](docs/reference/web-providers.md)
-- [Web tools 错误码](docs/reference/web-tools-error-codes.md)
-- [安全模型](docs/guides/security-model.md)
-- [架构决策记录](docs/adr/README.md)
+- [文档总入口](docs/zh/README.md)
+- [Reference 索引](docs/zh/reference/README.md)
+- [目标与范围](docs/zh/guides/goals-and-scope.md)
+- [架构](docs/zh/guides/architecture.md)
+- [配置参考](docs/zh/reference/configuration.md)
+- [Subagents 参考](docs/zh/reference/subagents.md)
+- [Subagent tool 参考](docs/zh/reference/subagent-tool.md)
+- [Agent 定义](docs/zh/reference/agent-definition.md)
+- [结果 schema](docs/zh/reference/result-schema.md)
+- [Toolkit commands 参考](docs/zh/reference/toolkit-commands.md)
+- [LSP tools 参考](docs/zh/reference/lsp-tools.md)
+- [Web tools 参考](docs/zh/reference/web-tools.md)
+- [Web providers 参考](docs/zh/reference/web-providers.md)
+- [Web tools 错误码](docs/zh/reference/web-tools-error-codes.md)
+- [安全模型](docs/zh/guides/security-model.md)
+- [架构决策记录](docs/zh/adr/README.md)
 
 ## 许可证
 

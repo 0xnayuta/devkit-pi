@@ -4,6 +4,23 @@ audience: all
 last_verified: 2026-05-12
 ---
 
-# 暂未翻译
+# 参考文档
 
-本页面尚未翻译为中文。请查看英文版本：[Reference](../../reference/README.md)
+`docs/reference/` 是 devkit-pi 的公共契约 / API reference。它记录当前已实现的公共接口、配置、工具参数、结果结构、错误语义和稳定性边界。
+
+完整的 reference 目录策略见 [Reference README](./README.md)。
+
+## 核心参考
+
+- [配置](./configuration.md)
+- [Subagents](./subagents.md)
+- [Subagent 工具](./subagent-tool.md)
+- [Agent 定义](./agent-definition.md)
+- [Result schema](./result-schema.md)
+- [Web 工具](./web-tools.md)
+- [Web providers](./web-providers.md)
+- [Web 工具错误码](./web-tools-error-codes.md)
+- [LSP 工具](./lsp-tools.md)
+- [Toolkit 命令](./toolkit-commands.md)
+
+提案、roadmap、归档和 ADR 文档不会包含在此 reference 入口中。如果非 reference 材料与当前 reference 文档、源码或测试不一致，以 `docs/reference/`、`src/` 和 `tests/` 为准。
