@@ -4,6 +4,10 @@ audience: all
 last_verified: 2026-05-12
 ---
 
+<p align="center">
+  <img src="/logo.png" alt="devkit-pi logo" width="80" height="80" />
+</p>
+
 # devkit-pi
 
 `devkit-pi` 是面向个人工作流的一体化 pi coding 工具包。它将 subagent 任务委派、Web 研究工具、LSP 代码智能、自动诊断 hook 和开发者命令整合为一个模块化 pi 扩展。
