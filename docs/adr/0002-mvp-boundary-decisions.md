@@ -6,6 +6,8 @@ last_verified: 2026-05-08
 
 # ADR 0002：MVP 边界决策
 
+> Historical decision record：本文记录当时的背景和取舍，不等同于当前 API reference；当前行为以 `docs/reference/`、`src/` 和 `tests/` 为准。
+
 ## 状态
 
 Accepted

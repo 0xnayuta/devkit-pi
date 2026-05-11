@@ -42,6 +42,9 @@
     "lint": "biome check src",
     "lint:fix": "biome check --write src",
     "format": "biome format --write src",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "docs:check": "node scripts/check-docs.mjs"
   },
   "pi": {
@@ -81,7 +84,8 @@
     "@earendil-works/pi-coding-agent": "^0.74.0",
     "@earendil-works/pi-tui": "^0.74.0",
     "@types/node": "^25.6.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitepress": "^1.6.4"
   },
   "packageManager": "pnpm@11.0.9"
 }

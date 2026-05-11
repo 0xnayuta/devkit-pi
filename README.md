@@ -167,6 +167,18 @@ pnpm test         # Run unit tests
 pnpm docs:check   # Validate documentation
 ```
 
+### Documentation site
+
+The VitePress documentation site can be previewed locally:
+
+```bash
+pnpm docs:dev
+pnpm docs:build
+pnpm docs:preview
+```
+
+The deployed site URL will be added after GitHub Pages is configured.
+
 ## Documentation
 
 - [Documentation index](docs/README.md)

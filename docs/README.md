@@ -19,6 +19,18 @@ last_verified: 2026-05-11
 
 当前行为应以 `src/`、`tests/` 与 `docs/reference/` 中标记为 current 的 reference 文档为准。
 
+## Local documentation site
+
+VitePress 文档站可在本地预览：
+
+```bash
+pnpm docs:dev
+pnpm docs:build
+pnpm docs:preview
+```
+
+GitHub Pages 部署完成后再补充线上地址。
+
 ## Recommended reading path
 
 ### 新用户

@@ -65,3 +65,5 @@ last_verified: 2026-05-11
 ## 后续建站原则
 
 VitePress 只改变展示层和导航层，不改变文档事实源。任何 public API、配置、错误码或命令说明变更，都应先以源码和测试为准更新 `docs/reference/`，再同步站点导航。reserved/proposed/historical 内容不得被渲染为当前能力。
+
+后续信息架构计划：[VitePress 信息架构计划](./vitepress-ia-plan.md)。

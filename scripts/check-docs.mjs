@@ -234,6 +234,36 @@ function checkAllowWriteBoundary() {
   }
 }
 
+function checkVitePressSite() {
+  const pkg = JSON.parse(read("package.json"));
+  for (const script of ["docs:dev", "docs:build", "docs:preview"]) {
+    if (!pkg.scripts?.[script]) {
+      errors.push(`package.json: missing ${script} script`);
+    }
+  }
+
+  const configFile = "docs/.vitepress/config.ts";
+  if (!fs.existsSync(path.join(root, configFile))) {
+    errors.push(`${configFile}: missing VitePress config`);
+  } else {
+    const config = read(configFile);
+    if (!config.includes('base: "/devkit-pi/"')) {
+      errors.push(`${configFile}: missing /devkit-pi/ base`);
+    }
+  }
+
+  for (const file of ["README.md", "README.zh.md"]) {
+    const content = read(file);
+    if (!content.includes("docs:dev") || !content.includes("docs:build")) {
+      errors.push(`${file}: missing local documentation site commands`);
+    }
+  }
+
+  if (!fs.existsSync(path.join(root, ".github/workflows/docs.yml"))) {
+    errors.push(".github/workflows/docs.yml: missing GitHub Pages workflow");
+  }
+}
+
 function checkWebErrorCodes() {
   const source = read("src/modules/web/errors.ts");
   const block = source.match(/export const WEB_ERROR_CODES = \{([\s\S]*?)\} as const;/)?.[1] ?? "";
@@ -279,6 +309,7 @@ checkErrorCodes();
 checkReferenceNavigation();
 checkGuideNavigation();
 checkAllowWriteBoundary();
+checkVitePressSite();
 checkWebErrorCodes();
 
 if (errors.length > 0) {
