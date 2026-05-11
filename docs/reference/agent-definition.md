@@ -1,24 +1,24 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
 # Agent Definition Reference
 
-Agent 使用 markdown frontmatter + prompt 正文定义。Subagents 总览见 [`subagents.md`](./subagents.md)，调用入口见 [`subagent-tool.md`](./subagent-tool.md)，执行结果结构见 [`result-schema.md`](./result-schema.md)。
+Agents are defined using markdown frontmatter + prompt body. For the Subagents overview, see [`subagents.md`](./subagents.md); for the calling interface, see [`subagent-tool.md`](./subagent-tool.md); for execution result structure, see [`result-schema.md`](./result-schema.md).
 
 ## Discovery paths
 
-当前会发现三类 agents：
+Currently three types of agents are discovered:
 
-| Source | Path | 说明 |
+| Source | Path | Description |
 |---|---|---|
-| builtin | 仓库 `agents/` | devkit-pi 内置 5 个 agents |
-| user | `~/.pi/agent/agents/` | 用户级自定义 agents |
-| project | 从 cwd 向上查找 `.pi/agents/` 或 `.agents/` | 项目级自定义 agents |
+| builtin | Repository `agents/` | devkit-pi built-in 5 agents |
+| user | `~/.pi/agent/agents/` | User-level custom agents |
+| project | Search upward from cwd for `.pi/agents/` or `.agents/` | Project-level custom agents |
 
-同名去重优先级：
+Same-name deduplication priority:
 
 ```text
 project > user > builtin
@@ -26,39 +26,39 @@ project > user > builtin
 
 ## File format
 
-支持 `.md` 和 `.markdown` 文件。
+Supports `.md` and `.markdown` files.
 
-当前 parser 只支持简单 frontmatter，不是完整 YAML parser：
+The current parser only supports simple frontmatter, not a full YAML parser:
 
-- 文件必须以 `---` 开头才会解析 frontmatter。
-- 结束标记是下一段 `---`。
-- 每行匹配 `key: value`。
-- key 支持 word/hyphen：`[\w-]+`。
-- value 会 trim；成对单引号或双引号会被去掉。
-- 不支持 YAML list、嵌套对象、多行字符串或复杂类型。
+- Files must start with `---` to parse frontmatter.
+- The closing marker is the next `---`.
+- Each line matches `key: value`.
+- Keys support word/hyphen: `[\w-]+`.
+- Values are trimmed; paired single or double quotes are stripped.
+- Does not support YAML lists, nested objects, multi-line strings, or complex types.
 
 ## Supported frontmatter fields
 
 | Field | Required | Type in file | Behavior |
 |---|---:|---|---|
-| `name` | 是 | string | agent 名称；缺失则该文件不会被加载 |
-| `description` | 否 | string | agent 描述；缺失时为空字符串 |
-| `readonly` | 否 | string | 只有 `true` 或 `1` 会解析为 true；否则 false |
-| `tools` | 否 | comma-separated string | 逗号分隔工具名，trim 后去空 |
-| `model` | 否 | string | 传给 child pi 的 `--model` |
+| `name` | Yes | string | Agent name; if missing, the file is not loaded |
+| `description` | No | string | Agent description; defaults to empty string |
+| `readonly` | No | string | Only `true` or `1` parse as true; otherwise false |
+| `tools` | No | comma-separated string | Comma-separated tool names, trimmed and deduplicated |
+| `model` | No | string | Passed to child pi as `--model` |
 
-Prompt 正文作为 agent 的 `systemPrompt`。如果正文为空，执行时会回退使用 description 或默认角色文本。
+Prompt body becomes the agent's `systemPrompt`. If the body is empty, execution falls back to the description or default role text.
 
 ## Unsupported fields
 
-以下字段当前没有特殊语义，不应写入 public 文档为已实现功能：
+The following fields currently have no special semantics and should not be written into public documentation as implemented features:
 
 ```text
 package, inheritSkills, defaultContext, tags, routingHints, disabled,
 permissions, temperature, maxTokens, provider, tools as YAML list
 ```
 
-其中 `disabled` 当前不被解析；没有 per-agent disable public config。
+Among these, `disabled` is currently not parsed; there is no per-agent disable public config.
 
 ## Built-in agents
 
@@ -87,7 +87,7 @@ Use the available readonly tools to inspect API code and report findings with fi
 If evidence is insufficient, report uncertainty.
 ```
 
-Web researcher example：
+Web researcher example:
 
 ```md
 ---
@@ -103,48 +103,46 @@ Do not write files. Do not call other subagents.
 
 ## Naming recommendations
 
-推荐：
-
-- 使用小写短横线：`api-reviewer`、`docs-researcher`。
-- 避免覆盖 builtin agent 名称，除非确实想在 project/user scope 替换它。
-- description 简短说明用途，方便 `/toolkit agents` 展示。
-- readonly agent 只声明只读 tools。
-- prompt 中明确任务边界、不可调用 subagents、不确定时如何汇报。
+- Use lowercase with hyphens: `api-reviewer`, `docs-researcher`.
+- Avoid overriding builtin agent names unless you truly want to replace it at the project/user scope.
+- Keep descriptions short to explain purpose, useful for `/toolkit agents` display.
+- Readonly agents should only declare readonly tools.
+- Prompts should clearly state task boundaries, no subagent invocation allowed, and how to report uncertainty.
 
 ## Tool filtering and readonly behavior
 
-执行时，`filterToolsForReadonly()` 会基于 agent 的 `readonly` 与 `subagents.allowWrite` 过滤 tools：
+During execution, `filterToolsForReadonly()` filters tools based on the agent's `readonly` and `subagents.allowWrite`:
 
-- readonly agent：只保留 readonly tools。
-- non-readonly agent 且 `subagents.allowWrite=false`：仍只保留 readonly tools。
-- non-readonly agent 且 `subagents.allowWrite=true`：保留 agent 声明的 tools。
+- Readonly agent: only readonly tools are retained.
+- Non-readonly agent with `subagents.allowWrite=false`: still only readonly tools retained.
+- Non-readonly agent with `subagents.allowWrite=true`: agent-declared tools are retained.
 
-Readonly tools 当前包括：
+Readonly tools currently include:
 
 ```text
 read, grep, find, ls, web_search, fetch_content, get_search_content
 ```
 
-`lsp` 只有在 `subagents.allowLspTools=true` 且 `subagents.allowedLspActions` 非空时保留。子代理中 LSP privileged actions 始终禁用。
+`lsp` is only retained when `subagents.allowLspTools=true` and `subagents.allowedLspActions` is non-empty. LSP privileged actions are always disabled in subagent processes.
 
-可写自定义 subagents 目前属于实验性能力。默认且推荐的模式是 readonly。`subagents.allowWrite=true` 只表示放宽委派策略，不代表已经具备完整权限沙箱、审计日志、自动回滚机制或稳定的写入能力契约。仅建议在可信仓库中使用，并且必须人工 review 所有变更。
+Writable custom subagents are currently an experimental capability. The default and recommended mode is readonly. `subagents.allowWrite=true` only indicates relaxed delegation policy; it does not imply a complete permission sandbox, audit logging, automatic rollback mechanism, or stable write-capability contract. Use only in trusted repositories, and all changes must be human-reviewed.
 
-对于自定义 agent：
+For custom agents:
 
-- 子代理的实际工具可用性取决于 child pi runtime、当前工具注册、执行环境和配置。
-- 不要把 `readonly: false` 或 `allowWrite=true` 理解为稳定、可控、可审计的工具权限模型。
-- 文件写入、命令执行、修改项目等 write-like 行为不应被视为默认安全能力。
-- 当前没有稳定的自动回滚保证；启用可写行为时应使用 Git diff、人工 review 和测试命令兜底。
+- Subagent's actual tool availability depends on child pi runtime, current tool registration, execution environment, and configuration.
+- Do not interpret `readonly: false` or `allowWrite=true` as a stable, controllable, auditable tool permission model.
+- File writing, command execution, project modification, and other write-like behaviors should not be treated as default-safe capabilities.
+- There is currently no stable automatic rollback guarantee; when enabling writable behavior, use Git diffs, human review, and test commands as safety nets.
 
 ## Invalid definitions
 
-以下情况会导致 agent 文件被跳过或能力不符合预期：
+The following cases cause agent files to be skipped or have capabilities not match expectations:
 
-- 缺少 `name`：文件不会被加载。
-- frontmatter 不是简单 `key: value`：无法解析为预期字段。
-- `tools` 使用 YAML list：不会按列表解析。
-- 声明不存在的工具：工具名会被传入 child pi，但是否可用取决于 pi runtime；devkit-pi 不会在 discovery 阶段校验每个工具是否存在。
-- `readonly` 写成 `yes` / `True`：不会解析为 true；只有 `true` 或 `1` 生效。
+- Missing `name`: file is not loaded.
+- Frontmatter is not simple `key: value`: cannot parse into expected fields.
+- `tools` uses YAML list syntax: not parsed as a list.
+- Declaring non-existent tools: tool names are passed to child pi, but availability depends on pi runtime; devkit-pi does not verify each tool's existence at discovery time.
+- `readonly` written as `yes` / `True`: does not parse as true; only `true` or `1` take effect.
 
 ## Source map
 

@@ -1,52 +1,52 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
 # Web Tools Reference
 
-本文档是 devkit-pi 内置 Web tools 的 public API reference。配置默认值以 [`configuration.md`](./configuration.md) 为准，错误码以 [`web-tools-error-codes.md`](./web-tools-error-codes.md) 为准。
+This document is the public API reference for devkit-pi's built-in Web tools. Configuration defaults are defined in [`configuration.md`](./configuration.md); error codes are defined in [`web-tools-error-codes.md`](./web-tools-error-codes.md).
 
 ## Overview
 
-Web tools 模块为主代理和子代理提供 readonly 的网页搜索、URL 内容抓取、可读文本提取与结果检索能力。当前公开注册的工具来自 `src/modules/web/register.ts`：
+The Web tools module provides the main agent and subagents with readonly web search, URL content fetching, readable text extraction, and result retrieval capabilities. Currently publicly registered tools come from `src/modules/web/register.ts`:
 
-| Tool | 作用 | 主要源码 |
+| Tool | Purpose | Primary source |
 |---|---|---|
-| `web_search` | 调用配置的 search provider 执行 Web 搜索，可选抓取搜索结果内容 | `src/modules/web/search.ts` |
-| `fetch_content` | 抓取 HTTP/HTTPS URL 并提取可读文本 | `src/modules/web/fetch.ts` |
-| `get_search_content` | 通过 `responseId` 检索已存储的搜索或抓取结果 | `src/modules/web/storage.ts` |
+| `web_search` | Execute web search via configured search provider, optionally fetch search result content | `src/modules/web/search.ts` |
+| `fetch_content` | Fetch HTTP/HTTPS URLs and extract readable text | `src/modules/web/fetch.ts` |
+| `get_search_content` | Retrieve stored search or fetch results by `responseId` | `src/modules/web/storage.ts` |
 
-模块内部还包含 provider selection、search cache、URL security、content handlers、Jina Reader fallback、concurrency、connection pool、observability 和 structured errors。这些内部模块支撑公开工具，但不是额外公开 tool。
+The module also internally contains provider selection, search cache, URL security, content handlers, Jina Reader fallback, concurrency, connection pool, observability, and structured errors. These internal modules support the public tools but are not additional public tools.
 
 ## Tool list
 
 ### `web_search`
 
-- 参数 schema：`WebSearchParams`
-- 成功结果：`WebSearchSuccess`
-- 错误结果：`WebToolError`
-- provider：`ddgs`、`brave`、`tavily`、`serper`、`openserp`、`searxng`，以及 `provider="auto"` 的自动选择模式
+- Parameter schema: `WebSearchParams`
+- Success result: `WebSearchSuccess`
+- Error result: `WebToolError`
+- Providers: `ddgs`, `brave`, `tavily`, `serper`, `openserp`, `searxng`, and `provider="auto"` auto-selection mode
 
 ### `fetch_content`
 
-- 参数 schema：`FetchContentParams`
-- 成功结果：`FetchContentSuccess`
-- 错误结果：`WebToolError`
-- 支持 HTTP/HTTPS URL；默认阻止 localhost、私网地址、私有 hostname 与 DNS 解析到私网地址的目标
+- Parameter schema: `FetchContentParams`
+- Success result: `FetchContentSuccess`
+- Error result: `WebToolError`
+- Supports HTTP/HTTPS URLs; by default blocks localhost, private addresses, private hostnames, and DNS resolution to private addresses
 
 ### `get_search_content`
 
-- 参数 schema：`GetSearchContentParams`
-- 用于从 `web_search` 或 `fetch_content` 返回的 `responseId` 中取回完整或指定条目
-- storage 会随 session lifecycle restore/clear，并受 `web.maxStoredResults` 与 `web.maxStoredContentChars` 限制
+- Parameter schema: `GetSearchContentParams`
+- Used to retrieve full or specified entries from `responseId` returned by `web_search` or `fetch_content`
+- Storage follows session lifecycle restore/clear and is limited by `web.maxStoredResults` and `web.maxStoredContentChars`
 
 ## `web_search` reference
 
 ### Input schema
 
-源码：`src/modules/web/schemas.ts`
+Source: `src/modules/web/schemas.ts`
 
 ```ts
 {
@@ -59,33 +59,33 @@ Web tools 模块为主代理和子代理提供 readonly 的网页搜索、URL �
 
 ### Required fields
 
-TypeBox schema 中字段均为 optional，但运行时要求至少提供一个非空 query：
+All fields are optional in the TypeBox schema, but at runtime at least one non-empty query is required:
 
-- `query`：单个查询字符串
-- `queries`：多个查询字符串
+- `query`: single query string
+- `queries`: multiple query strings
 
-`query` 和 `queries` 会合并、trim、去空值、去重，最多保留 5 个查询。若没有任何有效查询，返回 `WEB_SEARCH_INVALID_QUERY`。
+`query` and `queries` are merged, trimmed, deduplicated, with a maximum of 5 queries retained. If no valid queries exist, returns `WEB_SEARCH_INVALID_QUERY`.
 
 ### Optional fields
 
-| Field | 类型 | 行为 |
+| Field | Type | Behavior |
 |---|---|---|
-| `numResults` | number | 每个 query 请求的结果数；非有限数使用 `web.maxResults`；有效值会 floor 后限制在 `1..web.maxResults` |
-| `includeContent` | boolean | 为 `true` 时，对每个搜索结果尝试调用 `fetchUrlContent()` 附加 `content`；单个结果抓取失败会被忽略，该搜索结果仍保留 |
+| `numResults` | number | Results requested per query; non-finite numbers use `web.maxResults`; valid values are floored and limited to `1..web.maxResults` |
+| `includeContent` | boolean | When `true`, attempts to call `fetchUrlContent()` for each search result to attach `content`; single result fetch failures are ignored, the search result is still retained |
 
 ### Default behavior
 
-- 默认 provider 来自 `web.provider`，默认值是 `ddgs`。
-- search cache 仅在 `web.cache.enabled=true` 时生效。
-- 搜索请求受 `web.timeoutMs`、`web.concurrency.*` 与 connection pool 配置影响。
-- 成功结果会存入 responseId storage，可用 `get_search_content` 检索。
+- Default provider comes from `web.provider`, default value is `ddgs`.
+- Search cache only takes effect when `web.cache.enabled=true`.
+- Search requests are affected by `web.timeoutMs`, `web.concurrency.*`, and connection pool configuration.
+- Successful results are stored in responseId storage, retrievable via `get_search_content`.
 
 ### Provider selection behavior
 
-- `web.provider="ddgs"`：默认零配置 DuckDuckGo Lite fallback provider。
-- `web.provider` 为显式 provider 时：只使用该 provider；显式 provider 失败不会 fallback 到其他 provider。
-- `web.provider="auto"`：按 provider availability 过滤候选 provider，并按分层顺序尝试：commercial（`tavily`、`serper`、`brave`）→ self-host/open（`openserp`、`searxng`）→ zero-config（`ddgs`）。每层内部按 `web.providerPriority` 排序。
-- provider 详细配置见 [`web-providers.md`](./web-providers.md)。
+- `web.provider="ddgs"`: default zero-config DuckDuckGo Lite fallback provider.
+- `web.provider` is an explicit provider: only that provider is used; explicit provider failure does not fall back to other providers.
+- `web.provider="auto"`: filters candidates by provider availability and tries in tiered order: commercial (`tavily`, `serper`, `brave`) → self-host/open (`openserp`, `searxng`) → zero-config (`ddgs`). Within each tier, sorted by `web.providerPriority`.
+- Provider configuration details: [`web-providers.md`](./web-providers.md).
 
 ### Success response shape
 
@@ -114,7 +114,7 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 
 ### Empty results semantics
 
-无结果是成功响应，不是错误。provider 返回空结果时，`web_search` 返回：
+No results is a success response, not an error. When the provider returns empty results, `web_search` returns:
 
 ```json
 {
@@ -125,7 +125,7 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 }
 ```
 
-`WEB_SEARCH_NO_RESULTS` 是 reserved code，当前不会直接返回。
+`WEB_SEARCH_NO_RESULTS` is a reserved code, not directly returned.
 
 ### Error response shape
 
@@ -138,7 +138,7 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 }
 ```
 
-JSON 返回中的 `code` 仍是字符串值。常见 active code：
+Common active codes:
 
 - `WEB_SEARCH_INVALID_QUERY`
 - `WEB_SEARCH_FAILED`
@@ -147,13 +147,13 @@ JSON 返回中的 `code` 仍是字符串值。常见 active code：
 - `PROVIDER_RATE_LIMITED`
 - `PROVIDER_UNAVAILABLE`
 - `NETWORK_ERROR`
-- `INVALID_INPUT`（provider 配置/选择错误）
+- `INVALID_INPUT` (provider configuration/selection error)
 
-provider JSON parse 或 response shape 异常当前继续归入 `WEB_SEARCH_FAILED`，不直接返回 reserved code `PARSE_ERROR`。
+Provider JSON parse or response shape anomalies currently continue to be classified as `WEB_SEARCH_FAILED`, not directly returning reserved code `PARSE_ERROR`.
 
 ### Examples
 
-单 query：
+Single query:
 
 ```json
 {
@@ -162,7 +162,7 @@ provider JSON parse 或 response shape 异常当前继续归入 `WEB_SEARCH_FAIL
 }
 ```
 
-多 query：
+Multiple queries:
 
 ```json
 {
@@ -171,7 +171,7 @@ provider JSON parse 或 response shape 异常当前继续归入 `WEB_SEARCH_FAIL
 }
 ```
 
-附加抓取内容：
+With content fetching:
 
 ```json
 {
@@ -184,7 +184,7 @@ provider JSON parse 或 response shape 异常当前继续归入 `WEB_SEARCH_FAIL
 
 ### Input schema
 
-源码：`src/modules/web/schemas.ts`
+Source: `src/modules/web/schemas.ts`
 
 ```ts
 {
@@ -196,39 +196,39 @@ provider JSON parse 或 response shape 异常当前继续归入 `WEB_SEARCH_FAIL
 
 ### Required fields
 
-TypeBox schema 中字段均为 optional，但运行时要求至少提供一个非空 URL：
+All fields are optional in the TypeBox schema, but at runtime at least one non-empty URL is required:
 
-- `url`：单个 URL
-- `urls`：多个 URL
+- `url`: single URL
+- `urls`: multiple URLs
 
-`url` 和 `urls` 会合并、trim、去空值、去重。若没有任何有效 URL，返回 `INVALID_INPUT`。
+`url` and `urls` are merged, trimmed, deduplicated. If no valid URLs exist, returns `INVALID_INPUT`.
 
 ### Optional fields
 
-| Field | 类型 | 行为 |
+| Field | Type | Behavior |
 |---|---|---|
-| `preferReader` | boolean | 当 `web.enableJinaFallback=true` 且内容为 HTML 时，请求优先尝试 Jina Reader；私网 URL 不会发送给 Jina |
+| `preferReader` | boolean | When `web.enableJinaFallback=true` and content is HTML, requests preferentially try Jina Reader; private network URLs are not sent to Jina |
 
 ### Supported URL protocols
 
-- 支持：`http:`、`https:`
-- 非 HTTP/HTTPS 协议会返回 `CONTENT_FETCH_INVALID_URL`
+- Supported: `http:`, `https:`
+- Non-HTTP/HTTPS protocols return `CONTENT_FETCH_INVALID_URL`
 
 ### Security boundary
 
-默认 `web.allowPrivateNetwork=false`。`fetch_content` 会通过 `src/modules/web/security.ts` 拒绝：
+Default `web.allowPrivateNetwork=false`. `fetch_content` will reject via `src/modules/web/security.ts`:
 
 - localhost / `*.localhost`
 - `.local` / `.internal`
-- 私网、loopback、link-local、multicast 等 IPv4/IPv6 地址
-- DNS 解析到私网地址的 hostname
-- 重定向到上述目标的 URL
+- Private network, loopback, link-local, multicast IPv4/IPv6 addresses
+- DNS resolution to private addresses
+- URLs redirecting to the above targets
 
-安全策略拒绝当前归入 `CONTENT_FETCH_FAILED`，不会新增独立 blocked 错误码。若确需抓取本地开发服务，可在配置中设置 `web.allowPrivateNetwork=true`。
+Security policy rejection is currently classified as `CONTENT_FETCH_FAILED`, not a new independent blocked error code. If local development server access is needed, set `web.allowPrivateNetwork=true` in configuration.
 
 ### Content extraction behavior
 
-`fetch_content` 下载响应体后，根据 HTTP header、URL extension、magic bytes 与 fallback 规则检测内容类型。当前支持的可读内容包括：
+`fetch_content` downloads the response body and detects content type based on HTTP header, URL extension, magic bytes, and fallback rules. Currently supported readable content includes:
 
 - HTML
 - plain text
@@ -237,33 +237,33 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 - CSV / TSV
 - XML / RSS / Atom
 - YAML
-- 常见源码/配置文本扩展名
+- Common source code/config text extensions
 
-不支持的二进制或文档类型包括 PDF、Office、ZIP、图片、音频、视频、可执行文件等；当前归入 `CONTENT_FETCH_FAILED`。
+Unsupported binary or document types include PDF, Office, ZIP, images, audio, video, executables, etc.; currently classified as `CONTENT_FETCH_FAILED`.
 
-content handlers 会尽量产生可读文本。JSON/CSV/XML 等 handler 解析失败时通常 fallback 为纯文本并设置 `parseWarning`，不直接返回 `PARSE_ERROR`。
+Content handlers try to produce readable text. JSON/CSV/XML handler parse failures usually fall back to plain text with `parseWarning` set, not directly returning `PARSE_ERROR`.
 
 ### Jina fallback behavior
 
-Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider。
+Jina Reader is `fetch_content`'s internal fallback, not a `web_search` provider.
 
-触发条件：
+Trigger conditions:
 
 - `web.enableJinaFallback=true`
-- 内容检测为 HTML
-- 并且：
-  - `preferReader=true`；或
-  - 自动触发条件命中 `web.jinaTriggers`（默认 `short-html`、`js-heavy-html`）
+- Content detected as HTML
+- AND either:
+  - `preferReader=true`; or
+  - Auto-trigger conditions match `web.jinaTriggers` (defaults: `short-html`, `js-heavy-html`)
 
-私网 URL 不会发送给 Jina。Jina 返回非 2xx 或空内容时，工具回退到原始 HTML 提取结果。Jina timeout/abort 可能返回 `CONTENT_FETCH_TIMEOUT`；其他 Jina 请求异常可能归入 `CONTENT_FETCH_FAILED`。当前没有 `JINA_*` 错误码。
+Private network URLs are not sent to Jina. Jina returns non-2xx or empty content: tool falls back to original HTML extraction result. Jina timeout/abort may return `CONTENT_FETCH_TIMEOUT`; other Jina request anomalies may be classified as `CONTENT_FETCH_FAILED`. Currently no `JINA_*` error codes.
 
 ### Truncation / size behavior
 
-- `web.maxResponseBytes` 限制下载响应体字节数。
-- `web.maxContentChars` 限制 tool 返回内容字符数。
-- storage 还受 `web.maxStoredContentChars` 限制。
-- 超过限制时当前采用“截断成功”的语义，结果中 `truncated: true`。
-- `CONTENT_FETCH_TOO_LARGE` 是 reserved code，当前不会因截断直接返回。
+- `web.maxResponseBytes` limits download response body bytes.
+- `web.maxContentChars` limits tool return content character count.
+- Storage also limited by `web.maxStoredContentChars`.
+- When limits are exceeded, current "truncation success" semantics apply, result contains `truncated: true`.
+- `CONTENT_FETCH_TOO_LARGE` is a reserved code, not directly returned for truncation.
 
 ### Success response shape
 
@@ -281,7 +281,7 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 }
 ```
 
-多个 URL 当前在同一次调用中返回同一个 `responseId`。若任一 URL 在 `fetchContent()` 主流程中抛出未恢复错误，整个 tool 调用返回错误结果。
+Multiple URLs currently return the same `responseId` in one call. If any URL throws an unrecoverable error in `fetchContent()` main flow, the entire tool call returns an error result.
 
 ### Error response shape
 
@@ -294,7 +294,7 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 }
 ```
 
-常见 active code：
+Common active codes:
 
 - `INVALID_INPUT`
 - `CONTENT_FETCH_INVALID_URL`
@@ -303,7 +303,7 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 
 ### Examples
 
-单 URL：
+Single URL:
 
 ```json
 {
@@ -311,7 +311,7 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 }
 ```
 
-多个 URL：
+Multiple URLs:
 
 ```json
 {
@@ -322,7 +322,7 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 }
 ```
 
-请求 Jina Reader（需要配置启用）：
+Request Jina Reader (requires configuration to enable):
 
 ```json
 {
@@ -335,7 +335,7 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 
 ### Input schema
 
-源码：`src/modules/web/schemas.ts`
+Source: `src/modules/web/schemas.ts`
 
 ```ts
 {
@@ -349,18 +349,18 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 
 ### Required fields
 
-- `responseId`：必填，来自 `web_search` 或 `fetch_content` 的成功响应。
+- `responseId`: required, from `web_search` or `fetch_content` success response.
 
 ### Optional selectors
 
-| Selector | 适用结果 | 行为 |
+| Selector | Applicable result | Behavior |
 |---|---|---|
-| `urlIndex` | fetch result | 取指定 URL index |
-| `url` | fetch result | 取匹配 URL |
-| `queryIndex` | search result | 取指定 query index |
-| `query` | search result | 取匹配 query |
+| `urlIndex` | fetch result | Get by URL index |
+| `url` | fetch result | Get by matching URL |
+| `queryIndex` | search result | Get by query index |
+| `query` | search result | Get by matching query |
 
-没有 selector 时返回整个 stored result。selector 无效或 `responseId` 不存在时返回 `NOT_FOUND`。
+Without selectors, returns the entire stored result. Invalid selectors or non-existent `responseId` returns `NOT_FOUND`.
 
 ### Success response shape
 
@@ -373,12 +373,12 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 
 ### Common error codes
 
-- `INVALID_INPUT`：`responseId` 缺失或 trim 后为空
-- `NOT_FOUND`：`responseId` 不存在或 selector 未命中
+- `INVALID_INPUT`: `responseId` missing or empty after trim
+- `NOT_FOUND`: `responseId` does not exist or selector not found
 
 ### Examples
 
-返回整个 stored result：
+Return entire stored result:
 
 ```json
 {
@@ -386,7 +386,7 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 }
 ```
 
-按 URL index 返回单条抓取结果：
+Return single fetch result by URL index:
 
 ```json
 {
@@ -395,7 +395,7 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 }
 ```
 
-按 query 返回搜索结果：
+Return search result by query:
 
 ```json
 {
@@ -406,7 +406,7 @@ Jina Reader 是 `fetch_content` 内部 fallback，不是 `web_search` provider�
 
 ## Error contract
 
-Web tools 的错误结果统一为：
+Web tools error results are unified as:
 
 ```ts
 {
@@ -417,72 +417,72 @@ Web tools 的错误结果统一为：
 }
 ```
 
-- TypeScript 类型中 `WebToolError.error.code` 是 `WebErrorCode`。
-- JSON 返回中 `code` 仍是字符串值。
-- 完整 canonical 错误码清单见 [`web-tools-error-codes.md`](./web-tools-error-codes.md)。
-- `active` 表示当前有直接返回路径。
-- `reserved` 表示已定义但当前不会直接返回。
-- `deprecated` 表示旧名称或历史文档名称，不再作为 canonical code 返回。
+- TypeScript type `WebToolError.error.code` is `WebErrorCode`.
+- JSON return `code` is still a string value.
+- Complete canonical error code list: [`web-tools-error-codes.md`](./web-tools-error-codes.md).
+- `active` means currently has a direct return path.
+- `reserved` means defined but currently not directly returned.
+- `deprecated` means old name or historical documentation name, no longer returned as canonical code.
 
-本文不重复完整错误码表，避免与 canonical reference 漂移。
+This document does not repeat the full error code table to avoid drift from canonical reference.
 
 ## Configuration links
 
-完整配置见 [`configuration.md`](./configuration.md)：
+Complete configuration: [`configuration.md`](./configuration.md):
 
-- `web.*`：基础开关、超时、结果数、大小限制、storage、安全边界、debug
-- `web.provider` / `web.providerPriority`：search provider 选择
-- provider 子配置：`web.openserp`、`web.searxng`、`web.tavily`、`web.serper`，以及 Brave 的 `BRAVE_SEARCH_API_KEY`
-- `web.cache.*`：search cache
-- `web.concurrency.*`：请求并发与队列
-- `web.connectionPool.*`：HTTP/HTTPS keep-alive pool
-- `web.enableJinaFallback`、`web.jinaTimeoutMs`、`web.jinaTriggers`：Jina Reader fallback
+- `web.*`: basic switches, timeout, result count, size limits, storage, security boundary, debug
+- `web.provider` / `web.providerPriority`: search provider selection
+- Provider sub-configs: `web.openserp`, `web.searxng`, `web.tavily`, `web.serper`, and Brave's `BRAVE_SEARCH_API_KEY`
+- `web.cache.*`: search cache
+- `web.concurrency.*`: request concurrency and queue
+- `web.connectionPool.*`: HTTP/HTTPS keep-alive pool
+- `web.enableJinaFallback`, `web.jinaTimeoutMs`, `web.jinaTriggers`: Jina Reader fallback
 
-Provider 专项说明见 [`web-providers.md`](./web-providers.md)。
+Provider-specific details: [`web-providers.md`](./web-providers.md).
 
 ## Stability notes
 
-Public contract：
+Public contract:
 
-- 公开 tool 名称：`web_search`、`fetch_content`、`get_search_content`
-- 参数字段名与基本类型
-- 成功响应中的 `responseId`、`queries`、`results`、`result` 等顶层结构
-- 错误响应中的 `error.code` / `error.message`
-- canonical `WebErrorCode` 字符串值
+- Public tool names: `web_search`, `fetch_content`, `get_search_content`
+- Parameter field names and basic types
+- Success response top-level structures: `responseId`, `queries`, `results`, `result`
+- Error response: `error.code` / `error.message`
+- Canonical `WebErrorCode` string values
 
-Internal implementation：
+Internal implementation:
 
-- provider adapter 内部解析细节
-- renderer UI 展示格式
-- cache、concurrency、connection pool 的内部数据结构
-- content handler 的具体格式化细节
-- storage 的内部 envelope 与 session custom entry 结构
+- Provider adapter internal parsing details
+- Renderer UI display format
+- Cache, concurrency, connection pool internal data structures
+- Content handler specific formatting details
+- Storage internal envelope and session custom entry structure
 
-边界说明：
+Boundary notes:
 
-- reserved error codes 不代表当前会直接返回。
-- provider 行为可能因第三方服务、API key、rate limit、HTML/JSON 返回格式变化而异。
-- search provider response shape 异常当前继续归入 `WEB_SEARCH_FAILED`。
-- fetch truncation 当前是成功语义，不返回 `CONTENT_FETCH_TOO_LARGE`。
-- 安全策略拒绝当前归入 `CONTENT_FETCH_FAILED`。
+- Reserved error codes do not represent current direct returns.
+- Provider behavior may vary due to third-party services, API keys, rate limits, HTML/JSON return format changes.
+- Search provider response shape anomalies currently continue to be classified as `WEB_SEARCH_FAILED`.
+- Fetch truncation is currently success semantics, not returning `CONTENT_FETCH_TOO_LARGE`.
+- Security policy rejection is currently classified as `CONTENT_FETCH_FAILED`.
 
 ## Source map
 
-| 文档主题 | 对应源码 |
+| Document topic | Source |
 |---|---|
-| tool registration / session hooks | `src/modules/web/register.ts` |
-| schemas | `src/modules/web/schemas.ts` |
-| public result/input types | `src/modules/web/types.ts` |
-| search flow | `src/modules/web/search.ts` |
-| fetch flow | `src/modules/web/fetch.ts` |
-| content extraction helpers | `src/modules/web/extract.ts` |
-| content handlers | `src/modules/web/handlers.ts` |
+| Tool registration / session hooks | `src/modules/web/register.ts` |
+| Schemas | `src/modules/web/schemas.ts` |
+| Public result/input types | `src/modules/web/types.ts` |
+| Search flow | `src/modules/web/search.ts` |
+| Fetch flow | `src/modules/web/fetch.ts` |
+| Content extraction helpers | `src/modules/web/extract.ts` |
+| Content handlers | `src/modules/web/handlers.ts` |
 | URL security | `src/modules/web/security.ts` |
 | responseId storage | `src/modules/web/storage.ts` |
-| search cache | `src/modules/web/cache.ts` |
-| concurrency throttling | `src/modules/web/concurrency.ts` |
+| Search cache | `src/modules/web/cache.ts` |
+| Concurrency throttling | `src/modules/web/concurrency.ts` |
 | HTTP connection pool | `src/modules/web/http-pool.ts` |
-| observability/activity | `src/modules/web/observability.ts` |
-| renderers | `src/modules/web/renderers.ts` |
-| errors | `src/modules/web/errors.ts` |
-| provider registry/adapters | `src/modules/web/providers/` |
+| Observability/activity | `src/modules/web/observability.ts` |
+| Renderers | `src/modules/web/renderers.ts` |
+| Errors | `src/modules/web/errors.ts` |
+| Provider registry/adapters | `src/modules/web/providers/` |

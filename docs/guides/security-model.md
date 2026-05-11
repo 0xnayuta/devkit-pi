@@ -1,69 +1,69 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
-# 安全模型
+# Security Model
 
-本文档说明 devkit-pi 当前安全边界。它不是形式化安全证明；当前 public API 与配置细节以 [Configuration reference](../reference/configuration.md)、[Subagents reference](../reference/subagents.md)、[Agent definition reference](../reference/agent-definition.md)、[Web tools reference](../reference/web-tools.md)、[Web tools error codes](../reference/web-tools-error-codes.md) 和 [LSP tools reference](../reference/lsp-tools.md) 为准。
+This document describes devkit-pi's current security boundaries. It is not a formal security proof. Current public API and configuration details are defined in [Configuration reference](../reference/configuration.md), [Subagents reference](../reference/subagents.md), [Agent definition reference](../reference/agent-definition.md), [Web tools reference](../reference/web-tools.md), [Web tools error codes](../reference/web-tools-error-codes.md), and [LSP tools reference](../reference/lsp-tools.md).
 
-## 默认策略
+## Default policies
 
-- 默认 readonly
-- 默认 `subagents.maxDepth = 1`
-- 子代理不继承 `subagent` 工具
-- 子代理只处理被委托的 task
-- 子代理不应扩大任务范围
-- LSP privileged actions 默认禁用
-- 子代理只能使用 `subagents.allowedLspActions` 中的 readonly LSP actions
-- LSP hook 仅在主代理进程注册，不在子代理进程注册
+- Readonly by default
+- Default `subagents.maxDepth = 1`
+- Subagents do not inherit the `subagent` tool
+- Subagents only handle delegated tasks
+- Subagents should not expand the task scope
+- LSP privileged actions disabled by default
+- Subagents can only use readonly LSP actions from `subagents.allowedLspActions`
+- LSP hook is registered only in the main agent process, not in subagent processes
 
-## 输出清理
+## Output sanitization
 
-结果中不应暴露：
+Results should not expose:
 
-- API key
-- npm token
-- Authorization header
-- 环境变量值
-- 完整 stack trace
-- 完整系统 prompt
+- API keys
+- npm tokens
+- Authorization headers
+- Environment variable values
+- Full stack traces
+- Full system prompts
 
-## Web tools 安全边界
+## Web tools security boundaries
 
-内置 `web_search`、`fetch_content`、`get_search_content` 保持 readonly。工具参数、返回结构和错误语义见 [Web tools reference](../reference/web-tools.md) 与 [Web tools error codes](../reference/web-tools-error-codes.md)：
+Built-in `web_search`, `fetch_content`, `get_search_content` remain readonly. Tool parameters, return structures, and error semantics are defined in [Web tools reference](../reference/web-tools.md) and [Web tools error codes](../reference/web-tools-error-codes.md):
 
-- 仅允许 `http:` / `https:`
-- 禁止 `localhost`、loopback、link-local、private IP
-- 禁止 `file:` 等本地协议
-- 设置请求 timeout
-- 设置最大响应体大小与最大输出字符数
-- 不写项目文件；responseId storage 随 session lifecycle restore/clear，并受配置限制
+- Only `http:` / `https:` allowed
+- Block `localhost`, loopback, link-local, private IP
+- Block `file:` and other local protocols
+- Request timeout configured
+- Max response body size and max output character count
+- Does not write project files; responseId storage follows session lifecycle restore/clear, subject to configuration limits
 
-完整设计背景见 [ADR 0004](../adr/0004-bundled-readonly-web-tools.md)。当前 provider、Jina fallback、storage 和 URL 安全边界以 [Web tools reference](../reference/web-tools.md)、[Web providers reference](../reference/web-providers.md) 与 [Configuration reference](../reference/configuration.md) 为准。
+Full design background in [ADR 0004](../adr/0004-bundled-readonly-web-tools.md). Current provider, Jina fallback, storage, and URL security boundaries are defined in [Web tools reference](../reference/web-tools.md), [Web providers reference](../reference/web-providers.md), and [Configuration reference](../reference/configuration.md).
 
-## LSP 安全边界
+## LSP security boundaries
 
-LSP tool/action、hook 和 failure semantics 见 [LSP tools reference](../reference/lsp-tools.md)。
+LSP tool/action, hook, and failure semantics are defined in [LSP tools reference](../reference/lsp-tools.md).
 
-Readonly-safe actions：
+Readonly-safe actions:
 
 ```text
 definition, references, hover, signature, symbols, diagnostics, workspace-diagnostics, servers
 ```
 
-Privileged actions：
+Privileged actions:
 
 ```text
 rename, codeAction, restart
 ```
 
-`lsp.tool.allowMutatingActions` 默认为 `false`。即使显式开启，子代理进程中仍禁止 privileged actions。
+`lsp.tool.allowMutatingActions` defaults to `false`. Even when explicitly enabled, privileged actions remain blocked in subagent processes.
 
-LSP hook 默认启用 `agent_end` 模式，仅对主代理进程中本轮修改过的文件自动诊断；可通过 `lsp.hook.enabled: false` 或 `lsp.hook.mode: "disabled"` 关闭。hook 输出会限制文件数量和最大字符数。
+LSP hook defaults to `agent_end` mode, auto-diagnosing only files modified in the current turn by the main agent process. It can be disabled via `lsp.hook.enabled: false` or `lsp.hook.mode: "disabled"`. Hook output limits file count and max characters.
 
-子代理 LSP 由 subagents namespace 控制：
+Subagent LSP is controlled by the subagents namespace:
 
 ```json
 {
@@ -74,9 +74,9 @@ LSP hook 默认启用 `agent_end` 模式，仅对主代理进程中本轮修改�
 }
 ```
 
-## 写入能力
+## Write capability
 
-Subagents 的 readonly/write 行为见 [Subagents reference](../reference/subagents.md) 与 [Agent definition reference](../reference/agent-definition.md)。子代理写能力默认关闭：
+Subagent readonly/write behavior is defined in [Subagents reference](../reference/subagents.md) and [Agent definition reference](../reference/agent-definition.md). Subagent write capability is disabled by default:
 
 ```json
 {
@@ -86,18 +86,18 @@ Subagents 的 readonly/write 行为见 [Subagents reference](../reference/subage
 }
 ```
 
-可写自定义 subagents 目前属于实验性能力。默认且推荐的模式是 readonly。`subagents.allowWrite=true` 只表示放宽委派策略，不代表已经具备完整权限沙箱、审计日志、自动回滚机制或稳定的写入能力契约。仅建议在可信仓库中使用，并且必须人工 review 所有变更。
+Writable custom subagents are currently an experimental capability. The default and recommended mode is readonly. `subagents.allowWrite=true` only indicates relaxed delegation policy; it does not imply a complete permission sandbox, audit logging, automatic rollback mechanism, or stable write-capability contract. Use only in trusted repositories, and all changes must be human-reviewed.
 
-当前边界：
+Current boundaries:
 
-- 内置 agents 仍按 readonly-first 设计。
-- 子代理的实际工具可用性取决于 child pi runtime、当前工具注册、执行环境和配置。
-- 主代理进程注册 `subagent` 和 `/toolkit`；子代理进程不注册 `subagent`，也不注册 `/toolkit`。
-- LSP privileged actions 在子代理中始终禁用。
-- Web tools 可用于研究和读取信息。
-- 文件写入、命令执行、修改项目等 write-like 行为不应被视为默认安全能力。
-- `allowWrite=true` 只是放宽策略入口，不代表完整安全沙箱。
+- Built-in agents are still designed with readonly-first principles.
+- Actual tool availability in subagents depends on child pi runtime, current tool registration, execution environment, and configuration.
+- Main agent process registers `subagent` and `/toolkit`; subagent processes do not register `subagent` or `/toolkit`.
+- LSP privileged actions are always disabled in subagents.
+- Web tools are available for research and reading information.
+- File writing, command execution, project modification, and other write-like behavior should not be treated as default-safe capabilities.
+- `allowWrite=true` only relaxes the policy entry; it does not imply a complete security sandbox.
 
-当前没有稳定的自动回滚保证。如果用户启用可写行为，应使用 Git 工作区、提交前 diff、人工 review 和测试命令兜底。
+There is currently no stable automatic rollback guarantee. If users enable writable behavior, they should use Git workspaces, pre-commit diffs, human review, and test commands as safety nets.
 
-如后续要正式支持可写自定义 subagents，应单独进行 “Writable Subagents Safety Hardening”，至少补充：权限模型、工具 allowlist/denylist、readonly 与 write-like action 分类、write action logging、modified files summary、before/after diff guidance、rollback recommendation、failure recovery notes、测试覆盖和 release note 中的 experimental/breaking 状态说明。
+To formally support writable custom subagents in the future, a separate "Writable Subagents Safety Hardening" effort should be undertaken, covering at minimum: permission model, tool allowlist/denylist, readonly vs write-like action classification, write action logging, modified files summary, before/after diff guidance, rollback recommendation, failure recovery notes, test coverage, and experimental/breaking status in release notes.

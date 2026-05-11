@@ -1,42 +1,42 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
-# 发布前检查清单
+# Release Checklist
 
-发布前应同步检查 [Documentation index](../README.md)、[Reference index](../reference/README.md)、[Configuration reference](../reference/configuration.md)、[Web tools error codes](../reference/web-tools-error-codes.md)、[Toolkit commands reference](../reference/toolkit-commands.md) 与 [CHANGELOG.md](../../CHANGELOG.md)。
+Before release, check [Documentation index](../README.md), [Reference index](../reference/README.md), [Configuration reference](../reference/configuration.md), [Web tools error codes](../reference/web-tools-error-codes.md), [Toolkit commands reference](../reference/toolkit-commands.md), and [CHANGELOG.md](../../CHANGELOG.md).
 
-## 代码验证
+## Code verification
 
-- [ ] `pnpm typecheck` 通过
-- [ ] `pnpm lint` 通过
-- [ ] `pnpm test` 通过
-- [ ] `pnpm test:unit` 通过
+- [ ] `pnpm typecheck` passes
+- [ ] `pnpm lint` passes
+- [ ] `pnpm test` passes
+- [ ] `pnpm test:unit` passes
 
-## 文档同步
+## Documentation sync
 
-- [ ] `pnpm docs:check` 通过
-- [ ] `README.md` / `README.zh.md` / `docs/README.md` / `docs/reference/README.md` 导航同步
-- [ ] `README.md` 与 `agents/*.md` 的内置 agent 工具列表一致
-- [ ] `docs/reference/agent-definition.md` 与 `agents/*.md` 的 frontmatter 一致
-- [ ] `docs/reference/result-schema.md` 覆盖 `src/shared/types.ts` 中的所有 subagent 错误码
-- [ ] `docs/reference/configuration.md` 与 namespace 配置默认值一致
-- [ ] `docs/reference/web-tools-error-codes.md` 与 `src/modules/web/errors.ts` 的 `WEB_ERROR_CODES` 一致
-- [ ] `/toolkit` 文档与 `src/modules/commands/register.ts` 真实 subcommands 一致
-- [ ] 新增或恢复当前边界外能力时，已新增 ADR
+- [ ] `pnpm docs:check` passes
+- [ ] `README.md` / `README.zh.md` / `docs/README.md` / `docs/reference/README.md` navigation is in sync
+- [ ] `README.md` and `agents/*.md` built-in agent tool lists are consistent
+- [ ] `docs/reference/agent-definition.md` and `agents/*.md` frontmatter are consistent
+- [ ] `docs/reference/result-schema.md` covers all subagent error codes in `src/shared/types.ts`
+- [ ] `docs/reference/configuration.md` is consistent with namespace config defaults
+- [ ] `docs/reference/web-tools-error-codes.md` is consistent with `WEB_ERROR_CODES` in `src/modules/web/errors.ts`
+- [ ] `/toolkit` docs are consistent with actual subcommands in `src/modules/commands/register.ts`
+- [ ] New ADR added when adding or restoring capabilities beyond current boundaries
 
-## 安全边界
+## Security boundaries
 
-- [ ] readonly agents 未暴露 `bash`、`edit`、`write`
-- [ ] 子代理仍无法注册或调用 `subagent` 工具
-- [ ] 子代理仍无法调用 privileged LSP actions
-- [ ] LSP hook 仅在主代理进程注册，且可通过配置关闭
-- [ ] sanitize 规则覆盖 token、Authorization header、绝对路径和 stack trace
+- [ ] Readonly agents do not expose `bash`, `edit`, `write`
+- [ ] Subagents still cannot register or call the `subagent` tool
+- [ ] Subagents still cannot call privileged LSP actions
+- [ ] LSP hook is only registered in the main agent process and can be disabled via configuration
+- [ ] Sanitize rules cover tokens, Authorization headers, absolute paths, and stack traces
 
-## 包元数据
+## Package metadata
 
-- [ ] `package.json` 的 `files` 与实际发布内容一致
-- [ ] `package.json` 的 `pi.extensions` 指向当前扩展入口
-- [ ] `CHANGELOG.md` 已更新
+- [ ] `package.json` `files` matches actual publish content
+- [ ] `package.json` `pi.extensions` points to current extension entry
+- [ ] `CHANGELOG.md` is updated

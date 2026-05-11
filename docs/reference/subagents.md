@@ -1,104 +1,104 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
 # Subagents Reference
 
-本文档是 devkit-pi Subagents 模块的 public overview/reference。`subagent` tool 的参数与返回见 [`subagent-tool.md`](./subagent-tool.md)，agent 文件格式见 [`agent-definition.md`](./agent-definition.md)，结果结构见 [`result-schema.md`](./result-schema.md)。
+This document is devkit-pi Subagents module's public overview/reference. For `subagent` tool parameters and return values, see [`subagent-tool.md`](./subagent-tool.md); for agent file format, see [`agent-definition.md`](./agent-definition.md); for result structure, see [`result-schema.md`](./result-schema.md).
 
 ## Overview
 
-Subagents 模块让主代理把一个聚焦任务委派给一个专职 child pi session。它不是完整多代理框架；当前只支持 foreground、single subagent execution，主代理仍是唯一 orchestrator。
+The Subagents module lets the main agent delegate a focused task to a dedicated child pi session. It is not a full multi-agent framework; currently only supports foreground, single subagent execution, with the main agent remaining the sole orchestrator.
 
-适合使用的场景：
+Suitable use cases:
 
-- 代码探索：查找文件、符号、调用链和架构位置
-- 文档/外部资料研究：交给带 Web tools 的 researcher
-- 实现建议：生成 implementation plan，而不是直接写代码
-- Review：隔离代码审查输出和证据收集
-- Testing：生成测试策略、边界用例和覆盖建议
-- 大输出隔离：子代理的中间 tool calls 和上下文不会直接塞入主代理推理流
-- 上下文压缩：子代理返回聚焦摘要，主代理接收整理后的结果
+- Code exploration: find files, symbols, call chains, and architecture locations
+- Documentation/external research: hand off to researcher with Web tools
+- Implementation suggestions: generate implementation plans, not write code directly
+- Review: isolate code review output and evidence collection
+- Testing: generate test strategies, edge cases, and coverage suggestions
+- Large output isolation: subagent's intermediate tool calls and context won't directly fill the main agent's reasoning flow
+- Context compression: subagent returns focused summaries, main agent receives organized results
 
-和其他能力的区别：
+Differences from other capabilities:
 
-- 普通 prompt：仍在主代理上下文中完成；subagent 会启动独立 child session。
-- Web tools：`web_search` / `fetch_content` 是工具；researcher subagent 会使用它们做研究。
-- LSP tools：`lsp` 是代码智能工具；部分内置 subagents 可使用 readonly LSP actions。
-- `/toolkit` commands：用户手动诊断/查看状态；不会替代 `subagent` tool。
+- Regular prompt: still completed in main agent context; subagent starts an independent child session.
+- Web tools: `web_search` / `fetch_content` are tools; researcher subagent uses them for research.
+- LSP tools: `lsp` is a code intelligence tool; some built-in subagents can use readonly LSP actions.
+- `/toolkit` commands: user manual diagnostics/status viewing; does not replace `subagent` tool.
 
 ## Public surface
 
 | Surface | Purpose | Usage | Output | Limitations | Source |
 |---|---|---|---|---|---|
-| `subagent` tool | 委派一个聚焦任务给指定 agent | `subagent({ agent, task })` | pi tool result，`content` + `details` | 只支持单 agent foreground 执行；不支持 chain/parallel/background | `src/modules/subagents/register.ts` |
-| Built-in agents | 5 个预置 readonly 专职 agents | `explorer` / `researcher` / `reviewer` / `implementer` / `tester` | agent prompt 与工具白名单 | prompt 文本可迭代；能力取决于可用 tools | `agents/*.md` |
-| Custom agent definitions | user/project markdown agents | `~/.pi/agent/agents/`、`.pi/agents/`、`.agents/` | 被 discovery 合并进 agent list | 只支持简单 frontmatter；project > user > builtin 去重 | `src/modules/subagents/agents.ts`, `frontmatter.ts` |
-| Delegation policy injection | 给主代理提示何时委派 | 默认 `subagents.injectDelegationPolicy=true` | system prompt 追加 policy/examples | 是提示策略，不是强制调度器 | `src/shared/delegation-policy.ts` |
-| `/toolkit agents` | 查看已发现 agents | 手动运行 command | console agent list | 不启动子代理 | `src/modules/subagents/commands/list.ts` |
-| `/toolkit doctor` | 诊断配置、agents、providers、权限、LSP 等 | 手动运行 command | doctor report | report fail/warn 是诊断项，不是 command failure | `src/modules/subagents/commands/doctor.ts` |
-| `/toolkit logs` / `/toolkit activity` | 查看 Web activity logs/stats | 手动运行 command | text log / TUI panel | 主要面向 Web observability，不是 subagent execution log | `src/modules/subagents/commands/logs.ts`, `activity.ts` |
-| Output collection | 从 child pi JSONL/stdout 收集最终结果、usage、错误 | 自动内部执行 | `details.results[]`、`content[0].text` | 内部 helper，不是 public tool | `src/modules/subagents/collect-output.ts`, `execution.ts` |
+| `subagent` tool | Delegate a focused task to specified agent | `subagent({ agent, task })` | pi tool result, `content` + `details` | Only single agent foreground execution; no chain/parallel/background | `src/modules/subagents/register.ts` |
+| Built-in agents | 5 preset readonly dedicated agents | `explorer` / `researcher` / `reviewer` / `implementer` / `tester` | agent prompt and tool allowlist | Prompt text may iterate; capabilities depend on available tools | `agents/*.md` |
+| Custom agent definitions | user/project markdown agents | `~/.pi/agent/agents/`, `.pi/agents/`, `.agents/` | Merged into agent list by discovery | Only simple frontmatter supported; project > user > builtin dedup | `src/modules/subagents/agents.ts`, `frontmatter.ts` |
+| Delegation policy injection | Hints to main agent when to delegate | Default `subagents.injectDelegationPolicy=true` | system prompt appended with policy/examples | Is a hint strategy, not a forced dispatcher | `src/shared/delegation-policy.ts` |
+| `/toolkit agents` | View discovered agents | Manual command | console agent list | Does not start subagents | `src/modules/subagents/commands/list.ts` |
+| `/toolkit doctor` | Diagnose config, agents, providers, permissions, LSP, etc. | Manual command | doctor report | report fail/warn are diagnostic items, not command failure | `src/modules/subagents/commands/doctor.ts` |
+| `/toolkit logs` / `/toolkit activity` | View Web activity logs/stats | Manual command | text log / TUI panel | Primarily for Web observability, not subagent execution log | `src/modules/subagents/commands/logs.ts`, `activity.ts` |
+| Output collection | Collect final result, usage, errors from child pi JSONL/stdout | Automatic internal execution | `details.results[]`, `content[0].text` | Internal helper, not public tool | `src/modules/subagents/collect-output.ts`, `execution.ts` |
 
 ## Built-in agents
 
-内置 agents 来自仓库 `agents/` 目录。它们都声明 `readonly: true`，当前设计为只读分析/规划/研究，不写文件。
+Built-in agents come from the repository's `agents/` directory. They all declare `readonly: true`, designed for read-only analysis/planning/research without writing files.
 
 | Agent | Role / purpose | Expected use cases | Tools declared | Source |
 |---|---|---|---|---|
-| `explorer` | Read-only codebase navigator | 查找文件、模式、定义、引用、架构位置 | `read, grep, find, ls, lsp` | `agents/explorer.md` |
-| `researcher` | Read-only web researcher | 外部文档/API/资料搜索、来源综合 | `web_search, fetch_content, get_search_content` | `agents/researcher.md` |
-| `reviewer` | Read-only code reviewer | 审查代码、diff、方案、测试和文档 | `read, grep, find, ls, lsp` | `agents/reviewer.md` |
-| `implementer` | Read-only implementation planner | 分析需求和代码结构，产出实现计划 | `read, grep, find, ls, lsp` | `agents/implementer.md` |
-| `tester` | Read-only test planner | 设计测试策略、场景、边界和覆盖 | `read, grep, find, ls, lsp` | `agents/tester.md` |
+| `explorer` | Read-only codebase navigator | Find files, patterns, definitions, references, architecture locations | `read, grep, find, ls, lsp` | `agents/explorer.md` |
+| `researcher` | Read-only web researcher | External documentation/API/resource search, source synthesis | `web_search, fetch_content, get_search_content` | `agents/researcher.md` |
+| `reviewer` | Read-only code reviewer | Review code, diffs, plans, tests, and documentation | `read, grep, find, ls, lsp` | `agents/reviewer.md` |
+| `implementer` | Read-only implementation planner | Analyze requirements and code structure, produce implementation plans | `read, grep, find, ls, lsp` | `agents/implementer.md` |
+| `tester` | Read-only test planner | Design test strategies, scenarios, edge cases, and coverage | `read, grep, find, ls, lsp` | `agents/tester.md` |
 
-注意：agent prompt 中的输出格式、工作规则和建议是行为引导，不应理解为强安全边界或协议保证。真实工具可用性还受配置、pi runtime、子代理进程环境和工具注册情况影响。
+Note: Output format, work rules, and suggestions in agent prompts are behavioral guidance and should not be understood as strong security boundaries or protocol guarantees. Actual tool availability is also affected by configuration, pi runtime, subagent process environment, and tool registration.
 
-Routing hints 来自 delegation policy：
+Routing hints from delegation policy:
 
-- `explorer`：定位、导航、搜索代码/文件
-- `researcher`：外部资源/API/技术比较/资料综合
-- `reviewer`：代码质量、风险、架构审查
-- `implementer`：实现规划、方案设计
-- `tester`：测试策略、边界用例、覆盖规划
+- `explorer`: locate, navigate, search code/files
+- `researcher`: external resources/API/technology comparison/resource synthesis
+- `reviewer`: code quality, risk, architecture review
+- `implementer`: implementation planning, solution design
+- `tester`: test strategies, edge cases, coverage planning
 
 ## Custom agents
 
-自定义 agent 使用 markdown frontmatter + prompt 正文。详细格式见 [`agent-definition.md`](./agent-definition.md)。
+Custom agents use markdown frontmatter + prompt body. Detailed format: [`agent-definition.md`](./agent-definition.md).
 
 ### Discovery paths
 
-当前 discovery 会加载：
+Current discovery loads:
 
-- Built-in：仓库 `agents/`
-- User：`~/.pi/agent/agents/`
-- Project：从当前 cwd 向上查找 `.pi/agents/` 或 `.agents/`
+- Built-in: repository `agents/`
+- User: `~/.pi/agent/agents/`
+- Project: search upward from cwd for `.pi/agents/` or `.agents/`
 
-去重优先级：
+Deduplication priority:
 
 ```text
 project > user > builtin
 ```
 
-也就是说，project agent 可以覆盖同名 user/builtin agent，user agent 可以覆盖同名 builtin agent。
+That is, a project agent can override same-named user/builtin agents; user agent can override same-named builtin agents.
 
 ### Supported frontmatter fields
 
-当前 parser 是简单 `key: value` parser，不是完整 YAML parser。支持字段：
+The current parser is a simple `key: value` parser, not a full YAML parser. Supported fields:
 
 | Field | Required | Behavior |
 |---|---:|---|
-| `name` | 是 | agent 名称；缺失则该文件不会被加载 |
-| `description` | 否 | 描述；缺失时为空字符串 |
-| `readonly` | 否 | 只有字符串 `true` 或 `1` 会解析为 true；否则 false |
-| `tools` | 否 | 逗号分隔工具名列表 |
-| `model` | 否 | 传给 child pi 的 `--model` |
+| `name` | Yes | Agent name; if missing, the file is not loaded |
+| `description` | No | Description; defaults to empty string |
+| `readonly` | No | Only string `true` or `1` parses as true; otherwise false |
+| `tools` | No | Comma-separated tool name list |
+| `model` | No | Passed to child pi as `--model` |
 
-Prompt 正文作为 `systemPrompt`。若正文为空，使用 description；再为空则 child prompt 会回退到默认角色文本。
+Prompt body becomes `systemPrompt`. If body is empty, uses description; if also empty, child prompt falls back to default role text.
 
-不支持或不会产生特殊行为的字段：
+Fields with no special behavior currently:
 
 - `package`
 - `inheritSkills`
@@ -107,7 +107,7 @@ Prompt 正文作为 `systemPrompt`。若正文为空，使用 description；再�
 - `routingHints`
 - `disabled`
 - `permissions`
-- `tools` 的 YAML list 语法
+- `tools` YAML list syntax
 
 ### Example
 
@@ -123,96 +123,96 @@ You research external documentation and return concise findings.
 Focus only on the delegated task. Do not call other subagents.
 ```
 
-推荐：
+Recommendations:
 
-- 使用小写、短横线命名，例如 `api-reviewer`。
-- 明确写出“只处理 delegated task”。
-- 明确写出“不调用额外 subagents”。
-- 明确不确定时如何报告 uncertainty。
-- readonly agent 只声明只读 tools。
+- Use lowercase, hyphen-separated naming, e.g., `api-reviewer`.
+- Explicitly write "only handle delegated task".
+- Explicitly write "do not call additional subagents".
+- Explicitly state how to report uncertainty.
+- Readonly agents should only declare readonly tools.
 
 ## Delegation behavior
 
-当前调用链：
+Current call chain:
 
 ```text
-主代理调用 subagent({ agent, task })
-  → 校验 depth/config/input
+Main agent calls subagent({ agent, task })
+  → Validate depth/config/input
   → discoverAgents(cwd, "both")
-  → 选择 agent 定义
+  → Select agent definition
   → filterToolsForReadonly(agent, config)
   → buildChildPrompt(...)
   → buildSubagentChildArgs(...)
-  → runSync() 启动 foreground child pi process
-  → collectOutput() 收集 JSONL/stdout 最终 assistant 输出、usage、错误
-  → sanitizeOutput() 脱敏
-  → truncateOutput() 截断
-  → 返回 content + details 给主代理
+  → runSync() starts foreground child pi process
+  → collectOutput() collects JSONL/stdout final assistant output, usage, errors
+  → sanitizeOutput() sanitizes
+  → truncateOutput() truncates
+  → Returns content + details to main agent
 ```
 
-执行模式：
+Execution mode:
 
-- foreground：父代理等待子代理完成。
-- single：一次 tool call 只启动一个 child agent。
-- depth guarded：默认 `maxDepth=1`，子代理进程不会注册 `subagent` tool，也被 prompt 要求不要再委派。
-- child pi 使用 `--mode json`，写入独立 session file。
-- 长 task 超过内部阈值时，会写入临时 task 文件并用 `@file` 传给 child pi。
-- system prompt 会写入临时 prompt 文件，执行后 best-effort cleanup。
+- Foreground: parent agent waits for subagent to complete.
+- Single: one tool call starts only one child agent.
+- Depth guarded: default `maxDepth=1`, subagent process does not register `subagent` tool, prompt also requires not delegating further.
+- Child pi uses `--mode json`, writes to independent session file.
+- Long tasks exceeding internal threshold write to temporary task file and pass to child pi via `@file`.
+- System prompt writes to temporary prompt file, best-effort cleanup after execution.
 
-上下文继承：
+Context inheritance:
 
-- 当前 executor 调用 `buildChildPrompt()` 时 `parentMessages: []`，即不主动传递父会话消息列表。
-- prompt-runtime 中存在用于 strip inherited context/skills 的内部逻辑，但这不是面向用户的 public API。
-- 子代理接收的是 role prompt、tools 列表、delegated task 和边界指令。
+- Current executor calls `buildChildPrompt()` with `parentMessages: []`, i.e., does not actively pass parent message list.
+- prompt-runtime has internal logic for stripping inherited context/skills, but this is not a public-facing API.
+- Subagent receives role prompt, tools list, delegated task, and boundary instructions.
 
-输出隔离：
+Output isolation:
 
-- 子代理中间 JSONL events、tool calls、usage 会被收集为 display/usage 信息。
-- 主代理最终收到聚焦文本结果和 `details`，而不是完整 child session 上下文。
-- session file 路径会记录在 result 中，便于调试。
+- Subagent intermediate JSONL events, tool calls, usage are collected as display/usage information.
+- Main agent ultimately receives focused text result and `details`, not the full child session context.
+- Session file path is recorded in result for debugging.
 
 ## Readonly / write boundary
 
-可写自定义 subagents 目前属于实验性能力。默认且推荐的模式是 readonly。`subagents.allowWrite=true` 只表示放宽委派策略，不代表已经具备完整权限沙箱、审计日志、自动回滚机制或稳定的写入能力契约。仅建议在可信仓库中使用，并且必须人工 review 所有变更。
+Writable custom subagents are currently an experimental capability. The default and recommended mode is readonly. `subagents.allowWrite=true` only indicates relaxed delegation policy; it does not imply a complete permission sandbox, audit logging, automatic rollback mechanism, or stable write-capability contract. Use only in trusted repositories, and all changes must be human-reviewed.
 
-当前边界以源码为准：
+Current boundary based on source code:
 
-- 5 个内置 agents 都声明 `readonly: true`，且 prompt 明确要求不编辑、不写文件。
-- `filterToolsForReadonly()` 会对 readonly agents 过滤工具，只保留只读工具集合：
+- All 5 built-in agents declare `readonly: true`, and prompts explicitly require no editing or file writing.
+- `filterToolsForReadonly()` filters tools for readonly agents, retaining only readonly tool sets:
   - `read`, `grep`, `find`, `ls`
   - `web_search`, `fetch_content`, `get_search_content`
-  - `lsp`（仅当 `subagents.allowLspTools=true` 且 `allowedLspActions` 非空）
-- 对于 `readonly: false` 的自定义 agent：
-  - 如果 `subagents.allowWrite=false`，仍会过滤到只读工具。
-  - 如果 `subagents.allowWrite=true`，会保留 agent frontmatter 中声明的 tools。
+  - `lsp` (only when `subagents.allowLspTools=true` and `allowedLspActions` is non-empty)
+- For custom agents with `readonly: false`:
+  - If `subagents.allowWrite=false`, still filters to readonly tools.
+  - If `subagents.allowWrite=true`, retains tools declared in agent frontmatter.
 
-重要说明：
+Important notes:
 
-- `subagents.allowWrite=true` 不意味着内置 agents 会自动写文件；内置 agents 仍是 readonly 定义，且不声明 `edit` / `write`。
-- `allowWrite=true` 只影响非 readonly 自定义 agent 的工具过滤结果。
-- 子代理的实际工具可用性取决于 child pi runtime、当前工具注册、执行环境和配置；不要假设未来所有工具都会自动继承给子代理。
-- 主代理进程注册 `subagent` 和 `/toolkit`；子代理进程不注册 `subagent`，也不注册 `/toolkit`。
-- LSP privileged actions 在子代理中始终禁用。
-- Web tools 可用于研究和读取信息。
-- 文件写入、命令执行、修改项目等 write-like 行为不应被文档理解为默认安全能力。
-- prompt/policy 是行为引导；真正的强约束主要来自工具过滤、子代理不注册 `subagent`、LSP privileged actions 在子代理中始终禁用等实现。
+- `subagents.allowWrite=true` does not mean built-in agents will automatically write files; built-in agents remain readonly definitions and do not declare `edit` / `write`.
+- `allowWrite=true` only affects tool filtering for non-readonly custom agents.
+- Subagent's actual tool availability depends on child pi runtime, current tool registration, execution environment, and configuration; do not assume all tools will automatically be inherited by subagents in the future.
+- Main agent process registers `subagent` and `/toolkit`; subagent process does not register `subagent` or `/toolkit`.
+- LSP privileged actions are always disabled in subagents.
+- Web tools can be used for research and reading information.
+- File writing, command execution, project modification, and other write-like behaviors should not be understood as default-safe capabilities.
+- Prompt/policy is behavioral guidance; real strong constraints mainly come from tool filtering, subagent not registering `subagent`, LSP privileged actions always disabled in subagents, etc.
 
-当前没有稳定的自动回滚保证。如果用户启用可写行为，应使用 Git 工作区、提交前 diff、人工 review 和测试命令兜底。
+There is currently no stable automatic rollback guarantee. If users enable writable behavior, they should use Git workspaces, pre-commit diffs, human review, and test commands as safety nets.
 
-后续若要把 writable custom subagents 升级为正式支持，应至少补充：
+To formally support writable custom subagents in the future, at least the following should be supplemented:
 
-1. `allowWrite=false` 时，write-like / privileged 能力被阻断或不暴露。
-2. `allowWrite=true` 时，允许范围符合预期。
-3. 子代理中 LSP privileged actions 仍然禁用。
-4. 子代理不注册 `subagent`，避免递归委派。
-5. 子代理不注册 `/toolkit`。
-6. 自定义 agent 的 `readonly` frontmatter 与全局配置之间的优先级清晰。
-7. 执行结果能记录足够信息供审计。
-8. 失败时不会伪装为成功。
+1. When `allowWrite=false`, write-like / privileged capabilities are blocked or not exposed.
+2. When `allowWrite=true`, allowed scope matches expectations.
+3. LSP privileged actions remain disabled in subagents.
+4. Subagents do not register `subagent`, preventing recursive delegation.
+5. Subagents do not register `/toolkit`.
+6. Custom agent `readonly` frontmatter and global config priority are clear.
+7. Execution results record sufficient information for auditing.
+8. Failures do not masquerade as success.
 
 ## Result schema and output collection
 
-详细结构见 [`result-schema.md`](./result-schema.md)。当前 `subagent` tool 返回 pi tool result：
+Detailed structure: [`result-schema.md`](./result-schema.md). Current `subagent` tool returns pi tool result:
 
 ```ts
 {
@@ -239,54 +239,54 @@ Focus only on the delegated task. Do not call other subagents.
 }
 ```
 
-语义：
+Semantics:
 
-- 成功执行：`exitCode === 0`，`details.results[0].output` 保存脱敏后的完整输出，`content[0].text` 可能是截断后的输出。
-- 执行失败：`exitCode !== 0`，`details.error.code` 通常是 `SUBAGENT_FAILED` 或 `SUBAGENT_TIMEOUT`。
-- 输出截断：执行可成功，但 `details.error.code` 可能是 `SUBAGENT_OUTPUT_TRUNCATED`。
-- Streaming：执行中可能通过 `onUpdate` 返回 `details.streaming`，最终结果不保留 streaming 字段。
-- `collectOutput()` 会从 child pi JSONL 中提取最终 assistant 文本、usage、provider/runtime error 和 partial output。
-- `sanitizeOutput()` 会遮蔽常见 token、secret、用户路径和过长 stack trace。
+- Successful execution: `exitCode === 0`, `details.results[0].output` holds sanitized full output, `content[0].text` may be truncated version.
+- Execution failure: `exitCode !== 0`, `details.error.code` is usually `SUBAGENT_FAILED` or `SUBAGENT_TIMEOUT`.
+- Output truncation: execution may succeed, but `details.error.code` may be `SUBAGENT_OUTPUT_TRUNCATED`.
+- Streaming: during execution, `details.streaming` may be returned via `onUpdate`; final results typically do not retain streaming fields.
+- `collectOutput()` extracts final assistant text, usage, provider/runtime error, and partial output from child pi JSONL.
+- `sanitizeOutput()` masks common tokens, secrets, user paths, and overly long stack traces.
 
-日志/activity：
+Logs/activity:
 
-- `/toolkit logs` 与 `/toolkit activity` 当前主要展示 Web observability logs/stats，不是 subagent execution history。
-- 子代理 session file 是调试线索，但不是稳定外部 API。
+- `/toolkit logs` and `/toolkit activity` currently primarily display Web observability logs/stats, not subagent execution history.
+- Subagent session file is a debugging clue, but not a stable external API.
 
-机器解析：
+Machine parsing:
 
-- `details` 的顶层形状可用于程序化判断，但人类可读 `content[0].text`、agent prompt 输出格式和 display rendering 可能变化。
-- 外部脚本不应依赖完整自然语言输出格式。
+- `details` top-level shape can be used for programmatic judgment, but human-readable `content[0].text`, agent prompt output format, and display rendering may change.
+- External scripts should not depend on complete natural language output format.
 
 ## Relationship with Web / LSP / toolkit
 
 ### Web tools
 
-- Web tools 在主代理和子代理进程中都可注册。
-- 内置 `researcher` 默认声明 `web_search`、`fetch_content`、`get_search_content`。
-- 自定义 agent 也可以在 `tools` 中声明这些工具。
-- Web tools 详情见 [`web-tools.md`](./web-tools.md)。
+- Web tools can be registered in both main agent and subagent processes.
+- Built-in `researcher` declares `web_search`, `fetch_content`, `get_search_content`.
+- Custom agents can also declare these tools in `tools`.
+- Web tools details: [`web-tools.md`](./web-tools.md).
 
 ### LSP tools
 
-- 内置 `explorer`、`reviewer`、`implementer`、`tester` 声明 `lsp`。
-- 子代理能否使用 `lsp` 受 `subagents.allowLspTools` 和 `subagents.allowedLspActions` 影响。
-- 子代理只允许 readonly-safe LSP actions；`rename`、`codeAction`、`restart` 在子代理进程中始终禁用。
-- LSP 详情见 [`lsp-tools.md`](./lsp-tools.md)。
+- Built-in `explorer`, `reviewer`, `implementer`, `tester` declare `lsp`.
+- Whether subagents can use `lsp` is affected by `subagents.allowLspTools` and `subagents.allowedLspActions`.
+- Subagents only allow readonly-safe LSP actions; `rename`, `codeAction`, `restart` are always disabled in subagent processes.
+- LSP details: [`lsp-tools.md`](./lsp-tools.md).
 
 ### `/toolkit` commands
 
-- `/toolkit agents`：查看发现到的 agents。
-- `/toolkit doctor`：诊断 agents、providers、权限、Web/LSP 状态。
-- `/toolkit logs` / `/toolkit activity`：查看 Web activity logs/stats。
-- `/toolkit` 只在主代理进程注册，子代理进程不注册。
-- Commands 详情见 [`toolkit-commands.md`](./toolkit-commands.md)。
+- `/toolkit agents`: view discovered agents.
+- `/toolkit doctor`: diagnose agents, providers, permissions, Web/LSP status.
+- `/toolkit logs` / `/toolkit activity`: view Web activity logs/stats.
+- `/toolkit` is only registered in main agent process, not in subagent processes.
+- Commands details: [`toolkit-commands.md`](./toolkit-commands.md).
 
 ## Configuration
 
-完整配置见 [`configuration.md#subagents-配置`](./configuration.md#subagents-配置)。
+Complete configuration: [`configuration.md#subagents-configuration`](./configuration.md#subagents-configuration).
 
-默认配置摘要：
+Default configuration summary:
 
 ```json
 {
@@ -309,66 +309,66 @@ Focus only on the delegated task. Do not call other subagents.
 }
 ```
 
-配置影响：
+Configuration effects:
 
-- `subagents.enabled=false`：`registerSubagentsModule()` 不注册 `subagent` tool。
-- `subagents.maxDepth=1`：默认禁止 nested subagents。
-- `subagents.timeoutMs`：单次 child execution timeout。
-- `subagents.allowWrite`：实验性/高级/不安全开关；只影响非 readonly 自定义 agent 的工具过滤，不改变内置 agents 的 readonly 定义，也不提供完整权限沙箱、审计日志、自动回滚或稳定写入能力契约。
-- `subagents.allowLspTools` / `allowedLspActions`：控制子代理是否可用 readonly LSP actions。
-- `subagents.injectDelegationPolicy`：控制是否向主代理 prompt 注入 delegation policy。
-- `subagents.retry.*`：对子代理 transient failure 做有限重试。
+- `subagents.enabled=false`: `registerSubagentsModule()` does not register `subagent` tool.
+- `subagents.maxDepth=1`: default prohibits nested subagents.
+- `subagents.timeoutMs`: single child execution timeout.
+- `subagents.allowWrite`: experimental/advanced/unsafe switch; only affects tool filtering for non-readonly custom agents, does not change built-in agents' readonly definition, does not provide complete permission sandbox, audit log, automatic rollback, or stable write-capability contract.
+- `subagents.allowLspTools` / `allowedLspActions`: controls whether subagents can use readonly LSP actions.
+- `subagents.injectDelegationPolicy`: controls whether to inject delegation policy into main agent prompt.
+- `subagents.retry.*`: limited retry for subagent transient failures.
 
-Custom agents discovery 路径当前不是配置项，固定为 user/project 目录查找。
+Custom agents discovery paths are currently not configurable, fixed to user/project directory lookup.
 
 ## Error and failure semantics
 
-当前 subagent 错误码 canonical source 是 `src/shared/types.ts` 中的 `SUBAGENT_ERROR_CODES`。
+Current subagent error code canonical source is `SUBAGENT_ERROR_CODES` in `src/shared/types.ts`.
 
-| Code | 当前语义 |
+| Code | Current semantics |
 |---|---|
-| `INVALID_INPUT` | 缺少 `agent` 或 `task` |
-| `SUBAGENTS_DISABLED` | 子代理功能被配置禁用 |
-| `UNKNOWN_AGENT` | 找不到指定 agent；返回可用 agent 名称 |
-| `SUBAGENT_DISABLED` | 已定义但当前没有直接返回路径；保留给未来单 agent disable 语义 |
-| `SUBAGENT_DEPTH_EXCEEDED` | depth 超限；子代理不能继续调用子代理 |
-| `SUBAGENT_TIMEOUT` | child execution 超时 |
-| `SUBAGENT_FAILED` | spawn、session directory、child process 或 provider/runtime failure 等未分类失败 |
-| `SUBAGENT_OUTPUT_TRUNCATED` | 输出过长被截断；可与成功执行同时出现 |
+| `INVALID_INPUT` | Missing `agent` or `task` |
+| `SUBAGENTS_DISABLED` | Subagent feature disabled by configuration |
+| `UNKNOWN_AGENT` | Cannot find specified agent; returns available agent names |
+| `SUBAGENT_DISABLED` | Defined but currently has no direct return path; reserved for future per-agent disable semantics |
+| `SUBAGENT_DEPTH_EXCEEDED` | Depth exceeded; subagents cannot continue calling subagents |
+| `SUBAGENT_TIMEOUT` | Child execution timed out |
+| `SUBAGENT_FAILED` | spawn, session directory, child process, or provider/runtime failure, uncategorized failures |
+| `SUBAGENT_OUTPUT_TRUNCATED` | Output too long, truncated; can co-occur with successful execution |
 
-失败表现：
+Failure behavior:
 
-- invalid input / disabled / unknown agent / depth exceeded 通常以 `content[0].text` + `details.error` 返回，不一定抛出异常。
-- spawn 失败会被包装为 `SUBAGENT_FAILED`。
-- child 进程非 0 exit 会形成 failure summary，包含 exit code、error、partial output 和 session file。
-- agent definition 解析失败或缺少 `name` 的文件会被静默跳过；`/toolkit doctor` 可能报告 user agents skipped。
+- Invalid input / disabled / unknown agent / depth exceeded usually returns as `content[0].text` + `details.error`, not necessarily throwing exception.
+- Spawn failure is wrapped as `SUBAGENT_FAILED`.
+- Child process non-0 exit forms failure summary including exit code, error, partial output, and session file.
+- Agent definition parse failure or files missing `name` are silently skipped; `/toolkit doctor` may report user agents skipped.
 
 ## Stability notes
 
-Public contract：
+Public contract:
 
-- Tool name：`subagent`
-- Input fields：`agent`、`task`
-- Built-in agent names：`explorer`、`researcher`、`reviewer`、`implementer`、`tester`
-- Custom agent discovery paths 和简单 frontmatter 支持字段
-- 默认 foreground single execution
-- 子代理进程不注册 `subagent` tool，不注册 `/toolkit`
-- 子代理 LSP privileged actions 始终禁用
-- `details.mode`、`details.results[]`、`details.error` 的基本结构
-- `SUBAGENT_ERROR_CODES` 字符串值
+- Tool name: `subagent`
+- Input fields: `agent`, `task`
+- Built-in agent names: `explorer`, `researcher`, `reviewer`, `implementer`, `tester`
+- Custom agent discovery paths and simple frontmatter supported fields
+- Default foreground single execution
+- Subagent process does not register `subagent` tool or `/toolkit`
+- Subagent LSP privileged actions always disabled
+- `details.mode`, `details.results[]`, `details.error` basic structure
+- `SUBAGENT_ERROR_CODES` string values
 
-Internal implementation / 可能变化：
+Internal implementation / may change:
 
-- 内置 agent prompt 文本和输出模板
-- delegation policy 文案和 examples
-- child prompt 具体拼接方式
-- session file 目录布局
-- streaming display item 格式细节
-- retry transient error pattern
-- sanitize/truncate 的具体规则
-- renderer UI 展示格式
+- Built-in agent prompt text and output templates
+- Delegation policy text and examples
+- Child prompt specific concatenation method
+- Session file directory layout
+- Streaming display item format details
+- Retry transient error pattern
+- Sanitize/truncate specific rules
+- Renderer UI display format
 
-外部脚本不应强依赖自然语言输出、box/TUI 渲染或 session file 布局；若需要稳定机器接口，应优先读取 `details` 中的结构化字段。
+External scripts should not strongly depend on natural language output, box/TUI rendering, or session file layout; if a stable machine interface is needed, prefer reading structured fields from `details`.
 
 ## Source map
 

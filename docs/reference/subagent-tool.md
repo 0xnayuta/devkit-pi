@@ -1,12 +1,12 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
 # Subagent Tool Reference
 
-本文档只描述 `subagent` tool 的 public API。Subagents 模块总览见 [`subagents.md`](./subagents.md)，agent 文件格式见 [`agent-definition.md`](./agent-definition.md)，结果结构见 [`result-schema.md`](./result-schema.md)。
+This document only describes the `subagent` tool's public API. For the Subagents module overview, see [`subagents.md`](./subagents.md); for agent file format, see [`agent-definition.md`](./agent-definition.md); for result structure, see [`result-schema.md`](./result-schema.md).
 
 ## Tool name
 
@@ -16,11 +16,11 @@ subagent
 
 ## Purpose
 
-把一个聚焦任务委派给指定 agent，并在 foreground child pi session 中执行。当前只支持单 agent、同步 foreground 执行。
+Delegate a focused task to a specified agent, executed in a foreground child pi session. Currently only supports single agent, synchronous foreground execution.
 
 ## Input schema
 
-源码：`src/modules/subagents/schemas.ts`
+Source: `src/modules/subagents/schemas.ts`
 
 ```ts
 {
@@ -29,13 +29,13 @@ subagent
 }
 ```
 
-TypeBox schema：
+TypeBox schema:
 
-- `agent`：required，`minLength: 1`
-- `task`：required，`minLength: 1`
+- `agent`: required, `minLength: 1`
+- `task`: required, `minLength: 1`
 - `additionalProperties: false`
 
-不支持的旧/规划字段：
+Unsupported legacy/planned fields:
 
 ```text
 chain, tasks, async, share, worktree, action, id, sessionDir, control, model, skills
@@ -66,7 +66,7 @@ subagent({
 
 ## Output shape
 
-成功或失败都通常以 pi tool result 返回：
+Success or failure usually returns a pi tool result:
 
 ```ts
 {
@@ -84,7 +84,7 @@ subagent({
 }
 ```
 
-单次执行的 `results[0]`：
+Single execution's `results[0]`:
 
 ```ts
 {
@@ -109,49 +109,49 @@ subagent({
 }
 ```
 
-`content[0].text` 是给主代理/用户阅读的文本，可能已截断。更完整的结构化信息见 `details`。
+`content[0].text` is text for the main agent/user to read, possibly truncated. For more complete structured information, see `details`.
 
 ## Success semantics
 
-- `exitCode === 0` 表示 child pi process 正常结束。
-- `details.results[0].output` 保存脱敏后的输出。
-- `content[0].text` 可能是同一输出的截断版本。
-- 如果输出被截断，执行仍可视为成功，但 `details.error.code` 可能为 `SUBAGENT_OUTPUT_TRUNCATED`。
+- `exitCode === 0` indicates the child pi process exited normally.
+- `details.results[0].output` holds the sanitized output.
+- `content[0].text` may be a truncated version of the same output.
+- If output is truncated, execution may still be considered successful, but `details.error.code` may be `SUBAGENT_OUTPUT_TRUNCATED`.
 
 ## Failure semantics
 
-常见失败以 `details.error` 表示：
+Common failures are expressed via `details.error`:
 
-| Code | 场景 |
+| Code | Scenario |
 |---|---|
-| `INVALID_INPUT` | 缺少 `agent` 或 `task` |
-| `SUBAGENTS_DISABLED` | subagents 配置禁用 |
-| `UNKNOWN_AGENT` | 指定 agent 不存在 |
-| `SUBAGENT_DEPTH_EXCEEDED` | depth 超限，禁止 nested subagents |
-| `SUBAGENT_TIMEOUT` | 子代理执行超时 |
-| `SUBAGENT_FAILED` | child process/spawn/session/provider runtime 等失败 |
-| `SUBAGENT_OUTPUT_TRUNCATED` | 输出过长被截断 |
+| `INVALID_INPUT` | Missing `agent` or `task` |
+| `SUBAGENTS_DISABLED` | Subagents feature disabled by configuration |
+| `UNKNOWN_AGENT` | Specified agent does not exist |
+| `SUBAGENT_DEPTH_EXCEEDED` | Depth exceeded, nested subagents prohibited |
+| `SUBAGENT_TIMEOUT` | Subagent execution timed out |
+| `SUBAGENT_FAILED` | Child process/spawn/session/provider runtime failure |
+| `SUBAGENT_OUTPUT_TRUNCATED` | Output too long, truncated |
 
-`SUBAGENT_DISABLED` 已定义但当前没有直接返回路径。
+`SUBAGENT_DISABLED` is defined but currently has no direct return path.
 
-失败时通常仍返回 tool result，而不是抛出异常。返回文本可能包含 exit code、error、partial output 和 session file 路径。
+On failure, a tool result is usually still returned rather than throwing an exception. The returned text may include exit code, error, partial output, and session file path.
 
 ## Execution notes
 
-- 子代理进程会设置 `PI_SUBAGENT_CHILD=1`。
-- 子代理进程不注册 `subagent` tool，因此不能继续委派子代理。
-- 默认 `subagents.maxDepth=1`。
-- 内置 agents 都是 readonly。
-- LSP privileged actions（`rename`、`codeAction`、`restart`）在子代理进程中始终禁用。
-- Web tools 可被声明了相应 tools 的子代理使用。
-- 子代理实际可用工具以 child pi runtime、当前工具注册、执行环境和配置为准。
-- `subagents.allowWrite=true` 只是实验性/高级/不安全的策略放宽入口，不代表完整权限沙箱、审计日志、自动回滚机制或稳定写入能力契约。
+- The subagent process sets `PI_SUBAGENT_CHILD=1`.
+- The subagent process does not register the `subagent` tool, so it cannot further delegate to subagents.
+- Default `subagents.maxDepth=1`.
+- Built-in agents are all readonly.
+- LSP privileged actions (`rename`, `codeAction`, `restart`) are always disabled in subagent processes.
+- Web tools can be used by subagents that declare the corresponding tools.
+- Subagent's actual tool availability depends on child pi runtime, current tool registration, execution environment, and configuration.
+- `subagents.allowWrite=true` is only an experimental/advanced/unsafe policy relaxation entry point, not a complete permission sandbox, audit log, automatic rollback mechanism, or stable write-capability contract.
 
 ## Writable custom subagents boundary
 
-可写自定义 subagents 目前属于实验性能力。默认且推荐的模式是 readonly。`subagents.allowWrite=true` 只表示放宽委派策略，不代表已经具备完整权限沙箱、审计日志、自动回滚机制或稳定的写入能力契约。仅建议在可信仓库中使用，并且必须人工 review 所有变更。
+Writable custom subagents are currently an experimental capability. The default and recommended mode is readonly. `subagents.allowWrite=true` only indicates relaxed delegation policy; it does not imply a complete permission sandbox, audit logging, automatic rollback mechanism, or stable write-capability contract. Use only in trusted repositories, and all changes must be human-reviewed.
 
-当前没有稳定的自动回滚保证。如果用户启用可写行为，应使用 Git 工作区、提交前 diff、人工 review 和测试命令兜底。
+There is currently no stable automatic rollback guarantee. If users enable writable behavior, they should use Git workspaces, pre-commit diffs, human review, and test commands as safety nets.
 
 ## Source map
 

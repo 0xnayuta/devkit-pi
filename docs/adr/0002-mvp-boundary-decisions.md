@@ -1,78 +1,78 @@
 ---
 status: accepted
 audience: maintainer
-last_verified: 2026-05-08
+last_verified: 2026-05-12
 ---
 
-# ADR 0002：MVP 边界决策
+# ADR 0002: MVP Boundary Decisions
 
-> Historical decision record：本文记录当时的背景和取舍，不等同于当前 API reference；当前行为以 `docs/reference/`、`src/` 和 `tests/` 为准。
+> Historical decision record: this document records the context and trade-offs at the time, and is not equivalent to current API reference; current behavior is defined by `docs/reference/`, `src/`, and `tests/`.
 
-## 状态
+## Status
 
 Accepted
 
-## 背景
+## Context
 
-在开始简化改造前，需要明确 MVP 的边界决策，避免改造过程中反复讨论范围。
+Before starting the simplification refactoring, the MVP boundary decisions need to be clearly defined to avoid repeated scope discussions during the process.
 
-## 决策
+## Decision
 
-### 1. user/project 自定义 agents
+### 1. User/project custom agents
 
-**保留简单 markdown agents，不保留 management/overrides/chains。**
+**Retain simple markdown agents; do not retain management/overrides/chains.**
 
-自定义 agents 是轻量 subagents 的核心扩展点，值得保留。但 management（create/update/delete）、settings overrides、chains、packaged agents 太复杂，MVP 不保留。
+Custom agents are the core extension point of lightweight subagents and worth retaining. But management (create/update/delete), settings overrides, chains, and packaged agents are too complex and not retained in MVP.
 
-### 2. `/subagents` 命令
+### 2. `/subagents` command
 
-**第一版不保留。**
+**Not retained in the first version.**
 
-主入口是 LLM tool `subagent({ agent, task })`。slash 命令会牵出 slash bridge、live state、TUI 渲染等复杂能力，与简化目标冲突。后续如需恢复，只加一个极简命令用于列出 agents。
+The main entry point is the LLM tool `subagent({ agent, task })`. Slash commands would pull in slash bridge, live state, TUI rendering and other complex capabilities, conflicting with the simplification goal. If restoration is needed later, a minimal command for listing agents can be added.
 
-### 3. `bash` 在 readonly agents 中
+### 3. `bash` in readonly agents
 
-**默认不允许。**
+**Not allowed by default.**
 
-readonly agents 只允许安全工具：`read, grep, find, ls`。researcher 可额外允许 `web_search, fetch_content, get_search_content`。
+Readonly agents only allow safe tools: `read, grep, find, ls`. Researcher can additionally allow `web_search, fetch_content, get_search_content`.
 
-`bash` 无法技术上保证只读。即使 prompt 写了 "read-only inspection commands"，模型仍可能执行写文件或修改系统的命令。因此 MVP 不在 readonly agents 中开放 `bash`。如未来需要恢复该能力，必须新增 ADR 并引入显式配置。
+`bash` cannot technically guarantee read-only. Even with prompt writing "read-only inspection commands", the model may still execute commands that write files or modify the system. Therefore MVP does not open `bash` in readonly agents. If this capability needs to be restored in the future, a new ADR must be added with explicit configuration.
 
-### 4. `skills` 目录
+### 4. `skills` directory
 
-**第一版不保留或不注册。**
+**Not retained or not registered in the first version.**
 
-当前 `skills/pi-subagents` 包含旧复杂编排能力说明，会把模型引向多代理 workflow、slash、chain、parallel、子代理调度，与简化目标冲突。package.json 中移除 `pi.skills` 和 `skills/**/*`。
+The current `skills/pi-subagents` contains old complex orchestration capability descriptions that would lead the model toward multi-agent workflow, slash, chain, parallel, subagent scheduling, conflicting with the simplification goal. Remove `pi.skills` and `skills/**/*` from package.json.
 
-### 5. session 文件
+### 5. Session files
 
-**保留最小 child session file，不做复杂管理。**
+**Retain minimal child session file; no complex management.**
 
-session 文件对调试和失败排查有帮助，保留。但不做 artifact tree、metadata、progress file、async result file、session sharing、resume、watcher、cleanup manager。
+Session files are helpful for debugging and failure investigation, retained. But no artifact tree, metadata, progress file, async result file, session sharing, resume, watcher, cleanup manager.
 
-### 6. `implementer` / `tester` 写文件
+### 6. `implementer` / `tester` write files
 
-**第一版不允许，两者均 readonly。**
+**Not allowed in first version; both are readonly.**
 
-- `implementer`：返回 patch plan / implementation plan / exact files to change
-- `tester`：返回 test plan / suggested tests / test commands / optional test code snippets
+- `implementer`: returns patch plan / implementation plan / exact files to change
+- `tester`: returns test plan / suggested tests / test commands / optional test code snippets
 
-避免主代理和子代理同时写文件导致责任不清。MVP 不做 worktree 隔离、diff 合并、冲突处理、rollback。后续可通过显式配置开启。
+Avoid unclear responsibility when main agent and subagent write files simultaneously. MVP does not implement worktree isolation, diff merging, conflict handling, rollback. Can be enabled later through explicit configuration.
 
-> Current implementation note：本 ADR 中的早期命名不代表当前配置契约。当前配置键是 `subagents.allowWrite`；可写自定义 subagents 仍是 experimental / advanced / unsafe，不代表完整 sandbox、audit、rollback 或稳定 write-capability contract。
+> Current implementation note: early naming in this ADR does not represent current configuration contract. Current configuration key is `subagents.allowWrite`; writable custom subagents are still experimental / advanced / unsafe, and do not imply a complete sandbox, audit, rollback, or stable write-capability contract.
 
-## 影响
+## Consequences
 
-这些决策确保 MVP 形态为：
+These decisions ensure the MVP form is:
 
 ```text
-一个 subagent 工具
-+ 5 个内置 readonly agents
-+ 简单 markdown 自定义 agents
-+ foreground single execution
+One subagent tool
++ 5 built-in readonly agents
++ Simple markdown custom agents
++ Foreground single execution
 + depth = 1
-+ 最小 child session file
-+ 简单 config / result schema
++ Minimal child session file
++ Simple config / result schema
 ```
 
-后续恢复任何能力，必须新增 ADR 并说明收益大于复杂度成本。
+Restoring any capability in the future requires a new ADR explaining that the benefits outweigh the complexity cost.

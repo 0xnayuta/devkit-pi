@@ -1,16 +1,16 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
-# Pi Extension API 用法参考
+# Pi Extension API Usage Reference
 
-本文档记录 devkit-pi 当前使用的 pi extension API 子集。当前 public API、配置和命令行为以 [Reference index](../reference/README.md)、[Configuration reference](../reference/configuration.md)、[Subagents reference](../reference/subagents.md)、[Subagent tool reference](../reference/subagent-tool.md)、[Web tools reference](../reference/web-tools.md)、[LSP tools reference](../reference/lsp-tools.md) 与 [Toolkit commands reference](../reference/toolkit-commands.md) 为准。
+This document records the pi extension API subset currently used by devkit-pi. Current public API, configuration, and command behavior are defined in [Reference index](../reference/README.md), [Configuration reference](../reference/configuration.md), [Subagents reference](../reference/subagents.md), [Subagent tool reference](../reference/subagent-tool.md), [Web tools reference](../reference/web-tools.md), [LSP tools reference](../reference/lsp-tools.md), and [Toolkit commands reference](../reference/toolkit-commands.md).
 
-## 工具注册
+## Tool registration
 
-模块通过 `defineTool()` + `pi.registerTool()` 注册工具：
+Modules register tools via `defineTool()` + `pi.registerTool()`:
 
 ```ts
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -33,7 +33,7 @@ export function registerModule(pi: ExtensionAPI): void {
 }
 ```
 
-当前入口是 `src/index.ts`，只负责加载配置并组合注册模块：
+The current entry point is `src/index.ts`, which only loads configuration and composes module registration:
 
 ```ts
 registerWebTools(pi, config.web);
@@ -42,24 +42,24 @@ registerSubagentsModule(pi, config.subagents);
 registerToolkitCommands(pi, config);
 ```
 
-## 事件监听
+## Event listeners
 
-当前使用的事件：
+Events currently used:
 
-| Event | 用途 |
+| Event | Purpose |
 |---|---|
-| `before_agent_start` | 注入 delegation policy；子代理 prompt runtime 重写 |
-| `session_start` | web storage restore / stats reset；LSP hook status/warmup |
-| `tool_call` | LSP hook 预热相关文件 clients |
-| `tool_result` | LSP hook 记录或执行 diagnostics |
-| `agent_start` | LSP hook 清理本轮状态 |
-| `agent_end` | LSP hook `agent_end` 模式自动 diagnostics |
-| `session_shutdown` | web cleanup；LSP manager shutdown |
+| `before_agent_start` | Inject delegation policy; subagent prompt runtime rewriting |
+| `session_start` | Web storage restore / stats reset; LSP hook status/warmup |
+| `tool_call` | LSP hook pre-warms related file clients |
+| `tool_result` | LSP hook records or runs diagnostics |
+| `agent_start` | LSP hook clears current turn state |
+| `agent_end` | LSP hook `agent_end` mode auto-diagnostics |
+| `session_shutdown` | Web cleanup; LSP manager shutdown |
 
-## 渲染
+## Rendering
 
-web 与 lsp tools 可以提供 `renderCall` / `renderResult`，用于压缩 UI 输出并避免默认 JSON 过长。LSP hook 还注册 `lsp-diagnostics` message renderer，用于折叠自动 diagnostics 输出。
+Web and LSP tools can provide `renderCall` / `renderResult` to compress UI output and avoid overly long default JSON. The LSP hook also registers an `lsp-diagnostics` message renderer to fold automatic diagnostics output.
 
-## 兼容边界
+## Compatibility boundary
 
-devkit-pi 使用新 namespace 配置，不实现旧配置迁移层。配置默认值和 normalize 规则见 [Configuration reference](../reference/configuration.md)。
+devkit-pi uses new namespace configuration and does not implement a legacy configuration migration layer. Configuration defaults and normalize rules are defined in [Configuration reference](../reference/configuration.md).

@@ -1,21 +1,21 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
-# Web Tools 错误码
+# Web Tools Error Codes
 
-本文定义内置 web tools（`web_search` / `fetch_content` / `get_search_content`）的结构化错误码。工具 API 见 [`web-tools.md`](./web-tools.md)，provider 行为见 [`web-providers.md`](./web-providers.md)，配置见 [`configuration.md`](./configuration.md)。
+This document defines the structured error codes for built-in web tools (`web_search` / `fetch_content` / `get_search_content`). For tool API, see [`web-tools.md`](./web-tools.md); for provider behavior, see [`web-providers.md`](./web-providers.md); for configuration, see [`configuration.md`](./configuration.md).
 
-Canonical source：
+Canonical source:
 
-- 完整错误码清单以 `src/modules/web/errors.ts` 中的 `WEB_ERROR_CODES` 为准。
-- 实际返回结构参考 `src/modules/web/types.ts` 的 `WebToolError`。
-- 具体返回路径参考 `src/modules/web/search.ts`、`src/modules/web/fetch.ts`、`src/modules/web/storage.ts`、`src/modules/web/providers/select-provider.ts`。
-- 如果 README / README.zh 与本文档不一致，以本文档和源码为准。README 只保留常见错误说明，不作为完整错误码清单。
+- Complete error code list: `WEB_ERROR_CODES` in `src/modules/web/errors.ts`.
+- Actual return structure: `WebToolError` in `src/modules/web/types.ts`.
+- Specific return paths: `src/modules/web/search.ts`, `src/modules/web/fetch.ts`, `src/modules/web/storage.ts`, `src/modules/web/providers/select-provider.ts`.
+- If README / README.zh conflicts with this document, this document and source code take precedence. README only retains common error descriptions, not as a complete error code list.
 
-错误返回结构：
+Error return structure:
 
 ```json
 {
@@ -26,149 +26,149 @@ Canonical source：
 }
 ```
 
-`message` 是面向调用方的可操作提示，可能随版本优化；自动化逻辑应优先使用 `code`。
+`message` is an actionable hint for the caller, may be optimized across versions; automation logic should prefer `code`.
 
-## 状态定义
+## Status definitions
 
-| Status | 含义 |
+| Status | Meaning |
 |---|---|
-| active | 当前有直接返回路径 |
-| reserved | 已在 `WEB_ERROR_CODES` 中定义，但当前没有直接返回路径；保留给未来稳定细化 |
-| deprecated | 旧名称或历史文档名称，不再作为 canonical code 返回 |
+| active | Currently has a direct return path |
+| reserved | Defined in `WEB_ERROR_CODES` but currently has no direct return path; reserved for future stable refinement |
+| deprecated | Old name or historical documentation name, no longer returned as canonical code |
 
-## 当前 canonical 错误码清单
+## Current canonical error code list
 
-下表覆盖 `WEB_ERROR_CODES` 中当前定义的全部错误码。
+The table below covers all error codes currently defined in `WEB_ERROR_CODES`.
 
 | Error code | Status | Meaning | Typical cause | Returned by | Retryable | Related source |
 |---|---|---|---|---|---|---|
-| `INVALID_INPUT` | active | 通用输入或 provider 配置无效 | 缺少 `url`/`responseId`；不支持的 provider；显式 provider 未启用或缺少 endpoint | `fetch_content`、`get_search_content`、provider selection | 否 | `fetch.ts`、`storage.ts`、`providers/select-provider.ts` |
-| `NOT_FOUND` | active | 已存储结果或 selector 未命中 | `responseId` 不存在；`urlIndex`/`queryIndex` 越界；指定 url/query 不存在 | `get_search_content` | 否 | `storage.ts` |
-| `WEB_SEARCH_FAILED` | active | 搜索失败的兜底错误 | provider 抛出未分类错误；provider 响应解析失败；auto mode 没有 provider 成功完成 | `web_search`、provider selection | 视情况；源码 recovery 建议为 fallback | `errors.ts`、`search.ts`、`providers/select-provider.ts` |
-| `WEB_SEARCH_TIMEOUT` | active | 搜索超时或被 abort | provider 请求超时；调用被 AbortSignal 中止 | `web_search` | 是 | `errors.ts`、`search.ts`、`abort.ts` |
-| `WEB_SEARCH_NO_RESULTS` | reserved | 预留：搜索无结果 | 当前设计中“无结果”是成功响应：`results = []`，不是错误 | 当前不直接返回 | 否 | `errors.ts`、providers |
-| `WEB_SEARCH_INVALID_QUERY` | active | 查询为空或无有效内容 | `query` 缺失，或 `query`/`queries` trim 后为空 | `web_search` | 否 | `search.ts` |
-| `CONTENT_FETCH_FAILED` | active | 内容抓取/提取失败的兜底错误 | URL 安全策略拒绝；HTTP 非 2xx；不支持内容类型；二进制内容；重定向异常；Jina 请求异常；queue full 等未分类 fetch 错误 | `fetch_content` | 通常否；取决于 message | `fetch.ts`、`security.ts`、`handlers.ts`、`concurrency.ts` |
-| `CONTENT_FETCH_TIMEOUT` | active | 内容抓取超时或被 abort | 主 fetch 请求或 Jina 请求超时/被中止 | `fetch_content` | 是 | `errors.ts`、`fetch.ts`、`abort.ts` |
-| `CONTENT_FETCH_INVALID_URL` | active | URL 格式或协议无效 | URL 无法被 `new URL()` 解析；协议不是 HTTP/HTTPS | `fetch_content` | 否 | `fetch.ts`、`security.ts` |
-| `CONTENT_FETCH_TOO_LARGE` | reserved | 预留：响应体过大 | 当前实现使用 `maxResponseBytes` / `maxContentChars` 截断，不把截断视为错误 | 当前不直接返回 | 否 | `errors.ts`、`fetch.ts` |
-| `PROVIDER_RATE_LIMITED` | active | provider 限流 | provider 返回 HTTP 429 | `web_search` | 是 | `errors.ts`、`search.ts`、providers |
-| `PROVIDER_UNAVAILABLE` | active | provider 临时不可用 | provider 返回 HTTP 5xx | `web_search` | 是 | `errors.ts`、`search.ts`、providers |
-| `PROVIDER_AUTH_FAILED` | active | provider 认证失败 | API key 缺失或无效；HTTP 401/403 | `web_search` | 否 | `errors.ts`、`search.ts`、providers |
-| `NETWORK_ERROR` | active | 搜索 provider 网络连接错误 | `fetch failed`、DNS `ENOTFOUND`、`ECONN*` 等 | `web_search` | 是 | `errors.ts`、`search.ts` |
-| `PARSE_ERROR` | reserved | 预留：解析失败 | 当前 provider JSON parse/response shape 异常通常归入 `WEB_SEARCH_FAILED`；content handler 解析失败通常 fallback 并设置 `parseWarning` | 当前不直接返回 | 否 | `errors.ts`、providers、`handlers.ts` |
-| `CACHE_ERROR` | reserved | 预留：cache 操作失败 | 当前 search cache 是 best-effort，本地 cache/storage 超限通过淘汰或截断处理 | 当前不直接返回 | 否 | `errors.ts`、`cache.ts`、`storage.ts` |
+| `INVALID_INPUT` | active | General input or provider configuration invalid | Missing `url`/`responseId`; unsupported provider; explicit provider not enabled or missing endpoint | `fetch_content`, `get_search_content`, provider selection | No | `fetch.ts`, `storage.ts`, `providers/select-provider.ts` |
+| `NOT_FOUND` | active | Stored result or selector not found | `responseId` does not exist; `urlIndex`/`queryIndex` out of bounds; specified url/query does not exist | `get_search_content` | No | `storage.ts` |
+| `WEB_SEARCH_FAILED` | active | Search failure fallback error | Provider threw uncategorized error; provider response parse failure; auto mode had no successful provider | `web_search`, provider selection | Depends; source recovery suggestion is fallback | `errors.ts`, `search.ts`, `providers/select-provider.ts` |
+| `WEB_SEARCH_TIMEOUT` | active | Search timed out or aborted | Provider request timed out; call aborted by AbortSignal | `web_search` | Yes | `errors.ts`, `search.ts`, `abort.ts` |
+| `WEB_SEARCH_NO_RESULTS` | reserved | Reserved: search returned no results | In current design "no results" is a success response: `results = []`, not an error | Not directly returned | No | `errors.ts`, providers |
+| `WEB_SEARCH_INVALID_QUERY` | active | Query empty or no valid content | `query` missing, or `query`/`queries` empty after trim | `web_search` | No | `search.ts` |
+| `CONTENT_FETCH_FAILED` | active | Content fetch/extraction failure fallback error | URL security policy rejection; HTTP non-2xx; unsupported content type; binary content; redirect anomaly; Jina request anomaly; queue full; other uncategorized fetch errors | `fetch_content` | Usually no; depends on message | `fetch.ts`, `security.ts`, `handlers.ts`, `concurrency.ts` |
+| `CONTENT_FETCH_TIMEOUT` | active | Content fetch timed out or aborted | Main fetch request or Jina request timed out/aborted | `fetch_content` | Yes | `errors.ts`, `fetch.ts`, `abort.ts` |
+| `CONTENT_FETCH_INVALID_URL` | active | URL format or protocol invalid | URL cannot be parsed by `new URL()`; protocol is not HTTP/HTTPS | `fetch_content` | No | `fetch.ts`, `security.ts` |
+| `CONTENT_FETCH_TOO_LARGE` | reserved | Reserved: response body too large | Current implementation uses `maxResponseBytes` / `maxContentChars` truncation, does not treat truncation as error | Not directly returned | No | `errors.ts`, `fetch.ts` |
+| `PROVIDER_RATE_LIMITED` | active | Provider rate limited | Provider returned HTTP 429 | `web_search` | Yes | `errors.ts`, `search.ts`, providers |
+| `PROVIDER_UNAVAILABLE` | active | Provider temporarily unavailable | Provider returned HTTP 5xx | `web_search` | Yes | `errors.ts`, `search.ts`, providers |
+| `PROVIDER_AUTH_FAILED` | active | Provider authentication failed | API key missing or invalid; HTTP 401/403 | `web_search` | No | `errors.ts`, `search.ts`, providers |
+| `NETWORK_ERROR` | active | Search provider network connection error | `fetch failed`, DNS `ENOTFOUND`, `ECONN*`, etc. | `web_search` | Yes | `errors.ts`, `search.ts` |
+| `PARSE_ERROR` | reserved | Reserved: parse failure | Current provider JSON parse/response shape anomaly usually classified as `WEB_SEARCH_FAILED`; content handler parse failure usually falls back with `parseWarning` | Not directly returned | No | `errors.ts`, providers, `handlers.ts` |
+| `CACHE_ERROR` | reserved | Reserved: cache operation failure | Current search cache is best-effort; local cache/storage over-limit handled via eviction or truncation | Not directly returned | No | `errors.ts`, `cache.ts`, `storage.ts` |
 
-## 六个预留/边界错误码的处理结论
+## Conclusions for six reserved/boundary error codes
 
-| Error code | 当前结论 | 是否直接返回 | 说明 |
+| Error code | Current conclusion | Directly returned | Description |
 |---|---|---|---|
-| `WEB_SEARCH_NO_RESULTS` | 保留为 reserved | 否 | 当前语义稳定为成功空结果，不应把 `results = []` 改成错误。 |
-| `WEB_SEARCH_INVALID_QUERY` | 保留并启用 | 是 | 空 query 是稳定、可测试的输入错误，直接返回该 code。 |
-| `CONTENT_FETCH_INVALID_URL` | 保留并启用 | 是 | URL 解析失败和非 HTTP/HTTPS 协议可稳定区分，直接返回该 code。 |
-| `CONTENT_FETCH_TOO_LARGE` | 保留为 reserved | 否 | 当前实现截断读取/输出，不把“过大但已截断”视为失败。 |
-| `PARSE_ERROR` | 保留为 reserved | 否 | 当前解析失败多为 fallback 或 provider 兜底错误，暂不引入跨 provider 解析层级。 |
-| `CACHE_ERROR` | 保留为 reserved | 否 | 当前 cache/storage 不作为用户可感知失败路径暴露。 |
+| `WEB_SEARCH_NO_RESULTS` | Retained as reserved | No | Current semantics stable as success empty result; should not change `results = []` to error. |
+| `WEB_SEARCH_INVALID_QUERY` | Retained and enabled | Yes | Empty query is a stable, testable input error, directly returns this code. |
+| `CONTENT_FETCH_INVALID_URL` | Retained and enabled | Yes | URL parse failure and non-HTTP/HTTPS protocol can be stably distinguished, directly returns this code. |
+| `CONTENT_FETCH_TOO_LARGE` | Retained as reserved | No | Current implementation truncates read/output; does not treat "too large but truncated" as failure. |
+| `PARSE_ERROR` | Retained as reserved | No | Current parse failures are mostly fallback or provider catch-all errors; no cross-provider parse layer introduced yet. |
+| `CACHE_ERROR` | Retained as reserved | No | Current cache/storage does not expose as user-perceivable failure path. |
 
-## 按场景说明
+## Scenario-based explanations
 
-### `web_search` 输入与无结果
+### `web_search` input and no results
 
-- 空 query 或 trim 后无有效 query：返回 `WEB_SEARCH_INVALID_QUERY`。
-- provider 返回空结果：工具成功返回，结果为 `results = []`，不返回 `WEB_SEARCH_NO_RESULTS`。
-- `WEB_SEARCH_NO_RESULTS` 仅作为未来可能改变无结果语义时的 reserved code。
+- Empty query or no valid query after trim: returns `WEB_SEARCH_INVALID_QUERY`.
+- Provider returns empty results: tool returns success, result is `results = []`, does not return `WEB_SEARCH_NO_RESULTS`.
+- `WEB_SEARCH_NO_RESULTS` only serves as a reserved code for possible future changes to no-result semantics.
 
-### Provider 配置、认证与请求失败
+### Provider configuration, authentication, and request failures
 
-- 显式 provider 不支持、未启用或 endpoint 配置无效：`INVALID_INPUT`。
-- API key 缺失、HTTP 401/403：`PROVIDER_AUTH_FAILED`。
-- HTTP 429：`PROVIDER_RATE_LIMITED`。
-- HTTP 5xx：`PROVIDER_UNAVAILABLE`。
-- 网络连接错误：`NETWORK_ERROR`。
-- provider JSON parse 或响应 shape 异常：当前继续归入 `WEB_SEARCH_FAILED`，暂不直接返回 `PARSE_ERROR`。对当前用户来说，这类异常与普通 provider 失败的处理动作基本一致；未来如果 structured parser、`convert_content` 或强 schema 校验变复杂，再启用 `PARSE_ERROR`。
+- Explicit unsupported, not enabled, or endpoint config invalid: `INVALID_INPUT`.
+- API key missing, HTTP 401/403: `PROVIDER_AUTH_FAILED`.
+- HTTP 429: `PROVIDER_RATE_LIMITED`.
+- HTTP 5xx: `PROVIDER_UNAVAILABLE`.
+- Network connection error: `NETWORK_ERROR`.
+- Provider JSON parse or response shape anomaly: currently continues to be classified as `WEB_SEARCH_FAILED`, not directly returning `PARSE_ERROR`. For current users, such exceptions and regular provider failures have essentially the same handling action; if structured parser, `convert_content`, or strong schema validation becomes complex in the future, `PARSE_ERROR` will be enabled.
 
-### `fetch_content` URL 与安全策略
+### `fetch_content` URL and security policy
 
-- 缺少 `url`/`urls`：`INVALID_INPUT`。
-- URL 格式非法，或协议不是 HTTP/HTTPS：`CONTENT_FETCH_INVALID_URL`。
-- `fetch_content` 的 URL 校验/安全边界可能拒绝 localhost、私网地址、私有 hostname、DNS 解析到私网地址、非允许协议等 URL。
-- localhost/private IP、私有 hostname、DNS 解析到私网地址等安全策略拒绝：继续归入 `CONTENT_FETCH_FAILED`。这类失败不是“URL 格式无效”，而是安全边界拒绝；当前不新增独立错误码。未来如果调用方需要区分普通 fetch 失败和安全策略拒绝，再考虑新增类似 CONTENT_FETCH_BLOCKED_BY_SECURITY_POLICY 或 CONTENT_FETCH_BLOCKED 的 canonical code。
+- Missing `url`/`urls`: `INVALID_INPUT`.
+- URL format invalid or protocol not HTTP/HTTPS: `CONTENT_FETCH_INVALID_URL`.
+- `fetch_content`'s URL validation/security boundaries may reject localhost, private addresses, private hostnames, DNS resolution to private addresses, non-allowed protocols, etc.
+- Localhost/private IP, private hostname, DNS resolution to private addresses, etc. security policy rejections: continue to be classified as `CONTENT_FETCH_FAILED`. These failures are not "URL format invalid" but security boundary rejection; currently no new independent error code is added. If callers need to distinguish regular fetch failures from security policy rejections in the future, a code like CONTENT_FETCH_BLOCKED_BY_SECURITY_POLICY or CONTENT_FETCH_BLOCKED may be considered.
 
-### `fetch_content` 内容类型与大小限制
+### `fetch_content` content type and size limits
 
-- PDF、Office、ZIP、图片、音视频、可执行文件、magic bytes 检测到二进制内容：当前归入 `CONTENT_FETCH_FAILED`。
-- `maxResponseBytes` 和 `maxContentChars` 当前用于截断读取/输出；截断结果通过 `truncated: true` 表示，不返回 `CONTENT_FETCH_TOO_LARGE`。
-- 当前保持“截断成功”的语义：`fetch_content` 面向 agent 阅读，截断内容通常比直接失败更有用。
-- 如果未来增加 strict/full mode 或 `allowTruncate=false`，可启用 reserved code `CONTENT_FETCH_TOO_LARGE`。
+- PDF, Office, ZIP, images, audio/video, executables, magic bytes detecting binary content: currently classified as `CONTENT_FETCH_FAILED`.
+- `maxResponseBytes` and `maxContentChars` currently used for truncating read/output; truncation results indicated by `truncated: true`, not returning `CONTENT_FETCH_TOO_LARGE`.
+- Currently maintains "truncation success" semantics: `fetch_content` is for agent reading; truncated content is usually more useful than direct failure.
+- If strict/full mode or `allowTruncate=false` is added in the future, reserved code `CONTENT_FETCH_TOO_LARGE` may be enabled.
 
 ### Extraction / handler failure
 
-- content handler 解析失败时优先 fallback 为纯文本，并设置 `parseWarning`。
-- 未分类异常由 `fetch_content` 汇总为 `CONTENT_FETCH_FAILED`。
-- 当前不直接返回 `PARSE_ERROR`，避免把可恢复的解析 fallback 变成用户可见错误。
+- Content handler parse failures prefer falling back to plain text, setting `parseWarning`.
+- Uncategorized exceptions are summarized by `fetch_content` as `CONTENT_FETCH_FAILED`.
+- Currently does not directly return `PARSE_ERROR`, avoiding converting recoverable parse fallbacks into user-visible errors.
 
 ### Cache / storage
 
-- `get_search_content` 未命中：`NOT_FOUND`。
-- search cache 当前是 best-effort；关闭 cache 是正常配置，不是错误。
-- storage 超出限制通过淘汰或截断处理，不返回 `CACHE_ERROR` 或 `STORAGE_FULL`。
+- `get_search_content` miss: `NOT_FOUND`.
+- Search cache is currently best-effort; disabling cache is normal configuration, not an error.
+- Storage over-limit handled via eviction or truncation, not returning `CACHE_ERROR` or `STORAGE_FULL`.
 
 ### Concurrency / connection pool
 
-- queue full 当前继续归入 `CONTENT_FETCH_FAILED` 或 `WEB_SEARCH_FAILED`，不新增 `QUEUE_FULL` / `CONCURRENCY_LIMITED`。
-- connection pool / fetch 底层异常会按调用路径归入 `CONTENT_FETCH_FAILED`、`WEB_SEARCH_FAILED` 或 `NETWORK_ERROR`。
+- Queue full currently continues to be classified as `CONTENT_FETCH_FAILED` or `WEB_SEARCH_FAILED`, no new `QUEUE_FULL` / `CONCURRENCY_LIMITED`.
+- Connection pool / fetch bottom-layer exceptions will be classified by call path into `CONTENT_FETCH_FAILED`, `WEB_SEARCH_FAILED`, or `NETWORK_ERROR`.
 
 ### Jina fallback
 
-- Jina fallback 是 `fetch_content` 内部补救机制，不是用户直接选择的独立 provider。
-- Jina 返回非 2xx 或空内容：fallback 为原始 HTML 结果，不返回错误。
-- Jina timeout/abort：可能返回 `CONTENT_FETCH_TIMEOUT`。
-- Jina 其他请求异常：可能归入 `CONTENT_FETCH_FAILED`。
-- 当前不新增 `JINA_*` 错误码；如未来 Jina 成为用户可显式选择/观测的 provider，再考虑细化。
+- Jina fallback is `fetch_content`'s internal recovery mechanism, not a user-selectable independent provider.
+- Jina returns non-2xx or empty content: falls back to original HTML result, does not return error.
+- Jina timeout/abort: may return `CONTENT_FETCH_TIMEOUT`.
+- Jina other request exceptions: may be classified as `CONTENT_FETCH_FAILED`.
+- Currently no new `JINA_*` error codes; if Jina becomes user-selectable/observable provider in the future, refinement may be considered.
 
-## HTTP 状态码映射
+## HTTP status code mapping
 
-当前 `mapHttpStatusToError()` 用于 search provider 错误分类：
+Current `mapHttpStatusToError()` is used for search provider error classification:
 
-| Status | 映射到 | Retryable |
+| Status | Maps to | Retryable |
 |---|---|---|
-| 401 | `PROVIDER_AUTH_FAILED` | 否 |
-| 403 | `PROVIDER_AUTH_FAILED` | 否 |
-| 429 | `PROVIDER_RATE_LIMITED` | 是 |
-| 500 | `PROVIDER_UNAVAILABLE` | 是 |
-| 502 | `PROVIDER_UNAVAILABLE` | 是 |
-| 503 | `PROVIDER_UNAVAILABLE` | 是 |
-| 504 | `PROVIDER_UNAVAILABLE` | 是 |
-| 其他 | `WEB_SEARCH_FAILED` | 依具体 recovery |
+| 401 | `PROVIDER_AUTH_FAILED` | No |
+| 403 | `PROVIDER_AUTH_FAILED` | No |
+| 429 | `PROVIDER_RATE_LIMITED` | Yes |
+| 500 | `PROVIDER_UNAVAILABLE` | Yes |
+| 502 | `PROVIDER_UNAVAILABLE` | Yes |
+| 503 | `PROVIDER_UNAVAILABLE` | Yes |
+| 504 | `PROVIDER_UNAVAILABLE` | Yes |
+| Other | `WEB_SEARCH_FAILED` | Depends on specific recovery |
 
-## Recovery 动作说明
+## Recovery action descriptions
 
-`src/modules/web/errors.ts` 为部分错误码定义了 recovery 建议：
+`src/modules/web/errors.ts` defines recovery suggestions for some error codes:
 
-| Action | 含义 |
+| Action | Meaning |
 |---|---|
-| `retry` | 稍后重试当前请求 |
-| `fallback` | 尝试其他 provider 或 Jina fallback |
-| `skip` | 跳过当前内容 |
-| `abort` | 配置或输入错误，通常不应自动重试 |
+| `retry` | Retry the current request later |
+| `fallback` | Try another provider or Jina fallback |
+| `skip` | Skip current content |
+| `abort` | Configuration or input error, usually should not auto-retry |
 
-并非所有实际返回的 `WebToolError` 都携带 recovery 字段；当前 tool 返回结构只保证 `error.code` 和 `error.message`。
+Not all actual returned `WebToolError` carry a recovery field; current tool return structure only guarantees `error.code` and `error.message`.
 
 ## Deprecated / not canonical names
 
-以下名称不是当前 canonical code，不应在 README 或用户文档中写成已实现专用 code：
+The following names are not current canonical codes and should not be written in README or user documentation as implemented dedicated codes:
 
-- `FETCH_CONTENT_FAILED`：deprecated 旧名称；当前 canonical code 是 `CONTENT_FETCH_FAILED`。
-- `CONTENT_TOO_LARGE`：deprecated/旧文档名称；当前 canonical reserved code 是 `CONTENT_FETCH_TOO_LARGE`。
-- `STORAGE_FULL`：未实现；当前 storage 使用条目上限淘汰和内容截断。
-- `CACHE_DISABLED`：未实现；关闭 cache 是正常配置。
-- `JINA_TIMEOUT` / `JINA_FAILED`：未实现；当前没有独立 Jina 错误码。
-- `QUEUE_FULL` / `CONCURRENCY_LIMITED`：未实现；queue full 不作为独立 web error code 暴露。
+- `FETCH_CONTENT_FAILED`: deprecated old name; current canonical code is `CONTENT_FETCH_FAILED`.
+- `CONTENT_TOO_LARGE`: deprecated/old documentation name; current canonical reserved code is `CONTENT_FETCH_TOO_LARGE`.
+- `STORAGE_FULL`: not implemented; current storage uses entry limit eviction and content truncation.
+- `CACHE_DISABLED`: not implemented; disabling cache is normal configuration.
+- `JINA_TIMEOUT` / `JINA_FAILED`: not implemented; currently no independent Jina error codes.
+- `QUEUE_FULL` / `CONCURRENCY_LIMITED`: not implemented; queue full not exposed as independent web error code.
 
 ## Future hardening
 
-- 如需更强类型约束，`WebToolError.error.code` 已可与 `WebErrorCode` 对齐；外部 JSON 结构仍保持字符串兼容。
-- 如果未来 provider 统一抛出可识别的 parse/shape 错误，或 structured parser / `convert_content` / 强 schema 校验变复杂，可将该类错误从 `WEB_SEARCH_FAILED` 细化为 `PARSE_ERROR`。
-- 如果未来 `fetch_content` 增加 strict/full mode 或 `allowTruncate=false`，可启用 `CONTENT_FETCH_TOO_LARGE`。
-- 如果未来调用方需要区分普通 fetch 失败和安全策略拒绝，可新增类似 CONTENT_FETCH_BLOCKED_BY_SECURITY_POLICY 或 CONTENT_FETCH_BLOCKED 的 canonical code。
-- 如果未来 cache/storage 失败成为用户可感知错误，可启用 `CACHE_ERROR`。
+- For stronger type constraints, `WebToolError.error.code` is already alignable with `WebErrorCode`; external JSON structure still maintains string compatibility.
+- If future providers uniformly throw identifiable parse/shape errors, or structured parser / `convert_content` / strong schema validation becomes complex, such errors may be refined from `WEB_SEARCH_FAILED` to `PARSE_ERROR`.
+- If `fetch_content` adds strict/full mode or `allowTruncate=false` in the future, `CONTENT_FETCH_TOO_LARGE` may be enabled.
+- If callers need to distinguish regular fetch failures from security policy rejections in the future, a code like CONTENT_FETCH_BLOCKED_BY_SECURITY_POLICY or CONTENT_FETCH_BLOCKED may be added.
+- If cache/storage failures become user-perceivable errors in the future, `CACHE_ERROR` may be enabled.

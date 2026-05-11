@@ -1,16 +1,16 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
 # Result Schema Reference
 
-本文档描述 devkit-pi 当前公开结果结构中与 `subagent` tool 相关的部分。Subagents 总览见 [`subagents.md`](./subagents.md)，tool API 见 [`subagent-tool.md`](./subagent-tool.md)。
+This document describes the publicly exposed result structure related to the `subagent` tool in devkit-pi. For the Subagents overview, see [`subagents.md`](./subagents.md); for tool API, see [`subagent-tool.md`](./subagent-tool.md).
 
 ## Important note
 
-当前 `subagent` tool 返回的是 pi tool result 结构：
+The current `subagent` tool returns a pi tool result structure:
 
 ```ts
 {
@@ -19,13 +19,13 @@ last_verified: 2026-05-11
 }
 ```
 
-历史文档中的：
+Historical documentation showing:
 
 ```json
 { "ok": true, "output": "..." }
 ```
 
-更接近内部/概念化成功结果，不是当前 `subagent` tool 的顶层返回结构。面向调用方请以 `content` + `details` 为准。
+is closer to an internal/conceptual success result, not the current `subagent` tool's top-level return structure. For callers, use `content` + `details` as the reference.
 
 ## Top-level tool result
 
@@ -48,16 +48,16 @@ last_verified: 2026-05-11
 }
 ```
 
-字段说明：
+Field descriptions:
 
-| Field | 说明 |
+| Field | Description |
 |---|---|
-| `content[0].text` | 面向用户/主代理阅读的输出；可能被截断 |
-| `details.mode` | 当前执行主要为 `single`；depth guard 等管理类结果可能为 `management` |
-| `details.runId` | 单次执行 id，通常为 8 位 UUID 前缀 |
-| `details.results` | 子代理执行结果数组；当前单次调用最多一个主要结果 |
-| `details.error` | 结构化错误或截断提示 |
-| `details.streaming` | 执行中的 streaming update 使用；最终结果通常不包含 |
+| `content[0].text` | Output for user/main agent to read; may be truncated |
+| `details.mode` | Current execution is mainly `single`; management results like depth guard may be `management` |
+| `details.runId` | Single execution id, usually an 8-character UUID prefix |
+| `details.results` | Subagent execution result array; current single call has at most one primary result |
+| `details.error` | Structured error or truncation indicator |
+| `details.streaming` | Used for streaming updates during execution; final results usually do not include this |
 
 ## `SingleResult`
 
@@ -84,14 +84,14 @@ last_verified: 2026-05-11
 }
 ```
 
-语义：
+Semantics:
 
-- `exitCode === 0`：child pi process 正常结束。
-- `exitCode !== 0`：执行失败；`error` 和 `details.error` 通常存在。
-- `usage`：从 child pi JSONL 中提取，缺失时回退为 0 值对象。
-- `sessionFile`：child session JSONL 文件路径，用于调试；不建议作为稳定外部 API 强依赖。
-- `output`：脱敏后的子代理输出。
-- `displayItems`：从 assistant messages 提取的文本和 tool calls，用于 rich rendering；格式细节可能变化。
+- `exitCode === 0`: child pi process exited normally.
+- `exitCode !== 0`: execution failed; `error` and `details.error` usually present.
+- `usage`: extracted from child pi JSONL; falls back to zero-value object when missing.
+- `sessionFile`: child session JSONL file path for debugging; not recommended as a stable external API dependency.
+- `output`: sanitized subagent output.
+- `displayItems`: text and tool calls extracted from assistant messages for rich rendering; format details may change.
 
 ## Success example
 
@@ -150,7 +150,7 @@ last_verified: 2026-05-11
 
 ## Streaming update shape
 
-执行过程中，renderer 可能收到 partial result：
+During execution, the renderer may receive partial results:
 
 ```ts
 {
@@ -170,26 +170,26 @@ last_verified: 2026-05-11
 }
 ```
 
-这是执行期 UI 展示状态，不应作为最终业务结果依赖。
+This is execution-period UI display state and should not be relied upon as a final business result.
 
 ## Subagent error codes
 
-Canonical source：`src/shared/types.ts` 中的 `SUBAGENT_ERROR_CODES`。
+Canonical source: `SUBAGENT_ERROR_CODES` in `src/shared/types.ts`.
 
-| Code | 说明 |
+| Code | Description |
 |------|------|
-| `INVALID_INPUT` | 缺少必需参数 `agent` 或 `task` |
-| `SUBAGENTS_DISABLED` | 子代理功能已禁用 |
-| `UNKNOWN_AGENT` | 未知 agent 名称 |
-| `SUBAGENT_DISABLED` | 已定义但当前没有直接返回路径；预留给未来 per-agent disable 语义 |
-| `SUBAGENT_DEPTH_EXCEEDED` | 递归深度超限；子代理不能再调子代理 |
-| `SUBAGENT_TIMEOUT` | 执行超时 |
-| `SUBAGENT_FAILED` | 子代理执行失败，含 spawn/session/runtime/provider 等未分类失败 |
-| `SUBAGENT_OUTPUT_TRUNCATED` | 输出被截断 |
+| `INVALID_INPUT` | Missing required parameter `agent` or `task` |
+| `SUBAGENTS_DISABLED` | Subagents feature is disabled |
+| `UNKNOWN_AGENT` | Unknown agent name |
+| `SUBAGENT_DISABLED` | Defined but currently has no direct return path; reserved for future per-agent disable semantics |
+| `SUBAGENT_DEPTH_EXCEEDED` | Recursion depth exceeded; subagents cannot call further subagents |
+| `SUBAGENT_TIMEOUT` | Execution timed out |
+| `SUBAGENT_FAILED` | Subagent execution failed, including spawn/session/runtime/provider uncategorized failures |
+| `SUBAGENT_OUTPUT_TRUNCATED` | Output was truncated |
 
 ## Output collection
 
-`src/modules/subagents/collect-output.ts` 从 child pi JSONL/stdout 中提取：
+`src/modules/subagents/collect-output.ts` extracts from child pi JSONL/stdout:
 
 - final assistant text
 - usage
@@ -197,47 +197,47 @@ Canonical source：`src/shared/types.ts` 中的 `SUBAGENT_ERROR_CODES`。
 - partial assistant output
 - last event type
 
-如果没有 final assistant text，会返回简短诊断，而不是暴露完整原始 JSONL。
+If there is no final assistant text, a short diagnostic is returned instead of exposing the full raw JSONL.
 
 ## Sanitization and truncation
 
-返回前会执行：
+Before returning, the following are executed:
 
-- `sanitizeOutput()`：遮蔽常见 API key、token、Authorization header、GitHub token、用户路径和过长 stack trace。
-- `truncateOutput()`：按默认输出限制截断长输出。
+- `sanitizeOutput()`: masks common API keys, tokens, Authorization headers, GitHub tokens, user paths, and overly long stack traces.
+- `truncateOutput()`: truncates long output per default output limits.
 
-因此：
+Therefore:
 
-- `details.results[0].output` 是脱敏后的输出。
-- `content[0].text` 可能是截断后的文本。
-- 截断时 `details.error.code` 可能是 `SUBAGENT_OUTPUT_TRUNCATED`。
+- `details.results[0].output` is the sanitized output.
+- `content[0].text` may be the truncated text.
+- When truncated, `details.error.code` may be `SUBAGENT_OUTPUT_TRUNCATED`.
 
 ## Logs and activity
 
-- `/toolkit logs` 与 `/toolkit activity` 当前主要展示 Web observability logs/stats。
-- 它们不是 subagent execution history 的稳定机器接口。
-- 子代理调试主要依赖 tool result 的 `details` 与 `sessionFile`。
+- `/toolkit logs` and `/toolkit activity` currently primarily display Web observability logs/stats.
+- They are not a stable machine interface for subagent execution history.
+- Subagent debugging mainly relies on the tool result's `details` and `sessionFile`.
 
 ## Machine parsing guidance
 
-相对稳定：
+Relatively stable:
 
 - `details.mode`
 - `details.results[]`
 - `details.error.code` / `details.error.message`
-- `usage` 数值字段
+- `usage` numeric fields
 - `exitCode`
 
-不建议强依赖：
+Not recommended for strong dependency:
 
-- `content[0].text` 的自然语言格式
-- 内置 agent prompt 要求的 markdown 输出模板
-- `displayItems` 的完整细节
-- `sessionFile` 目录布局
-- renderer 展示格式
+- `content[0].text` natural language format
+- Built-in agent prompt-required markdown output templates
+- `displayItems` full details
+- `sessionFile` directory layout
+- Renderer display format
 
 ## Related schemas
 
-- Web tools 错误码见 [`web-tools-error-codes.md`](./web-tools-error-codes.md)。
-- LSP tool 返回结构见 [`lsp-tools.md`](./lsp-tools.md)。
-- `/toolkit` command 输出语义见 [`toolkit-commands.md`](./toolkit-commands.md)。
+- Web tools error codes: [`web-tools-error-codes.md`](./web-tools-error-codes.md)
+- LSP tool return structure: [`lsp-tools.md`](./lsp-tools.md)
+- `/toolkit` command output semantics: [`toolkit-commands.md`](./toolkit-commands.md)

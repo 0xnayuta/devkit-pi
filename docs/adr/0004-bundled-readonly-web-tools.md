@@ -1,78 +1,78 @@
 ---
 status: accepted
 audience: maintainer
-last_verified: 2026-05-09
+last_verified: 2026-05-12
 ---
 
-# ADR 0004: 内置极简 readonly web tools
+# ADR 0004: Bundled Readonly Web Tools
 
-> Historical decision record：本文记录当时的背景和取舍，不等同于当前 API reference；当前行为以 `docs/reference/`、`src/` 和 `tests/` 为准。
+> Historical decision record: this document records the context and trade-offs at the time, and is not equivalent to current API reference; current behavior is defined by `docs/reference/`, `src/`, and `tests/`.
 
-## 状态
+## Status
 
-Accepted（2026-05-10 实施完成）
+Accepted (implementation completed 2026-05-10)
 
-## 背景
+## Context
 
-内置 `researcher` agent 声明使用：
+The built-in `researcher` agent declares usage of:
 
 ```text
 web_search, fetch_content, get_search_content
 ```
 
-这些工具不是 pi core 自带工具。参考项目 `nicobailon/pi-subagents` 选择依赖独立扩展 `pi-web-access`，但本项目希望让 `researcher` 开箱可用，同时保持轻量边界。
+These tools are not part of pi core's built-in tools. The reference project `nicobailon/pi-subagents` chose to depend on the independent extension `pi-web-access`, but this project wants `researcher` to be usable out-of-the-box while maintaining a lightweight boundary.
 
-## 决策
+## Decision
 
-在 `pi-subagents` 内置一组极简 readonly web tools：
+Bundle a set of minimal readonly web tools within `pi-subagents`:
 
 - `web_search`
 - `fetch_content`
 - `get_search_content`
 
-实现目标是兼容 `pi-web-access` 的常用接口子集，而不是复制其完整功能。
+The implementation goal is to be compatible with `pi-web-access`'s commonly used interface subset, not to replicate its full functionality.
 
-## 范围
+## Scope
 
-### 包含
+### Included
 
-- 普通网页搜索
-- HTTP/HTTPS URL 内容抓取
-- HTML/text 到可读文本的基础提取
-- `responseId` 内存存储
-- 从历史搜索/抓取结果中按 `responseId` 取回完整内容
-- timeout、响应大小、输出长度限制
-- SSRF 防护
+- General web search
+- HTTP/HTTPS URL content fetching
+- Basic HTML/text to readable text extraction
+- `responseId` in-memory storage
+- Retrieve full content from historical search/fetch results by `responseId`
+- Timeout, response size, output length limits
+- SSRF protection
 
-### 不包含
+### Excluded
 
-- curator UI
+- Curator UI
 - Gemini Web/browser cookie
-- YouTube/视频分析
-- PDF 专门处理
+- YouTube/video analysis
+- PDF specialized handling
 - GitHub repo clone
-- MCP/Exa 复杂 fallback
-- 多 provider 自动编排
-- 登录态抓取
-- 写入项目文件
+- MCP/Exa complex fallback
+- Multi-provider automatic orchestration
+- Authenticated fetching
+- Writing project files
 
-## 推荐模块结构
+## Recommended module structure
 
 ```text
 src/web/
 ├─ index.ts      # registerWebTools(pi, config)
-├─ schemas.ts    # TypeBox 参数 schema
-├─ types.ts      # web tool 内部类型
-├─ security.ts   # URL 校验、防 SSRF、timeout/size 默认值
+├─ schemas.ts    # TypeBox parameter schemas
+├─ types.ts      # web tool internal types
+├─ security.ts   # URL validation, SSRF protection, timeout/size defaults
 ├─ storage.ts    # responseId -> search/fetch result cache
 ├─ fetch.ts      # fetch_content
-├─ extract.ts    # HTML/text 提取
+├─ extract.ts    # HTML/text extraction
 └─ search.ts     # web_search provider
 ```
 
-## 注册策略
+## Registration strategy
 
-子代理进程不能注册 `subagent` 工具，但必须能注册 web tools：
+Subagent processes cannot register the `subagent` tool, but must be able to register web tools:
 
 ```ts
 registerWebTools(pi, effectiveConfig);
@@ -82,35 +82,35 @@ if (process.env[PI_SUBAGENT_CHILD] === "1") return;
 registerSubagentTool(pi);
 ```
 
-| 进程 | 注册内容 |
+| Process | Registered content |
 |---|---|
-| 主代理进程 | `subagent` + 可选 `web_*` |
-| 子代理进程 | `web_search` / `fetch_content` / `get_search_content` |
-| 子代理进程 | 不注册 `subagent` |
+| Main agent process | `subagent` + optional `web_*` |
+| Subagent process | `web_search` / `fetch_content` / `get_search_content` |
+| Subagent process | Does not register `subagent` |
 
-## 安全边界
+## Security boundary
 
-- 仅允许 `http:` / `https:`
-- 禁止 `localhost`、loopback、link-local、private IP
-- 禁止 `file:` 等本地协议
-- 设置 fetch timeout
-- 设置最大响应体大小
-- 设置最大输出字符数
-- 限制重定向
-- 默认只处理 text/html/text/plain 等文本内容
-- 不写项目文件；结果仅存内存或会话级临时状态
+- Only allows `http:` / `https:`
+- Blocks `localhost`, loopback, link-local, private IP
+- Blocks `file:` and other local protocols
+- Sets fetch timeout
+- Sets maximum response body size
+- Sets maximum output character count
+- Limits redirects
+- By default only handles text/html/text/plain and other text content
+- Does not write project files; results only stored in memory or session-level temporary state
 
-## 后果
+## Consequences
 
-优点：
+Advantages:
 
-- `researcher` 开箱可用
-- 不依赖外部 `pi-web-access`
-- 保留 readonly 安全边界
-- 接口对常用场景保持熟悉
+- `researcher` usable out-of-the-box
+- No dependency on external `pi-web-access`
+- Maintains readonly security boundary
+- Interface remains familiar for common use cases
 
-代价：
+Trade-offs:
 
-- 项目范围从纯 subagent 编排扩展到包含基础 web research tools
-- 需要维护网络访问、安全限制和 provider 兼容性
-- 搜索 provider 的稳定性会成为新的维护点
+- Project scope expanded from pure subagent orchestration to include basic web research tools
+- Need to maintain network access, security limits, and provider compatibility
+- Search provider stability becomes a new maintenance point

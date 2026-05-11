@@ -1,7 +1,7 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
 # Architecture Decision Records

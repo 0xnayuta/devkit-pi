@@ -1,46 +1,46 @@
 ---
 status: accepted
 audience: maintainer
-last_verified: 2026-05-08
+last_verified: 2026-05-12
 ---
 
-# ADR 0001：采用轻量 foreground subagent 设计
+# ADR 0001: Lightweight Foreground Subagent Design
 
-> Historical decision record：本文记录当时的背景和取舍，不等同于当前 API reference；当前行为以 `docs/reference/`、`src/` 和 `tests/` 为准。
+> Historical decision record: this document records the context and trade-offs at the time, and is not equivalent to current API reference; current behavior is defined by `docs/reference/`, `src/`, and `tests/`.
 
-## 状态
+## Status
 
 Accepted
 
-## 背景
+## Context
 
-原项目具备 background、parallel、chain、intercom、worktree、TUI 等高级能力，但当前目标是为 pi 提供简单、真实、可控的 subagents 能力。
+The original project had advanced capabilities such as background, parallel, chain, intercom, worktree, and TUI, but the current goal is to provide simple, realistic, and controllable subagents capability for pi.
 
-## 决策
+## Decision
 
-第一版只实现：
+First version only implements:
 
-- 一个 `subagent` 工具
-- 五个内置子代理
-- foreground 同步执行
+- One `subagent` tool
+- Five built-in subagents
+- Foreground synchronous execution
 - `maxSubagentDepth = 1`
-- 默认 readonly
+- Default readonly
 
-不实现复杂多代理编排能力。
+Does not implement complex multi-agent orchestration capabilities.
 
-## 影响
+## Consequences
 
-优点：
+Advantages:
 
-- 易维护
-- 易测试
-- 用户心智负担低
-- 默认更安全
+- Easy to maintain
+- Easy to test
+- Low user mental overhead
+- Safer by default
 
-代价：
+Trade-offs:
 
-- 不支持后台任务
-- 不支持并行和链式流程
-- 不支持子代理运行中联系主代理
+- No background tasks
+- No parallel and chain workflows
+- No subagent-to-main-agent communication during execution
 
-这些能力可在 MVP 稳定后按需重新评估。
+These capabilities can be re-evaluated on demand after MVP stabilization.

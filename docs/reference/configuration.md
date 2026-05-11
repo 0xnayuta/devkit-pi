@@ -1,26 +1,26 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
-# 配置参考
+# Configuration Reference
 
-本文档以 `src/config/load-config.ts` 为 canonical source，辅助参考 `src/shared/types.ts`、`src/modules/web/providers/*`、`src/modules/lsp/schemas.ts` 与相关 tests。若 README 或旧 docs 与本文档不一致，以 `src/config/load-config.ts` 的默认值和 normalize 逻辑为准。
+This document uses `src/config/load-config.ts` as canonical source, with supplementary reference from `src/shared/types.ts`, `src/modules/web/providers/*`, `src/modules/lsp/schemas.ts`, and related tests. If README or old docs conflict with this document, the defaults and normalize logic in `src/config/load-config.ts` take precedence.
 
-## 配置文件位置
+## Configuration file location
 
-默认配置文件：
+Default configuration file:
 
 ```text
 ~/.pi/agent/extensions/devkit-pi/config.json
 ```
 
-devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配置文件缺失或读取失败时，使用默认配置 `{}` 与 `DEFAULT_CONFIG` merge 后的结果。
+devkit-pi uses namespace-based configuration and does not support legacy flat configuration fields. When the config file is missing or unreadable, the default config `{}` merged with `DEFAULT_CONFIG` is used.
 
-## 完整默认配置示例
+## Complete default configuration example
 
-对应源码：`src/config/load-config.ts` 中的 `DEFAULT_CONFIG`、`DEFAULT_SUBAGENTS_CONFIG`、`DEFAULT_WEB_CONFIG`。
+Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG` in `src/config/load-config.ts`.
 
 ```json
 {
@@ -114,37 +114,37 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配�
 }
 ```
 
-所有字段都是可选字段；未配置或类型不符合 normalize 规则时会回退到默认值。
+All fields are optional; unconfigured or type-non-conforming values fall back to defaults per normalize rules.
 
-## Normalize 规则摘要
+## Normalize rules summary
 
-对应源码：`src/config/load-config.ts`。
+Source: `src/config/load-config.ts`.
 
-| 规则 | 适用字段 | 行为 |
+| Rule | Applicable fields | Behavior |
 |---|---|---|
-| `booleanValue` | boolean 字段 | 只有 boolean 生效，否则使用默认值 |
-| `positiveInteger` | 超时、大小、数量、队列等正整数 | 必须是 `> 0` 的 integer，否则使用默认值 |
-| `nonNegativeInteger` | `subagents.maxDepth` | 必须是 `>= 0` 的 integer，否则使用默认值 |
-| `normalizeProvider` | `web.provider` | 只接受 `auto`、`brave`、`ddgs`、`openserp`、`searxng`、`tavily`、`serper` |
-| `normalizeProviderPriority` | `web.providerPriority` | 过滤非法 provider，去重；空数组或非法数组回退默认值 |
-| `normalizeDebugLevel` | `web.debug` | 接受 `false`、`minimal`、`verbose`；`true` 会变为 `minimal` |
-| `normalizeJinaTriggers` | `web.jinaTriggers` | 接受非空 string 数组并去重；非数组回退默认值；空数组可保留为空 |
-| `normalizeLspReadonlyActions` | `subagents.allowedLspActions` | 只保留 readonly-safe LSP actions 并去重 |
-| `normalizeLspHookMode` | `lsp.hook.mode` | 只接受 `agent_end`、`edit_write`、`disabled` |
+| `booleanValue` | boolean fields | Only boolean takes effect, otherwise uses default |
+| `positiveInteger` | Timeouts, sizes, counts, queue positive integers | Must be `> 0` integer, otherwise uses default |
+| `nonNegativeInteger` | `subagents.maxDepth` | Must be `>= 0` integer, otherwise uses default |
+| `normalizeProvider` | `web.provider` | Only accepts `auto`, `brave`, `ddgs`, `openserp`, `searxng`, `tavily`, `serper` |
+| `normalizeProviderPriority` | `web.providerPriority` | Filters invalid providers, deduplicates; empty or invalid array falls back to default |
+| `normalizeDebugLevel` | `web.debug` | Accepts `false`, `minimal`, `verbose`; `true` becomes `minimal` |
+| `normalizeJinaTriggers` | `web.jinaTriggers` | Accepts non-empty string array and deduplicates; non-array falls back to default; empty array can be retained as empty |
+| `normalizeLspReadonlyActions` | `subagents.allowedLspActions` | Only retains readonly-safe LSP actions and deduplicates |
+| `normalizeLspHookMode` | `lsp.hook.mode` | Only accepts `agent_end`, `edit_write`, `disabled` |
 
-## 顶层配置
+## Top-level configuration
 
-对应源码：`DEFAULT_CONFIG`、`mergeConfig()`。
+Source: `DEFAULT_CONFIG`, `mergeConfig()`.
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `enabled` | boolean | `true` | 否 | 是否启用整个 devkit-pi 扩展；为 `false` 时主入口直接返回 | `src/index.ts`, `src/config/load-config.ts` |
-| `subagents` | object | 见下方 | 否 | subagent 工具、内置 agents、delegation policy、子代理 LSP 暴露 | `src/modules/subagents/*` |
-| `web` | object | 见下方 | 否 | `web_search` / `fetch_content` / `get_search_content` | `src/modules/web/*` |
-| `lsp` | object | 见下方 | 否 | `lsp` tool 与自动 diagnostics hook | `src/modules/lsp/*` |
-| `commands` | object | 见下方 | 否 | 统一 `/toolkit` developer command | `src/modules/commands/register.ts` |
+| `enabled` | boolean | `true` | No | Whether to enable entire devkit-pi extension; when `false`, main entry returns immediately | `src/index.ts`, `src/config/load-config.ts` |
+| `subagents` | object | See below | No | Subagent tool, built-in agents, delegation policy, subagent LSP exposure | `src/modules/subagents/*` |
+| `web` | object | See below | No | `web_search` / `fetch_content` / `get_search_content` | `src/modules/web/*` |
+| `lsp` | object | See below | No | `lsp` tool and automatic diagnostics hook | `src/modules/lsp/*` |
+| `commands` | object | See below | No | Unified `/toolkit` developer command | `src/modules/commands/register.ts` |
 
-示例：关闭整个扩展。
+Example: disable entire extension.
 
 ```json
 {
@@ -152,25 +152,25 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配�
 }
 ```
 
-## Subagents 配置
+## Subagents configuration
 
-Public overview、tool API、agent definition 与 result schema 见 [`subagents.md`](./subagents.md)、[`subagent-tool.md`](./subagent-tool.md)、[`agent-definition.md`](./agent-definition.md)、[`result-schema.md`](./result-schema.md)。
+Public overview, tool API, agent definition, and result schema: [`subagents.md`](./subagents.md), [`subagent-tool.md`](./subagent-tool.md), [`agent-definition.md`](./agent-definition.md), [`result-schema.md`](./result-schema.md).
 
-对应源码：`DEFAULT_SUBAGENTS_CONFIG`、`normalizeSubagentsConfig()`、`src/modules/subagents/register.ts`、`src/modules/subagents/executor.ts`。
+Source: `DEFAULT_SUBAGENTS_CONFIG`, `normalizeSubagentsConfig()`, `src/modules/subagents/register.ts`, `src/modules/subagents/executor.ts`.
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `subagents.enabled` | boolean | `true` | 否 | 是否注册 `subagent` tool | `src/modules/subagents/register.ts` |
-| `subagents.maxDepth` | number | `1` | 否 | 子代理最大深度；默认禁止 nested subagents。接受非负整数 | `src/shared/types.ts`, `src/modules/subagents/register.ts` |
-| `subagents.timeoutMs` | number | `120000` | 否 | 单次子代理执行超时，单位 ms | `src/modules/subagents/executor.ts` |
-| `subagents.allowWrite` | boolean | `false` | 否 | 实验性/高级/不安全开关。放宽非 readonly 自定义 agent 的工具过滤策略；不代表完整权限沙箱、审计日志、自动回滚或稳定写入能力契约 | `src/config/load-config.ts`, `src/modules/subagents/*` |
-| `subagents.allowLspTools` | boolean | `true` | 否 | 是否允许子代理使用 readonly LSP tool；还会受 `lsp.enabled` 与 `lsp.tool.enabled` 共同限制 | `src/index.ts`, `src/modules/subagents/*` |
-| `subagents.allowedLspActions` | string[] | 见下方 | 否 | 子代理可用 LSP action 白名单；非法值会被丢弃 | `src/config/load-config.ts` |
-| `subagents.injectDelegationPolicy` | boolean | `true` | 否 | 是否向主代理 system prompt 注入 delegation policy 和 few-shot 示例 | `src/shared/delegation-policy.ts`, `src/modules/subagents/register.ts` |
-| `subagents.retry.enabled` | boolean | `true` | 否 | 是否启用子代理重试 | `src/config/load-config.ts`, `src/modules/subagents/executor.ts` |
-| `subagents.retry.maxAttempts` | number | `2` | 否 | 最大尝试次数，必须是正整数 | `src/config/load-config.ts`, `src/modules/subagents/executor.ts` |
+| `subagents.enabled` | boolean | `true` | No | Whether to register `subagent` tool | `src/modules/subagents/register.ts` |
+| `subagents.maxDepth` | number | `1` | No | Maximum subagent depth; default prohibits nested subagents. Accepts non-negative integer | `src/shared/types.ts`, `src/modules/subagents/register.ts` |
+| `subagents.timeoutMs` | number | `120000` | No | Single subagent execution timeout in ms | `src/modules/subagents/executor.ts` |
+| `subagents.allowWrite` | boolean | `false` | No | Experimental/advanced/unsafe switch. Relaxes non-readonly custom agent tool filtering policy; does not imply complete permission sandbox, audit log, automatic rollback, or stable write-capability contract | `src/config/load-config.ts`, `src/modules/subagents/*` |
+| `subagents.allowLspTools` | boolean | `true` | No | Whether to allow subagents to use readonly LSP tool; also constrained by `lsp.enabled` and `lsp.tool.enabled` | `src/index.ts`, `src/modules/subagents/*` |
+| `subagents.allowedLspActions` | string[] | See below | No | Subagent LSP action allowlist; invalid values are discarded | `src/config/load-config.ts` |
+| `subagents.injectDelegationPolicy` | boolean | `true` | No | Whether to inject delegation policy and few-shot examples into main agent system prompt | `src/shared/delegation-policy.ts`, `src/modules/subagents/register.ts` |
+| `subagents.retry.enabled` | boolean | `true` | No | Whether to enable subagent retry | `src/config/load-config.ts`, `src/modules/subagents/executor.ts` |
+| `subagents.retry.maxAttempts` | number | `2` | No | Maximum attempt count, must be positive integer | `src/config/load-config.ts`, `src/modules/subagents/executor.ts` |
 
-默认 `subagents.allowedLspActions`：
+Default `subagents.allowedLspActions`:
 
 ```json
 [
@@ -185,7 +185,7 @@ Public overview、tool API、agent definition 与 result schema 见 [`subagents.
 ]
 ```
 
-示例：关闭 delegation policy 注入，并禁用子代理 LSP。
+Example: disable delegation policy injection and disable subagent LSP.
 
 ```json
 {
@@ -196,7 +196,7 @@ Public overview、tool API、agent definition 与 result schema 见 [`subagents.
 }
 ```
 
-示例：只允许子代理使用 LSP symbols 和 diagnostics。
+Example: only allow subagents to use LSP symbols and diagnostics.
 
 ```json
 {
@@ -206,55 +206,55 @@ Public overview、tool API、agent definition 与 result schema 见 [`subagents.
 }
 ```
 
-### `subagents.allowWrite` 边界
+### `subagents.allowWrite` boundary
 
-可写自定义 subagents 目前属于实验性能力。默认且推荐的模式是 readonly。`subagents.allowWrite=true` 只表示放宽委派策略，不代表已经具备完整权限沙箱、审计日志、自动回滚机制或稳定的写入能力契约。仅建议在可信仓库中使用，并且必须人工 review 所有变更。
+Writable custom subagents are currently an experimental capability. The default and recommended mode is readonly. `subagents.allowWrite=true` only indicates relaxed delegation policy; it does not imply a complete permission sandbox, audit logging, automatic rollback mechanism, or stable write-capability contract. Use only in trusted repositories, and all changes must be human-reviewed.
 
-当前约束：
+Current constraints:
 
-- 内置 agents 继续按 readonly-first 设计。
-- 子代理的实际工具可用性取决于 child pi runtime、当前工具注册、执行环境和配置。
-- 子代理进程不注册 `subagent`，也不注册 `/toolkit`。
-- LSP privileged actions 在子代理中始终禁用。
-- Web tools 可用于研究和读取信息。
-- 文件写入、命令执行、修改项目等 write-like 行为没有稳定的自动回滚保证。
+- Built-in agents continue to be designed as readonly-first.
+- Subagent's actual tool availability depends on child pi runtime, current tool registration, execution environment, and configuration.
+- Subagent processes do not register `subagent` or `/toolkit`.
+- LSP privileged actions are always disabled in subagents.
+- Web tools can be used for research and reading information.
+- File writing, command execution, project modification, and other write-like behaviors have no stable automatic rollback guarantee.
 
-如需启用可写行为，应使用 Git 工作区、提交前 diff、人工 review 和测试命令兜底。后续若要正式支持 writable custom subagents，应先补齐权限策略、审计日志、回滚建议和测试覆盖。
+To enable writable behavior, use Git workspaces, pre-commit diffs, human review, and test commands as safety nets. If formally supporting writable custom subagents in the future, permission strategy, audit logging, rollback recommendations, and test coverage should be supplemented first.
 
-## LSP 配置
+## LSP configuration
 
-Public API、action 输入输出、language server 行为与失败语义见 [`lsp-tools.md`](./lsp-tools.md)。
+Public API, action input/output, language server behavior, and failure semantics: [`lsp-tools.md`](./lsp-tools.md).
 
-对应源码：`DEFAULT_CONFIG.lsp`、`normalizeLspConfig()`、`src/modules/lsp/register.ts`、`src/modules/lsp/tool.ts`、`src/modules/lsp/hook.ts`、`src/modules/lsp/schemas.ts`。
+Source: `DEFAULT_CONFIG.lsp`, `normalizeLspConfig()`, `src/modules/lsp/register.ts`, `src/modules/lsp/tool.ts`, `src/modules/lsp/hook.ts`, `src/modules/lsp/schemas.ts`.
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `lsp.enabled` | boolean | `true` | 否 | 是否启用整个 LSP 模块 | `src/modules/lsp/register.ts` |
-| `lsp.tool.enabled` | boolean | `true` | 否 | 是否注册显式 `lsp` tool | `src/modules/lsp/register.ts`, `src/modules/lsp/tool.ts` |
-| `lsp.tool.allowMutatingActions` | boolean | `false` | 否 | 是否允许主代理进程调用 `rename`、`codeAction`、`restart`；子代理进程始终禁用 | `src/modules/lsp/tool.ts` |
-| `lsp.hook.enabled` | boolean | `true` | 否 | 是否启用自动 diagnostics hook；只在主代理进程注册 | `src/modules/lsp/register.ts`, `src/modules/lsp/hook.ts` |
-| `lsp.hook.mode` | `agent_end` / `edit_write` / `disabled` | `agent_end` | 否 | hook 触发时机。`disabled` 会使 resolved `hook.enabled=false`、`hook.mode="disabled"` | `src/config/load-config.ts`, `src/modules/lsp/hook.ts` |
+| `lsp.enabled` | boolean | `true` | No | Whether to enable entire LSP module | `src/modules/lsp/register.ts` |
+| `lsp.tool.enabled` | boolean | `true` | No | Whether to register explicit `lsp` tool | `src/modules/lsp/register.ts`, `src/modules/lsp/tool.ts` |
+| `lsp.tool.allowMutatingActions` | boolean | `false` | No | Whether to allow main agent process to call `rename`, `codeAction`, `restart`; subagent processes always disabled | `src/modules/lsp/tool.ts` |
+| `lsp.hook.enabled` | boolean | `true` | No | Whether to enable automatic diagnostics hook; only registered in main agent process | `src/modules/lsp/register.ts`, `src/modules/lsp/hook.ts` |
+| `lsp.hook.mode` | `agent_end` / `edit_write` / `disabled` | `agent_end` | No | Hook trigger timing. `disabled` resolves to `hook.enabled=false`, `hook.mode="disabled"` | `src/config/load-config.ts`, `src/modules/lsp/hook.ts` |
 
-`lsp` tool actions 来自 `src/modules/lsp/schemas.ts`：
+`lsp` tool actions from `src/modules/lsp/schemas.ts`:
 
 ```text
 definition, references, hover, symbols, diagnostics, workspace-diagnostics,
 signature, rename, codeAction, restart, servers
 ```
 
-Readonly-safe actions（可通过 `subagents.allowedLspActions` 暴露给子代理）：
+Readonly-safe actions (can be exposed to subagents via `subagents.allowedLspActions`):
 
 ```text
 definition, references, hover, signature, symbols, diagnostics, workspace-diagnostics, servers
 ```
 
-Privileged actions：
+Privileged actions:
 
 ```text
 rename, codeAction, restart
 ```
 
-示例：关闭 LSP hook，但保留显式 `lsp` tool。
+Example: disable LSP hook but retain explicit `lsp` tool.
 
 ```json
 {
@@ -266,7 +266,7 @@ rename, codeAction, restart
 }
 ```
 
-示例：允许主代理使用 mutating actions（子代理仍禁用）。
+Example: allow main agent to use mutating actions (subagents still disabled).
 
 ```json
 {
@@ -278,25 +278,25 @@ rename, codeAction, restart
 }
 ```
 
-## Web 基础配置
+## Web base configuration
 
-对应源码：`DEFAULT_WEB_CONFIG`、`normalizeWebConfig()`、`src/modules/web/register.ts`、`src/modules/web/search.ts`、`src/modules/web/fetch.ts`、`src/modules/web/storage.ts`。
+Source: `DEFAULT_WEB_CONFIG`, `normalizeWebConfig()`, `src/modules/web/register.ts`, `src/modules/web/search.ts`, `src/modules/web/fetch.ts`, `src/modules/web/storage.ts`.
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.enabled` | boolean | `true` | 否 | 是否注册 `web_search`、`fetch_content`、`get_search_content` | `src/modules/web/register.ts` |
-| `web.provider` | string | `ddgs` | 否 | 搜索 provider：`auto` / `brave` / `ddgs` / `openserp` / `searxng` / `tavily` / `serper` | `src/config/load-config.ts`, `src/modules/web/providers/select-provider.ts` |
-| `web.providerPriority` | string[] | `['tavily','serper','brave','openserp','searxng','ddgs']` | 否 | `provider="auto"` 时的候选顺序。源码会按 commercial / self-host-or-open / zero-config 分层后应用该优先级 | `src/modules/web/providers/select-provider.ts` |
-| `web.timeoutMs` | number | `10000` | 否 | web/provider/fetch 请求超时，单位 ms | `src/modules/web/abort.ts`, providers |
-| `web.maxResponseBytes` | number | `1048576` | 否 | fetch 下载响应体最大字节数 | `src/modules/web/fetch.ts` |
-| `web.maxContentChars` | number | `30000` | 否 | tool 返回内容最大字符数 | `src/modules/web/fetch.ts`, `src/modules/web/storage.ts` |
-| `web.maxResults` | number | `5` | 否 | 默认搜索结果数量 | `src/modules/web/search.ts` |
-| `web.maxStoredResults` | number | `100` | 否 | responseId storage 最多保留结果条目数 | `src/modules/web/storage.ts`, `src/modules/web/register.ts` |
-| `web.maxStoredContentChars` | number | `200000` | 否 | 单条存储内容最大字符数 | `src/modules/web/storage.ts`, `src/modules/web/register.ts` |
-| `web.allowPrivateNetwork` | boolean | `false` | 否 | 是否允许 `fetch_content` 访问 localhost / private IP / `.local` / `.internal` 等私网地址 | `src/modules/web/security.ts`, `src/modules/web/fetch.ts` |
-| `web.debug` | `false` / `minimal` / `verbose` | `false` | 否 | web observability 调试输出级别；配置 `true` 会 normalize 为 `minimal` | `src/modules/web/observability.ts` |
+| `web.enabled` | boolean | `true` | No | Whether to register `web_search`, `fetch_content`, `get_search_content` | `src/modules/web/register.ts` |
+| `web.provider` | string | `ddgs` | No | Search provider: `auto` / `brave` / `ddgs` / `openserp` / `searxng` / `tavily` / `serper` | `src/config/load-config.ts`, `src/modules/web/providers/select-provider.ts` |
+| `web.providerPriority` | string[] | `['tavily','serper','brave','openserp','searxng','ddgs']` | No | Candidate order for `provider="auto"`. Source code applies this priority after layering by commercial / self-host-or-open / zero-config | `src/modules/web/providers/select-provider.ts` |
+| `web.timeoutMs` | number | `10000` | No | web/provider/fetch request timeout in ms | `src/modules/web/abort.ts`, providers |
+| `web.maxResponseBytes` | number | `1048576` | No | Max fetch download response body bytes | `src/modules/web/fetch.ts` |
+| `web.maxContentChars` | number | `30000` | No | Max tool return content characters | `src/modules/web/fetch.ts`, `src/modules/web/storage.ts` |
+| `web.maxResults` | number | `5` | No | Default search result count | `src/modules/web/search.ts` |
+| `web.maxStoredResults` | number | `100` | No | Max responseId storage retained result entries | `src/modules/web/storage.ts`, `src/modules/web/register.ts` |
+| `web.maxStoredContentChars` | number | `200000` | No | Max single stored content characters | `src/modules/web/storage.ts`, `src/modules/web/register.ts` |
+| `web.allowPrivateNetwork` | boolean | `false` | No | Whether to allow `fetch_content` to access localhost / private IP / `.local` / `.internal` | `src/modules/web/security.ts`, `src/modules/web/fetch.ts` |
+| `web.debug` | `false` / `minimal` / `verbose` | `false` | No | Web observability debug output level; configuring `true` normalizes to `minimal` | `src/modules/web/observability.ts` |
 
-示例：使用自动 provider 选择，并提高结果数。
+Example: use auto provider selection and increase result count.
 
 ```json
 {
@@ -307,7 +307,7 @@ rename, codeAction, restart
 }
 ```
 
-示例：允许抓取本地开发服务。
+Example: allow fetching local development server.
 
 ```json
 {
@@ -317,166 +317,83 @@ rename, codeAction, restart
 }
 ```
 
-## Web providers 配置
+## Web providers configuration
 
-Provider 名称来自 `src/shared/types.ts` 的 `WebSearchProviderName` 与 `src/modules/web/providers/registry.ts`。provider selection 逻辑在 `src/modules/web/providers/select-provider.ts`。
+Provider names from `WebSearchProviderName` in `src/shared/types.ts` and `src/modules/web/providers/registry.ts`. Provider selection logic in `src/modules/web/providers/select-provider.ts`.
 
 ### `ddgs`
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| 无 namespace 配置 | - | - | - | 默认零配置 provider，使用 DuckDuckGo Lite fallback | `src/modules/web/providers/ddgs.ts` |
-
-示例：显式使用默认 provider。
-
-```json
-{
-  "web": {
-    "provider": "ddgs"
-  }
-}
-```
+| No namespace config | - | - | - | Default zero-config provider, uses DuckDuckGo Lite fallback | `src/modules/web/providers/ddgs.ts` |
 
 ### `brave`
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| 无 `web.brave` 配置 | - | - | - | 源码通过环境变量 `BRAVE_SEARCH_API_KEY` 判断 availability 和发起请求 | `src/modules/web/providers/brave.ts` |
+| No `web.brave` config | - | - | - | Source code determines availability and makes requests via fixed environment variable `BRAVE_SEARCH_API_KEY` | `src/modules/web/providers/brave.ts` |
 
-示例：
-
-```json
-{
-  "web": {
-    "provider": "brave"
-  }
-}
-```
-
-需要在环境中提供：
-
-```bash
-BRAVE_SEARCH_API_KEY=...
-```
-
-注意：当前 `WebConfig` 没有 `web.brave.apiKeyEnv` 配置项；不要在文档中假设存在。
+Note: current `WebConfig` has no `web.brave.apiKeyEnv` configuration; do not assume it exists in documentation.
 
 ### `openserp`
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.openserp.enabled` | boolean | `false` | 否 | 显式 provider 使用前必须启用；auto mode 下也用于 availability | `src/modules/web/providers/openserp.ts` |
-| `web.openserp.baseUrl` | string | `https://api.openserp.com/search` | 否 | OpenSERP endpoint | `src/config/load-config.ts` |
-| `web.openserp.apiKeyEnv` | string | `OPENSERP_API_KEY` | 否 | 从哪个环境变量读取 API key | `src/modules/web/providers/openserp.ts` |
-
-示例：
-
-```json
-{
-  "web": {
-    "provider": "openserp",
-    "openserp": {
-      "enabled": true,
-      "apiKeyEnv": "OPENSERP_API_KEY"
-    }
-  }
-}
-```
+| `web.openserp.enabled` | boolean | `false` | No | Must be enabled before explicit provider use; also used for availability in auto mode | `src/modules/web/providers/openserp.ts` |
+| `web.openserp.baseUrl` | string | `https://api.openserp.com/search` | No | OpenSERP endpoint | `src/config/load-config.ts` |
+| `web.openserp.apiKeyEnv` | string | `OPENSERP_API_KEY` | No | Which environment variable to read API key from | `src/modules/web/providers/openserp.ts` |
 
 ### `searxng`
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.searxng.enabled` | boolean | `false` | 否 | 显式 provider 使用前必须启用；auto mode 下也用于 availability | `src/modules/web/providers/searxng.ts` |
-| `web.searxng.baseUrl` | string | `""` | 否 | SearXNG base URL；必须是有效 http/https URL 才可用 | `src/modules/web/providers/searxng.ts` |
-| `web.searxng.defaultEngine` | string | `google` | 否 | 请求参数 `engines` 的默认值 | `src/modules/web/providers/searxng.ts` |
-
-示例：
-
-```json
-{
-  "web": {
-    "provider": "searxng",
-    "searxng": {
-      "enabled": true,
-      "baseUrl": "https://searx.example.com",
-      "defaultEngine": "google"
-    }
-  }
-}
-```
+| `web.searxng.enabled` | boolean | `false` | No | Must be enabled before explicit provider use; also used for availability in auto mode | `src/modules/web/providers/searxng.ts` |
+| `web.searxng.baseUrl` | string | `""` | No | SearXNG base URL; must be valid http/https URL to be available | `src/modules/web/providers/searxng.ts` |
+| `web.searxng.defaultEngine` | string | `google` | No | Default value for request parameter `engines` | `src/modules/web/providers/searxng.ts` |
 
 ### `tavily`
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.tavily.enabled` | boolean | `false` | 否 | 显式 provider 使用前必须启用 | `src/modules/web/providers/select-provider.ts` |
-| `web.tavily.baseUrl` | string | `https://api.tavily.com/search` | 否 | Tavily endpoint | `src/modules/web/providers/tavily.ts` |
-| `web.tavily.apiKeyEnv` | string | `TAVILY_API_KEY` | 否 | 从哪个环境变量读取 API key | `src/modules/web/providers/tavily.ts` |
-
-示例：
-
-```json
-{
-  "web": {
-    "provider": "tavily",
-    "tavily": {
-      "enabled": true,
-      "apiKeyEnv": "TAVILY_API_KEY"
-    }
-  }
-}
-```
+| `web.tavily.enabled` | boolean | `false` | No | Must be enabled before explicit provider use | `src/modules/web/providers/select-provider.ts` |
+| `web.tavily.baseUrl` | string | `https://api.tavily.com/search` | No | Tavily endpoint | `src/modules/web/providers/tavily.ts` |
+| `web.tavily.apiKeyEnv` | string | `TAVILY_API_KEY` | No | Which environment variable to read API key from | `src/modules/web/providers/tavily.ts` |
 
 ### `serper`
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.serper.enabled` | boolean | `false` | 否 | 显式 provider 使用前必须启用 | `src/modules/web/providers/select-provider.ts` |
-| `web.serper.baseUrl` | string | `https://google.serper.dev/search` | 否 | Serper endpoint | `src/modules/web/providers/serper.ts` |
-| `web.serper.apiKeyEnv` | string | `SERPER_API_KEY` | 否 | 从哪个环境变量读取 API key | `src/modules/web/providers/serper.ts` |
+| `web.serper.enabled` | boolean | `false` | No | Must be enabled before explicit provider use | `src/modules/web/providers/select-provider.ts` |
+| `web.serper.baseUrl` | string | `https://google.serper.dev/search` | No | Serper endpoint | `src/modules/web/providers/serper.ts` |
+| `web.serper.apiKeyEnv` | string | `SERPER_API_KEY` | No | Which environment variable to read API key from | `src/modules/web/providers/serper.ts` |
 
-示例：
+### `provider="auto"` behavior
 
-```json
-{
-  "web": {
-    "provider": "serper",
-    "serper": {
-      "enabled": true,
-      "apiKeyEnv": "SERPER_API_KEY"
-    }
-  }
-}
-```
+Auto mode filters and tries available providers based on `providerPriority`. Current source code divides candidate providers into three tiers:
 
-### `provider="auto"` 行为
+1. commercial: `tavily`, `serper`, `brave`
+2. self-host-or-open: `openserp`, `searxng`
+3. zero-config: `ddgs`
 
-`auto` mode 会根据 `providerPriority` 过滤并尝试可用 provider。当前源码将候选 provider 分为三类：
-
-1. commercial：`tavily`、`serper`、`brave`
-2. self-host-or-open：`openserp`、`searxng`
-3. zero-config：`ddgs`
-
-最终顺序是在每一类内按 `providerPriority` 排序，然后拼接。默认配置下等价于：
+Final order is sorted by `providerPriority` within each tier, then concatenated. Default configuration equivalent to:
 
 ```text
 tavily → serper → brave → openserp → searxng → ddgs
 ```
 
-provider availability 由各 provider adapter 判断。例如 `brave` 依赖 `BRAVE_SEARCH_API_KEY`，`searxng` 依赖启用且 `baseUrl` 是有效 http/https URL。
+Provider availability is determined by each provider adapter. For example, `brave` depends on `BRAVE_SEARCH_API_KEY`, `searxng` depends on being enabled and `baseUrl` being a valid http/https URL.
 
-## Web cache 配置
+## Web cache configuration
 
-对应源码：`src/modules/web/cache.ts`、`src/modules/web/register.ts`。
+Source: `src/modules/web/cache.ts`, `src/modules/web/register.ts`.
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.cache.enabled` | boolean | `false` | 否 | 是否启用 search result cache | `src/modules/web/cache.ts` |
-| `web.cache.maxEntries` | number | `50` | 否 | cache 最大条目数 | `src/modules/web/cache.ts` |
-| `web.cache.ttlMs` | number | `300000` | 否 | cache TTL，单位 ms | `src/modules/web/cache.ts` |
+| `web.cache.enabled` | boolean | `false` | No | Whether to enable search result cache | `src/modules/web/cache.ts` |
+| `web.cache.maxEntries` | number | `50` | No | Max cache entries | `src/modules/web/cache.ts` |
+| `web.cache.ttlMs` | number | `300000` | No | Cache TTL in ms | `src/modules/web/cache.ts` |
 
-示例：
+Example:
 
 ```json
 {
@@ -490,16 +407,16 @@ provider availability 由各 provider adapter 判断。例如 `brave` 依赖 `BR
 }
 ```
 
-## Web concurrency 配置
+## Web concurrency configuration
 
-对应源码：`src/modules/web/concurrency.ts`、`src/modules/web/register.ts`。
+Source: `src/modules/web/concurrency.ts`, `src/modules/web/register.ts`.
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.concurrency.maxConcurrent` | number | `3` | 否 | 同时执行的 web 请求上限 | `src/modules/web/concurrency.ts` |
-| `web.concurrency.maxQueueSize` | number | `10` | 否 | 等待队列最大长度 | `src/modules/web/concurrency.ts` |
+| `web.concurrency.maxConcurrent` | number | `3` | No | Max simultaneously executing web requests | `src/modules/web/concurrency.ts` |
+| `web.concurrency.maxQueueSize` | number | `10` | No | Max waiting queue length | `src/modules/web/concurrency.ts` |
 
-示例：
+Example:
 
 ```json
 {
@@ -512,17 +429,17 @@ provider availability 由各 provider adapter 判断。例如 `brave` 依赖 `BR
 }
 ```
 
-## Web connection pool 配置
+## Web connection pool configuration
 
-对应源码：`src/modules/web/http-pool.ts`、`src/modules/web/register.ts`。
+Source: `src/modules/web/http-pool.ts`, `src/modules/web/register.ts`.
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.connectionPool.maxSockets` | number | `10` | 否 | HTTP/HTTPS agent 最大 socket 数 | `src/modules/web/http-pool.ts` |
-| `web.connectionPool.maxFreeSockets` | number | `5` | 否 | keep-alive 空闲 socket 上限 | `src/modules/web/http-pool.ts` |
-| `web.connectionPool.timeout` | number | `60000` | 否 | socket timeout，单位 ms | `src/modules/web/http-pool.ts` |
+| `web.connectionPool.maxSockets` | number | `10` | No | HTTP/HTTPS agent max sockets | `src/modules/web/http-pool.ts` |
+| `web.connectionPool.maxFreeSockets` | number | `5` | No | Keep-alive idle socket limit | `src/modules/web/http-pool.ts` |
+| `web.connectionPool.timeout` | number | `60000` | No | Socket timeout in ms | `src/modules/web/http-pool.ts` |
 
-示例：
+Example:
 
 ```json
 {
@@ -536,17 +453,17 @@ provider availability 由各 provider adapter 判断。例如 `brave` 依赖 `BR
 }
 ```
 
-## Jina Reader 配置
+## Jina Reader configuration
 
-对应源码：`DEFAULT_WEB_CONFIG`、`src/modules/web/fetch.ts`、`src/modules/web/security.ts`、`src/modules/web/schemas.ts`。
+Source: `DEFAULT_WEB_CONFIG`, `src/modules/web/fetch.ts`, `src/modules/web/security.ts`, `src/modules/web/schemas.ts`.
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.enableJinaFallback` | boolean | `false` | 否 | 是否启用 Jina Reader fallback。未启用时，`preferReader` 也不会触发 Jina | `src/modules/web/fetch.ts` |
-| `web.jinaTimeoutMs` | number | `8000` | 否 | Jina 请求超时，单位 ms | `src/modules/web/fetch.ts` |
-| `web.jinaTriggers` | string[] | `["short-html", "js-heavy-html"]` | 否 | 自动触发 Jina 的条件；空数组表示不自动触发，但 `preferReader` 仍可在启用 fallback 时请求 Jina | `src/modules/web/fetch.ts` |
+| `web.enableJinaFallback` | boolean | `false` | No | Whether to enable Jina Reader fallback. When not enabled, `preferReader` also won't trigger Jina | `src/modules/web/fetch.ts` |
+| `web.jinaTimeoutMs` | number | `8000` | No | Jina request timeout in ms | `src/modules/web/fetch.ts` |
+| `web.jinaTriggers` | string[] | `["short-html", "js-heavy-html"]` | No | Auto-trigger Jina conditions; empty array means no auto-trigger, but `preferReader` still works when fallback enabled | `src/modules/web/fetch.ts` |
 
-`fetch_content` tool schema 中还存在参数：
+`fetch_content` tool schema also has parameter:
 
 ```json
 {
@@ -554,9 +471,9 @@ provider availability 由各 provider adapter 判断。例如 `brave` 依赖 `BR
 }
 ```
 
-它不是配置项，而是单次工具调用参数。私网 URL 不会发送给 Jina，以避免泄露 localhost/private network 地址。
+It is not a config item, but a single tool call parameter. Private network URLs are not sent to Jina to avoid leaking localhost/private network addresses.
 
-示例：启用 Jina fallback。
+Example: enable Jina fallback.
 
 ```json
 {
@@ -568,23 +485,23 @@ provider availability 由各 provider adapter 判断。例如 `brave` 依赖 `BR
 }
 ```
 
-## Commands 配置
+## Commands configuration
 
-Public command 列表、参数、输出与失败语义见 [`toolkit-commands.md`](./toolkit-commands.md)。
+Public command list, parameters, output, and failure semantics: [`toolkit-commands.md`](./toolkit-commands.md).
 
-对应源码：`DEFAULT_CONFIG.commands`、`normalizeCommandsConfig()`、`src/modules/commands/register.ts`。
+Source: `DEFAULT_CONFIG.commands`, `normalizeCommandsConfig()`, `src/modules/commands/register.ts`.
 
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+| Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `commands.enabled` | boolean | `true` | 否 | 是否启用统一 `/toolkit` developer command。子代理进程始终不注册该命令 | `src/modules/commands/register.ts` |
+| `commands.enabled` | boolean | `true` | No | Whether to enable unified `/toolkit` developer command. Subagent processes never register this command | `src/modules/commands/register.ts` |
 
-当前 `/toolkit` 子命令：
+Current `/toolkit` subcommands:
 
 ```text
 doctor, modules, logs, agents, lsp, activity, help
 ```
 
-示例：
+Example:
 
 ```json
 {
@@ -594,9 +511,9 @@ doctor, modules, logs, agents, lsp, activity, help
 }
 ```
 
-## 常见组合示例
+## Common combination examples
 
-### 最小只启用 subagents
+### Minimal: only enable subagents
 
 ```json
 {
@@ -607,7 +524,7 @@ doctor, modules, logs, agents, lsp, activity, help
 }
 ```
 
-### 启用 web auto provider 与 cache
+### Enable web auto provider with cache
 
 ```json
 {
@@ -622,7 +539,7 @@ doctor, modules, logs, agents, lsp, activity, help
 }
 ```
 
-### 禁用 LSP hook 但保留子代理 readonly LSP
+### Disable LSP hook but retain subagent readonly LSP
 
 ```json
 {
@@ -639,14 +556,14 @@ doctor, modules, logs, agents, lsp, activity, help
 
 ## Known environment / future notes
 
-1. **`web.brave` namespace 不存在**
-   - 源码当前通过固定环境变量 `BRAVE_SEARCH_API_KEY` 配置 Brave。
-   - 如果未来需要 `web.brave.apiKeyEnv`，应先修改源码和 tests，再更新文档。
+1. **`web.brave` namespace does not exist**
+   - Source code currently configures Brave via fixed environment variable `BRAVE_SEARCH_API_KEY`.
+   - If `web.brave.apiKeyEnv` is needed in the future, source code and tests must be modified first, then documentation updated.
 
-2. **`subagents.allowWrite` 不是 stable write-capability contract**
-   - 配置项存在，默认 `false`。
-   - 当前作为 experimental / advanced / unsafe 开关记录；默认且推荐模式仍是 readonly。
-   - 若未来要正式支持 writable custom subagents，应单独补齐权限策略、审计日志、回滚建议和测试覆盖。
+2. **`subagents.allowWrite` is not a stable write-capability contract**
+   - Configuration item exists, defaults to `false`.
+   - Currently recorded as experimental/advanced/unsafe switch; default and recommended mode is still readonly.
+   - If formally supporting writable custom subagents in the future, permission strategy, audit logging, rollback recommendations, and test coverage should be supplemented separately.
 
-3. **LSP language server 可用性依赖本机环境**
-   - 配置只控制 devkit-pi 是否注册工具/hook，不自动安装 language server。
+3. **LSP language server availability depends on local environment**
+   - Configuration only controls whether devkit-pi registers tools/hooks, not automatic language server installation.

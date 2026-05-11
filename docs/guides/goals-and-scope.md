@@ -1,60 +1,60 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
-# 目标与范围
+# Goals and Scope
 
-当前 public API 与配置细节以 [Reference index](../reference/README.md)、[Configuration reference](../reference/configuration.md)、[Subagents reference](../reference/subagents.md)、[Web tools reference](../reference/web-tools.md)、[LSP tools reference](../reference/lsp-tools.md) 和 [Toolkit commands reference](../reference/toolkit-commands.md) 为准。
+Current public API and configuration details are defined in [Reference index](../reference/README.md), [Configuration reference](../reference/configuration.md), [Subagents reference](../reference/subagents.md), [Web tools reference](../reference/web-tools.md), [LSP tools reference](../reference/lsp-tools.md), and [Toolkit commands reference](../reference/toolkit-commands.md).
 
-## 项目目标
+## Project goals
 
-`devkit-pi` 是面向个人工作流的综合 pi coding toolkit：
+`devkit-pi` is a comprehensive pi coding toolkit for personal workflows:
 
 ```text
 subagents + web tools + LSP tool + LSP diagnostics hook + developer commands
 ```
 
-目标不是完整多代理框架，而是把高频 coding 辅助能力模块化地合入一个 pi extension。
+The goal is not a full multi-agent framework, but to modularly integrate high-frequency coding assistance capabilities into a single pi extension.
 
-## 当前包含
+## Currently included
 
-- `subagent` 工具与 5 个内置 readonly agents：`explorer`、`researcher`、`reviewer`、`implementer`、`tester`
-- user/project markdown agent 定义（简单 frontmatter）
-- foreground 单次子代理执行
-- 子代理递归保护：`subagents.maxDepth = 1`
-- bundled readonly web tools：`web_search`、`fetch_content`、`get_search_content`
-- LSP tool：definitions、references、hover、signature、symbols、diagnostics、workspace diagnostics、servers
-- LSP diagnostics hook：默认在 `agent_end` 后对本轮修改文件自动诊断，可配置为 `edit_write` 或关闭
-- 可选的子代理 readonly LSP：通过 `subagents.allowLspTools` 和 `subagents.allowedLspActions` 控制
-- unified developer command：`/toolkit`（doctor、modules、logs、agents、lsp、activity）
-- namespace 化配置：`subagents` / `web` / `lsp` / `commands`
+- `subagent` tool with 5 built-in readonly agents: `explorer`, `researcher`, `reviewer`, `implementer`, `tester`
+- User/project markdown agent definitions (simple frontmatter)
+- Foreground single-shot subagent execution
+- Subagent recursion guard: `subagents.maxDepth = 1`
+- Bundled readonly web tools: `web_search`, `fetch_content`, `get_search_content`
+- LSP tool: definitions, references, hover, signature, symbols, diagnostics, workspace diagnostics, servers
+- LSP diagnostics hook: auto-diagnoses files modified in the current turn after `agent_end` by default; configurable to `edit_write` or disabled
+- Optional subagent readonly LSP: controlled via `subagents.allowLspTools` and `subagents.allowedLspActions`
+- Unified developer command: `/toolkit` (doctor, modules, logs, agents, lsp, activity)
+- Namespace-based configuration: `subagents` / `web` / `lsp` / `commands`
 
-## 当前不包含
+## Currently excluded
 
-- background/async jobs
-- chain workflow
-- parallel execution
-- intercom
-- worktree 管理
-- complex artifact system
-- fallback model chain
-- 多代理编排引擎
-- agent management actions（create/update/delete）
-- 子代理中的 LSP hook / 自动 diagnostics
-- 子代理中的 privileged LSP actions：`rename`、`codeAction`、`restart`
+- Background/async jobs
+- Chain workflow
+- Parallel execution
+- Intercom
+- Worktree management
+- Complex artifact system
+- Fallback model chain
+- Multi-agent orchestration engine
+- Agent management actions (create/update/delete)
+- LSP hook / auto-diagnostics in subagents
+- Privileged LSP actions in subagents: `rename`, `codeAction`, `restart`
 
-## 设计边界
+## Design boundaries
 
-1. 主代理是唯一 orchestrator。
-2. 子代理不能调度其他子代理。
-3. 默认 readonly；写能力必须显式配置。
-4. LSP readonly actions 可作为 read/grep/find 的渐进增强。
-5. `rename`、`codeAction`、`restart` 默认禁用，且在子代理进程中始终禁用。
-6. 各模块必须可独立启停。
+1. The main agent is the sole orchestrator.
+2. Subagents cannot dispatch other subagents.
+3. Readonly by default; write capability must be explicitly configured.
+4. LSP readonly actions can serve as a progressive enhancement over read/grep/find.
+5. `rename`, `codeAction`, `restart` are disabled by default and always disabled in subagent processes.
+6. Each module must be independently enabled/disabled.
 
-## 自定义 agent 示例
+## Custom agent example
 
 ```md
 ---

@@ -49,7 +49,7 @@ function parseFrontmatter(content) {
 }
 
 function allowedStatusFor(file) {
-  return /^docs\/adr\/\d{4}-/.test(file) ? allowedAdrStatus : allowedDocStatus;
+  return /^docs\/(zh\/)?adr\/\d{4}-/.test(file) ? allowedAdrStatus : allowedDocStatus;
 }
 
 function checkDocFrontmatter() {

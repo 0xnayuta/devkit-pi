@@ -4,47 +4,46 @@ audience: maintainer
 last_verified: 2026-05-12
 ---
 
-# ADR 0005: 从 pi-subagents 演进为 devkit-pi
+# ADR 0005: Evolve from pi-subagents to devkit-pi
 
-> Historical decision record：本文记录当时的背景和取舍，不等同于当前 API reference；当前行为以 `docs/reference/`、`src/` 和 `tests/` 为准。
+> Historical decision record: this document records the context and trade-offs at the time, and is not equivalent to current API reference; current behavior is defined by `docs/reference/`, `src/`, and `tests/`.
 
-## 状态
+## Status
 
-Accepted（2026-05-10 实施完成）
+Accepted (implementation completed 2026-05-10)
 
-## 背景
+## Context
 
-`pi-subagents` 最初定位为轻量 subagent 扩展（1 主代理 + 5 子代理 + readonly + depth=1）。
-但项目已实际包含超出原始 MVP 的能力：web tools、delegation policy 注入、developer commands。
+`pi-subagents` was originally positioned as a lightweight subagent extension (1 main agent + 5 subagents + readonly + depth=1).
+But the project has actually included capabilities beyond the original MVP: web tools, delegation policy injection, developer commands.
 
-同时 `pi-lsp` 提供 LSP tool 和 LSP hook，二者有合并为个人综合 pi coding toolkit 的自然需求。
+Meanwhile, `pi-lsp` provides LSP tool and LSP hook, and there is a natural need for the two to merge into a personal comprehensive pi coding toolkit.
 
-## 决策
+## Decision
 
-1. **合并 pi-subagents 与 pi-lsp** 为单一模块化项目 `devkit-pi`。
-2. **统一 `dev` 前缀命名**，与 `devpiano` 等个人项目保持一致。
-3. **模块化单包**，不保留原有项目边界，按能力域划分模块（subagents / web / lsp）。
-4. **薄入口 + 模块注册**，`src/index.ts` 只做组合注册，每个模块自包含。
-5. **tests 镜像 modules**，`tests/subagents/`、`tests/web/`、`tests/lsp/` 与 `src/modules/` 保持 1:1。
+1. **Merge pi-subagents and pi-lsp** into a single modular project `devkit-pi`.
+2. **Unified `dev` prefix naming**, consistent with personal projects like `devpiano`.
+3. **Modular single package**, do not retain original project boundaries, split into modules by capability domain (subagents / web / lsp).
+4. **Thin entry + module registration**, `src/index.ts` only does composite registration, each module is self-contained.
+5. **Tests mirror modules**, `tests/subagents/`, `tests/web/`, `tests/lsp/` maintain 1:1 with `src/modules/`.
 
-## 保留的设计边界
+## Retained design boundaries
 
-- 主代理是唯一 orchestrator
-- 子代理不调度其他子代理（maxDepth=1）
-- 子代理默认 readonly
-- 每个模块可独立启停
-- LSP mutating actions（rename / codeAction / restart）默认受限
+- Main agent is the sole orchestrator
+- Subagents do not dispatch other subagents (maxDepth=1)
+- Subagents default to readonly
+- Each module can be independently enabled/disabled
+- LSP mutating actions (rename / codeAction / restart) are restricted by default
 
-## 不再保留的概念
+## Concepts no longer retained
 
-- `mvp/` 开发阶段标识
-- `pi-subagents` 包名
-- `extension/` 目录（入口改为 `src/index.ts`）
-- commands 独立目录（归属各自 module）
+- `mvp/` development phase identifiers
+- `pi-subagents` package name
+- `extension/` directory (entry point changed to `src/index.ts`)
+- Independent commands directory (belongs to respective module)
 
-## 影响
+## Consequences
 
-- 新仓库: `github.com/0xnayuta/devkit-pi`
-- 旧仓库 `pi-subagents` 和 `pi-lsp` 归档，不再独立维护
-- 配置格式从 `ExtensionConfig` 演进为 namespace 化 `ToolkitConfig`
-
+- New repository: `github.com/0xnayuta/devkit-pi`
+- Old repositories `pi-subagents` and `pi-lsp` archived, no longer independently maintained
+- Configuration format evolved from `ExtensionConfig` to namespace-based `ToolkitConfig`

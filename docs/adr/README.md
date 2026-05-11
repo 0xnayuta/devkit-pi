@@ -1,24 +1,24 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-08
+last_verified: 2026-05-12
 ---
 
 # Architecture Decision Records
 
-本目录记录重要设计决策，帮助后续维护者理解为什么这样简化。
+This directory records important design decisions to help future maintainers understand why certain simplifications were made.
 
-ADR 记录某个时间点的决策背景，不等同于当前 API reference；当 ADR 与当前实现不一致时，以 `docs/reference/`、`src/` 和 `tests/` 为准。
+ADRs record decision context at a point in time and are not equivalent to current API reference; when ADRs conflict with current implementation, `docs/reference/`, `src/`, and `tests/` take precedence.
 
-| ADR | 标题 |
+| ADR | Title |
 |-----|------|
-| [0001](./0001-lightweight-foreground-subagents.md) | 采用轻量 foreground subagent 设计 |
-| [0002](./0002-mvp-boundary-decisions.md) | MVP 边界决策 |
-| [0003](./0003-autonomous-subagent-triggering.md) | 自主触发子代理的改进方案 |
-| [0004](./0004-bundled-readonly-web-tools.md) | 内置极简 readonly web tools |
-| [0005](./0005-evolve-into-devkit-pi.md) | 从 pi-subagents 演进为 devkit-pi |
+| [0001](./0001-lightweight-foreground-subagents.md) | Lightweight Foreground Subagent Design |
+| [0002](./0002-mvp-boundary-decisions.md) | MVP Boundary Decisions |
+| [0003](./0003-autonomous-subagent-triggering.md) | Autonomous Subagent Triggering |
+| [0004](./0004-bundled-readonly-web-tools.md) | Bundled Readonly Web Tools |
+| [0005](./0005-evolve-into-devkit-pi.md) | Evolve from pi-subagents to devkit-pi |
 
-命名格式：
+Naming format:
 
 ```text
 0001-short-title.md
