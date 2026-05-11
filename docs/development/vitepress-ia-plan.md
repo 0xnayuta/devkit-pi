@@ -328,3 +328,11 @@ Round 3B 的目标是可构建、可浏览、导航不误导，不是美化或�
 - Current contract：只从 Reference 进入。
 - Proposed/Roadmap：不进 current Guide 主路径，低优先级链接并明确 non-current。
 - Homepage：Round 3B 暂用 `docs/README.md`；Round 3C 后再评估新增 `docs/index.md`。
+
+## Deployment status
+
+VitePress site 已部署，当前线上地址为 `https://devkit-pi.wangyan.life/`。当前部署方式为 GitHub Pages + custom subdomain，VitePress `base` 为 `"/"`。
+
+已新增 `docs/index.md`、`docs/reference/index.md` 和 `docs/adr/index.md`，用于修复 `/`、`/reference/`、`/adr/` 目录首页路由。
+
+`docs/reference/` 仍是 devkit-pi current public contract / API reference 的事实源；站点部署不改变 reference、`src/` 和 `tests/` 的 canonical source 地位。

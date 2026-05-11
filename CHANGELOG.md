@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Documentation
+
+- Added VitePress documentation site.
+- Added GitHub Pages deployment workflow.
+- Published documentation at https://devkit-pi.wangyan.life/.
+- Added VitePress directory index pages for `/`, `/reference/`, and `/adr/`.
+- Organized docs navigation for Guide / Reference / Development / ADRs.
+- Kept `docs/reference/` as the canonical public contract source.
+
 ## 0.1.0 — 2026-05-10
 
 ### Initial Release

@@ -10,6 +10,18 @@ last_verified: 2026-05-11
 
 The canonical current public contract / API reference lives in [`docs/reference/`](./reference/). Proposal, roadmap, archive, and ADR content should not be read as current behavior unless it is also reflected in reference docs, source, and tests.
 
+## Documentation site
+
+Online documentation site: https://devkit-pi.wangyan.life/
+
+Local preview commands:
+
+```bash
+pnpm docs:dev
+pnpm docs:build
+pnpm docs:preview
+```
+
 ## Main entry points
 
 - [Guide](./README.md): documentation overview, reading paths, current guides, and content policy.

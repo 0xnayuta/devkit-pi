@@ -268,9 +268,9 @@ function checkVitePressSite() {
   }
 
   const docsSiteUrl = "https://devkit-pi.wangyan.life/";
-  for (const file of ["README.md", "README.zh.md", "docs/README.md"]) {
+  for (const file of ["README.md", "README.zh.md", "docs/README.md", "docs/index.md"]) {
     const content = read(file);
-    if (!content.includes("docs:dev") || !content.includes("docs:build")) {
+    if (!content.includes("docs:dev") || !content.includes("docs:build") || !content.includes("docs:preview")) {
       errors.push(`${file}: missing local documentation site commands`);
     }
     if (!content.includes(docsSiteUrl)) {
