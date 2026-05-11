@@ -321,6 +321,85 @@ function checkWebErrorCodes() {
   }
 }
 
+function checkPlanningDocs() {
+  const planningFiles = [
+    "docs/planning/README.md",
+    "docs/planning/add-convert_content-tool-plan.md",
+    "docs/planning/personal-toolkit-feature-roadmap.md",
+  ];
+
+  for (const file of planningFiles) {
+    if (!fs.existsSync(path.join(root, file))) {
+      errors.push(`missing planning file ${file}`);
+    }
+  }
+
+  // Old files should no longer exist in guides/
+  for (const oldFile of [
+    "docs/guides/add-convert_content-tool-plan.md",
+    "docs/guides/personal-toolkit-feature-roadmap.md",
+  ]) {
+    if (fs.existsSync(path.join(root, oldFile))) {
+      errors.push(`${oldFile}: planning doc should be in docs/planning/, not docs/guides/`);
+    }
+  }
+
+  // Planning docs must have proposed status
+  for (const file of [
+    "docs/planning/add-convert_content-tool-plan.md",
+    "docs/planning/personal-toolkit-feature-roadmap.md",
+  ]) {
+    if (!fs.existsSync(path.join(root, file))) continue;
+    const content = read(file);
+    const fm = parseFrontmatter(content);
+    if (!fm) {
+      errors.push(`${file}: missing frontmatter`);
+      continue;
+    }
+    if (fm.status !== "proposed") {
+      errors.push(`${file}: planning doc must have status 'proposed', got '${fm.status}'`);
+    }
+    // Check for warning about not being current behavior
+    if (!/not current behavior|不代表当前/.test(content)) {
+      errors.push(`${file}: planning doc must contain warning about not being current behavior`);
+    }
+  }
+}
+
+function checkPlanningNotInMainSidebar() {
+  const configFile = "docs/.vitepress/config.ts";
+  if (!fs.existsSync(path.join(root, configFile))) return;
+  const config = read(configFile);
+
+  const planningSlugs = ["add-convert_content-tool-plan", "personal-toolkit-feature-roadmap"];
+
+  // Check that planning doc slugs don't appear in sidebar link targets
+  for (const slug of planningSlugs) {
+    if (config.includes(`link: "/guides/${slug}"`)) {
+      errors.push(`${configFile}: sidebar must not contain old planning doc path '/guides/${slug}'`);
+    }
+    if (config.includes(`link: "/planning/${slug}"`)) {
+      errors.push(`${configFile}: sidebar must not contain planning doc '/planning/${slug}' (plan A)`);
+    }
+  }
+}
+
+function checkAdr0005Title() {
+  const file = "docs/adr/0005-evolve-into-devkit-pi.md";
+  if (!fs.existsSync(path.join(root, file))) return;
+  const content = read(file);
+  if (content.includes("# ADR 0004") && !content.includes("# ADR 0005")) {
+    errors.push(`${file}: title should use ADR 0005, not ADR 0004`);
+  }
+}
+
+function checkDocsReadmeSections() {
+  const docsReadme = read("docs/README.md");
+  if (!docsReadme.includes("docs/planning/") && !docsReadme.includes("planning/")) {
+    errors.push("docs/README.md: Documentation overview should mention docs/planning/");
+  }
+}
+
 checkDocFrontmatter();
 checkLinks();
 checkAgentsInDocs();
@@ -330,6 +409,10 @@ checkGuideNavigation();
 checkAllowWriteBoundary();
 checkVitePressSite();
 checkWebErrorCodes();
+checkPlanningDocs();
+checkPlanningNotInMainSidebar();
+checkAdr0005Title();
+checkDocsReadmeSections();
 
 if (errors.length > 0) {
   console.error(errors.join("\n"));

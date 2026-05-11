@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-11
+last_verified: 2026-05-12
 ---
 
 # devkit-pi Documentation
@@ -14,7 +14,7 @@ last_verified: 2026-05-11
 - `docs/guides/`：面向理解、维护和开发流程的指南。
 - `docs/reference/`：面向 public API / 配置 / 错误语义的查表型参考。
 - `docs/adr/`：历史架构决策记录。
-- `docs/issues/`：维护过程中的 issue/修复记录。
+- `docs/planning/`：proposal、roadmap 和未来计划，不代表当前已实现能力。
 - `docs/archive/`：历史计划和已归档内容。
 
 当前行为应以 `src/`、`tests/` 与 `docs/reference/` 中标记为 current 的 reference 文档为准。
@@ -91,8 +91,8 @@ Current guides：
 
 Proposed / roadmap guides：
 
-- [Add convert_content tool plan](./guides/add-convert_content-tool-plan.md)
-- [Personal toolkit feature roadmap](./guides/personal-toolkit-feature-roadmap.md)
+- [Add convert_content tool plan](./planning/add-convert_content-tool-plan.md)
+- [Personal toolkit feature roadmap](./planning/personal-toolkit-feature-roadmap.md)
 
 Proposed / roadmap 文档不代表当前已实现能力，不进入 public reference 主路径。
 
@@ -120,11 +120,15 @@ Proposed / roadmap 文档不代表当前已实现能力，不进入 public refer
 
 ADR 记录某个时间点的设计决策，不等同于当前完整 API reference；当 ADR 与当前 reference 不一致时，以当前源码、测试和 reference 文档为准。
 
-### `issues/`
+### `planning/`
 
-维护记录和已修复问题摘要。
+Future plans, proposals, and roadmap documents. These do not represent current behavior.
 
-- [Issue log](./issues/issue-log.md)
+- [Planning index](./planning/README.md)
+- [Add convert_content tool plan](./planning/add-convert_content-tool-plan.md)
+- [Personal toolkit feature roadmap](./planning/personal-toolkit-feature-roadmap.md)
+
+Proposed / roadmap 文档不代表当前已实现能力，不进入 public reference 主路径。
 
 ### `archive/`
 
@@ -154,8 +158,9 @@ Archive 内容仅保留历史背景，不代表当前实现或承诺。
 
 ## Historical / proposed content policy
 
+- `docs/planning/` 是 proposed / roadmap 文档，不代表当前实现。
 - `docs/archive/` 是历史内容，不代表当前实现。
 - `docs/adr/` 记录历史决策，不等于当前完整 API reference。
 - `proposed`、`roadmap`、`plan` 类文档只表示设计讨论或后续方向，不应被当作当前功能说明。
 - 当前行为以 `src/`、`tests/` 和 `docs/reference/` 为准。
-- 不要把 archive/proposal/roadmap 中的命令、字段、工具或错误码写入 current public reference，除非源码和测试已经实现并验证。
+- 不要把 planning/archive/proposal/roadmap 中的命令、字段、工具或错误码写入 current public reference，除非源码和测试已经实现并验证。

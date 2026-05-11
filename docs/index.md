@@ -28,7 +28,6 @@ pnpm docs:preview
 
 - [Guide](./README.md): documentation overview, reading paths, current guides, and content policy.
 - [Reference](./reference/): current public contract / API reference.
-- [Development](./development/docs-restructure-plan.md): maintainer-oriented documentation planning and audit notes.
 - [ADRs](./adr/): historical decision records, not current API reference.
 - [GitHub](https://github.com/0xnayuta/devkit-pi): source repository.
 

@@ -6,7 +6,7 @@ last_verified: 2026-05-11
 
 # 二、新增 `convert_content` 工具计划
 
-> Status: Proposed. 本文是未来工具计划，不代表当前 devkit-pi 已实现或公开注册了 `convert_content` tool。当前 public API 行为见 [Reference index](../reference/README.md)。
+> **⚠️ Status: Proposed — not current behavior.** This document describes a future tool plan. devkit-pi has **not** implemented or publicly registered a `convert_content` tool. The features, interfaces, and behavior described here are **not part of the current public API**. For the current public contract, see [Reference index](../reference/README.md), `src/`, and `tests/`.
 
 ## 目标定位
 

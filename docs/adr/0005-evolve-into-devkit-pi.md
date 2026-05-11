@@ -1,10 +1,10 @@
 ---
 status: accepted
 audience: maintainer
-last_verified: 2026-05-10
+last_verified: 2026-05-12
 ---
 
-# ADR 0004: 从 pi-subagents 演进为 devkit-pi
+# ADR 0005: 从 pi-subagents 演进为 devkit-pi
 
 > Historical decision record：本文记录当时的背景和取舍，不等同于当前 API reference；当前行为以 `docs/reference/`、`src/` 和 `tests/` 为准。
 

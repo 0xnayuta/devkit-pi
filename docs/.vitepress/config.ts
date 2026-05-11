@@ -18,7 +18,6 @@ export default defineConfig({
     nav: [
       { text: "Guide", link: "/" },
       { text: "Reference", link: "/reference/" },
-      { text: "Development", link: "/development/docs-restructure-plan" },
       { text: "ADRs", link: "/adr/" },
       { text: "GitHub", link: "https://github.com/0xnayuta/devkit-pi" },
     ],
@@ -44,44 +43,16 @@ export default defineConfig({
           ],
         },
       ],
-      "/development/": [
-        {
-          text: "Development",
-          items: [
-            { text: "Docs Restructure Plan", link: "/development/docs-restructure-plan" },
-            {
-              text: "Pre-VitePress Audit",
-              link: "/development/docs-audit-before-vitepress",
-            },
-            { text: "VitePress IA Plan", link: "/development/vitepress-ia-plan" },
-            { text: "Issue Log", link: "/issues/issue-log" },
-          ],
-        },
-      ],
-      "/issues/": [
-        {
-          text: "Development",
-          items: [
-            { text: "Docs Restructure Plan", link: "/development/docs-restructure-plan" },
-            {
-              text: "Pre-VitePress Audit",
-              link: "/development/docs-audit-before-vitepress",
-            },
-            { text: "VitePress IA Plan", link: "/development/vitepress-ia-plan" },
-            { text: "Issue Log", link: "/issues/issue-log" },
-          ],
-        },
-      ],
       "/adr/": [
         {
           text: "ADRs — Historical Decisions",
           items: [
             { text: "ADR Overview", link: "/adr/" },
-            { text: "0001 Lightweight Foreground Subagents", link: "/adr/0001-lightweight-foreground-subagents" },
-            { text: "0002 MVP Boundary Decisions", link: "/adr/0002-mvp-boundary-decisions" },
-            { text: "0003 Autonomous Subagent Triggering", link: "/adr/0003-autonomous-subagent-triggering" },
-            { text: "0004 Bundled Readonly Web Tools", link: "/adr/0004-bundled-readonly-web-tools" },
-            { text: "0005 Evolve Into devkit-pi", link: "/adr/0005-evolve-into-devkit-pi" },
+            { text: "ADR 0001 — Lightweight Foreground Subagents", link: "/adr/0001-lightweight-foreground-subagents" },
+            { text: "ADR 0002 — MVP Boundary Decisions", link: "/adr/0002-mvp-boundary-decisions" },
+            { text: "ADR 0003 — Autonomous Subagent Triggering", link: "/adr/0003-autonomous-subagent-triggering" },
+            { text: "ADR 0004 — Bundled Readonly Web Tools", link: "/adr/0004-bundled-readonly-web-tools" },
+            { text: "ADR 0005 — Evolve into devkit-pi", link: "/adr/0005-evolve-into-devkit-pi" },
           ],
         },
       ],
