@@ -114,6 +114,8 @@ User: "规划一下这个功能的测试方案"
 
 ### 实现细节
 
+> Current implementation note：下方保留实施时记录的早期类型名、入口路径和配置路径。当前 public contract 以 `docs/reference/configuration.md`、`src/config/load-config.ts`、`src/modules/subagents/register.ts` 和 `src/shared/delegation-policy.ts` 为准；当前配置键是 `subagents.injectDelegationPolicy`，配置路径是 `~/.pi/agent/extensions/devkit-pi/config.json`。
+
 #### 1. 配置项
 
 `ExtensionConfig.injectDelegationPolicy`（默认 `true`），用户可通过 `~/.pi/agent/extensions/subagent/config.json` 设置 `false` 禁用。

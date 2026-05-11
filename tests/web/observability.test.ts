@@ -56,7 +56,7 @@ describe("observability - stats", () => {
     recordSearchActivity("ddgs", "error", startTs + 1, "WEB_SEARCH_FAILED");
     recordSearchActivity("ddgs", "rate_limited", startTs + 2, "PROVIDER_RATE_LIMITED");
     recordFetchActivity("success");
-    recordFetchActivity("error", "FETCH_CONTENT_FAILED");
+    recordFetchActivity("error", "CONTENT_FETCH_FAILED");
 
     const stats = getWebToolStats();
     // search: 1 success + 1 error + 1 rate_limited = 3 calls

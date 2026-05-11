@@ -52,6 +52,8 @@ pnpm test
 
 所有 agent 默认 readonly。主代理是唯一编排者 — 子代理不能再调度其他子代理。
 
+可写自定义 subagents 目前属于实验性能力。默认且推荐模式是 readonly；`subagents.allowWrite=true` 不代表完整沙箱、审计日志或自动回滚保证。详见 [Subagents 参考](docs/reference/subagents.md) 和 [安全模型](docs/guides/security-model.md)。
+
 ### 自定义 agent
 
 在 `.pi/agents/`（项目级）或 `~/.pi/agent/agents/`（用户级）放置 markdown 文件：
@@ -111,60 +113,9 @@ subagent({ agent: "explorer", task: "查找认证相关代码" })
 
 ## 配置
 
-配置文件路径：`~/.pi/agent/extensions/devkit-pi/config.json`
+配置文件路径：`~/.pi/agent/extensions/devkit-pi/config.json`。
 
-完整配置参考（含默认值）：
-
-```json
-{
-  "enabled": true,
-  "subagents": {
-    "enabled": true,
-    "maxDepth": 1,
-    "timeoutMs": 120000,
-    "allowWrite": false,
-    "allowLspTools": true,
-    "allowedLspActions": [
-      "definition", "references", "hover", "signature",
-      "symbols", "diagnostics", "workspace-diagnostics", "servers"
-    ],
-    "injectDelegationPolicy": true,
-    "retry": {
-      "enabled": true,
-      "maxAttempts": 2
-    }
-  },
-  "web": {
-    "enabled": true,
-    "provider": "ddgs",
-    "providerPriority": ["tavily", "serper", "brave", "openserp", "searxng", "ddgs"],
-    "timeoutMs": 10000,
-    "maxResponseBytes": 1048576,
-    "maxContentChars": 30000,
-    "maxResults": 5,
-    "enableJinaFallback": false,
-    "cache": { "enabled": false, "maxEntries": 50, "ttlMs": 300000 },
-    "concurrency": { "maxConcurrent": 3, "maxQueueSize": 10 },
-    "debug": false
-  },
-  "lsp": {
-    "enabled": true,
-    "tool": {
-      "enabled": true,
-      "allowMutatingActions": false
-    },
-    "hook": {
-      "enabled": true,
-      "mode": "agent_end"
-    }
-  },
-  "commands": {
-    "enabled": true
-  }
-}
-```
-
-每个模块均可独立启用或禁用。
+每个模块均可独立启用或禁用。完整默认值与 normalize 规则见 [配置参考](docs/reference/configuration.md)。
 
 ## 错误码
 
@@ -174,7 +125,9 @@ subagent({ agent: "explorer", task: "查找认证相关代码" })
 
 ### Web 工具错误
 
-`INVALID_INPUT` | `WEB_SEARCH_FAILED` | `PROVIDER_AUTH_FAILED` | `PROVIDER_RATE_LIMITED` | `PROVIDER_UNAVAILABLE` | `WEB_SEARCH_TIMEOUT` | `FETCH_CONTENT_FAILED` | `NETWORK_ERROR` | `CONTENT_TOO_LARGE` | `CONTENT_FETCH_TIMEOUT` | `STORAGE_FULL` | `NOT_FOUND` | `CACHE_DISABLED`
+Web 工具返回包含 `error.code` 和 `error.message` 的结构化错误。常见错误码包括 `INVALID_INPUT`、`WEB_SEARCH_INVALID_QUERY`、`WEB_SEARCH_FAILED`、`WEB_SEARCH_TIMEOUT`、`PROVIDER_AUTH_FAILED`、`PROVIDER_RATE_LIMITED`、`PROVIDER_UNAVAILABLE`、`NETWORK_ERROR`、`CONTENT_FETCH_INVALID_URL`、`CONTENT_FETCH_FAILED`、`CONTENT_FETCH_TIMEOUT` 和 `NOT_FOUND`。
+
+完整 canonical 清单见 [Web tools 错误码](docs/reference/web-tools-error-codes.md)。
 
 ## 项目结构
 
@@ -199,7 +152,7 @@ docs/                       # 文档、指南、ADR
 
 1. 主代理是唯一编排者
 2. 子代理不能再调度其他子代理（`maxDepth = 1`）
-3. 默认 readonly — 写入能力需要显式配置
+3. 默认 readonly — 自定义 subagents 的写入能力需要显式配置且仍属于实验性能力
 4. LSP 变更类操作（`rename`、`codeAction`、`restart`）默认禁用，且在子代理进程中始终被阻止
 5. 每个模块均可独立启用或禁用
 
@@ -216,10 +169,20 @@ pnpm docs:check   # 验证文档
 
 ## 文档
 
+- [文档总入口](docs/README.md)
+- [Reference 索引](docs/reference/README.md)
 - [目标与范围](docs/guides/goals-and-scope.md)
 - [架构](docs/guides/architecture.md)
 - [配置参考](docs/reference/configuration.md)
+- [Subagents 参考](docs/reference/subagents.md)
+- [Subagent tool 参考](docs/reference/subagent-tool.md)
 - [Agent 定义](docs/reference/agent-definition.md)
+- [结果 schema](docs/reference/result-schema.md)
+- [Toolkit commands 参考](docs/reference/toolkit-commands.md)
+- [LSP tools 参考](docs/reference/lsp-tools.md)
+- [Web tools 参考](docs/reference/web-tools.md)
+- [Web providers 参考](docs/reference/web-providers.md)
+- [Web tools 错误码](docs/reference/web-tools-error-codes.md)
 - [安全模型](docs/guides/security-model.md)
 - [架构决策记录](docs/adr/README.md)
 

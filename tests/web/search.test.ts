@@ -79,8 +79,8 @@ describe("web_search", () => {
     const result = await webSearch({}, mergeWebConfig({}));
     assert.deepEqual(result, {
       error: {
-        code: "INVALID_INPUT",
-        message: "web_search requires query or queries",
+        code: "WEB_SEARCH_INVALID_QUERY",
+        message: "web_search requires a non-empty query or queries",
       },
     });
   });
@@ -406,6 +406,26 @@ describe("web_search", () => {
     if ("responseId" in result) {
       assert.match(calls[0], /lite\.duckduckgo\.com\/lite\//);
       assert.equal(result.queries[0].results[0].source, "fallback");
+    }
+  });
+
+  it("treats no search results as a successful empty result", async () => {
+    globalThis.fetch = (() =>
+      Promise.resolve(
+        new Response("<html><body>No results</body></html>", {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        })
+      )) as typeof fetch;
+
+    const result = await webSearch(
+      { query: "unlikely empty query" },
+      mergeWebConfig({ web: { provider: "ddgs" } })
+    );
+
+    assert.equal("responseId" in result, true);
+    if ("responseId" in result) {
+      assert.deepEqual(result.queries[0].results, []);
     }
   });
 

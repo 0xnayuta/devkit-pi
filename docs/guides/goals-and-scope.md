@@ -1,10 +1,12 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-10
+last_verified: 2026-05-11
 ---
 
 # 目标与范围
+
+当前 public API 与配置细节以 [Reference index](../reference/README.md)、[Configuration reference](../reference/configuration.md)、[Subagents reference](../reference/subagents.md)、[Web tools reference](../reference/web-tools.md)、[LSP tools reference](../reference/lsp-tools.md) 和 [Toolkit commands reference](../reference/toolkit-commands.md) 为准。
 
 ## 项目目标
 

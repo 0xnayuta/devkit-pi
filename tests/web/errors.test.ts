@@ -18,6 +18,8 @@ import {
 
 describe("errors - error codes", () => {
   it("should have all expected error codes", () => {
+    assert.equal(WEB_ERROR_CODES.INVALID_INPUT, "INVALID_INPUT");
+    assert.equal(WEB_ERROR_CODES.NOT_FOUND, "NOT_FOUND");
     assert.equal(WEB_ERROR_CODES.WEB_SEARCH_FAILED, "WEB_SEARCH_FAILED");
     assert.equal(WEB_ERROR_CODES.WEB_SEARCH_TIMEOUT, "WEB_SEARCH_TIMEOUT");
     assert.equal(WEB_ERROR_CODES.WEB_SEARCH_NO_RESULTS, "WEB_SEARCH_NO_RESULTS");
@@ -34,9 +36,9 @@ describe("errors - error codes", () => {
     assert.equal(WEB_ERROR_CODES.CACHE_ERROR, "CACHE_ERROR");
   });
 
-  it("should have 14 error codes total", () => {
+  it("should have 16 error codes total", () => {
     const count = Object.keys(WEB_ERROR_CODES).length;
-    assert.equal(count, 14);
+    assert.equal(count, 16);
   });
 });
 

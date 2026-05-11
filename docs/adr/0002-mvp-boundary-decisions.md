@@ -55,7 +55,9 @@ session 文件对调试和失败排查有帮助，保留。但不做 artifact tr
 - `implementer`：返回 patch plan / implementation plan / exact files to change
 - `tester`：返回 test plan / suggested tests / test commands / optional test code snippets
 
-避免主代理和子代理同时写文件导致责任不清。MVP 不做 worktree 隔离、diff 合并、冲突处理、rollback。后续可通过 `allowWriteSubagents: true` 显式开启。
+避免主代理和子代理同时写文件导致责任不清。MVP 不做 worktree 隔离、diff 合并、冲突处理、rollback。后续可通过显式配置开启。
+
+> Current implementation note：本 ADR 中的早期命名不代表当前配置契约。当前配置键是 `subagents.allowWrite`；可写自定义 subagents 仍是 experimental / advanced / unsafe，不代表完整 sandbox、audit、rollback 或稳定 write-capability contract。
 
 ## 影响
 

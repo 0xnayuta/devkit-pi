@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import type { WebErrorCode } from "./errors.ts";
+import { WEB_ERROR_CODES } from "./errors.ts";
 import type {
   ExtractedContent,
   GetSearchContentInput,
@@ -172,7 +174,7 @@ export function restoreResultsFromSession(
   return restored;
 }
 
-function error(code: string, message: string): WebToolError {
+function error(code: WebErrorCode, message: string): WebToolError {
   return { error: { code, message } };
 }
 
@@ -247,7 +249,7 @@ function selectFetchResult(
       params.urlIndex >= stored.length
     ) {
       return error(
-        "NOT_FOUND",
+        WEB_ERROR_CODES.NOT_FOUND,
         `urlIndex ${params.urlIndex} out of range (0-${Math.max(stored.length - 1, 0)}). ${formatFetchSelectorHint(stored)}`
       );
     }
@@ -258,7 +260,7 @@ function selectFetchResult(
     const matched = stored.find((result) => result.url === params.url);
     if (!matched) {
       return error(
-        "NOT_FOUND",
+        WEB_ERROR_CODES.NOT_FOUND,
         `URL "${params.url}" not found. ${formatFetchSelectorHint(stored)}`
       );
     }
@@ -279,7 +281,7 @@ function selectSearchResult(
       params.queryIndex >= stored.length
     ) {
       return error(
-        "NOT_FOUND",
+        WEB_ERROR_CODES.NOT_FOUND,
         `queryIndex ${params.queryIndex} out of range (0-${Math.max(stored.length - 1, 0)}). ${formatSearchSelectorHint(stored)}`
       );
     }
@@ -290,7 +292,7 @@ function selectSearchResult(
     const matched = stored.find((result) => result.query === params.query);
     if (!matched) {
       return error(
-        "NOT_FOUND",
+        WEB_ERROR_CODES.NOT_FOUND,
         `Query "${params.query}" not found. ${formatSearchSelectorHint(stored)}`
       );
     }
@@ -306,12 +308,15 @@ export function getSearchContent(
 ): GetSearchContentResult {
   const responseId = typeof params.responseId === "string" ? params.responseId.trim() : "";
   if (!responseId) {
-    return error("INVALID_INPUT", "get_search_content requires responseId");
+    return error(WEB_ERROR_CODES.INVALID_INPUT, "get_search_content requires responseId");
   }
 
   const stored = getResult(responseId);
   if (!stored) {
-    return error("NOT_FOUND", `No stored web result found for responseId: ${responseId}`);
+    return error(
+      WEB_ERROR_CODES.NOT_FOUND,
+      `No stored web result found for responseId: ${responseId}`
+    );
   }
 
   if (stored.type === "fetch") {

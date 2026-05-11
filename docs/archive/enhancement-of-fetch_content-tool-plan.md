@@ -6,6 +6,8 @@ last_verified: 2026-05-10
 
 # 一、扩展 / 增强 `fetch_content` 工具功能计划
 
+> Historical content：本文是归档计划，可能包含已实现、已调整或不再采用的设计；当前行为以 `docs/reference/`、`src/` 和 `tests/` 为准。
+
 ## 目标定位
 
 `fetch_content` 的第一版增强目标不是"支持所有文件"，而是把它从：

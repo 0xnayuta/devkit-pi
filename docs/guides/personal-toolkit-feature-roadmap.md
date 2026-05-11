@@ -1,10 +1,12 @@
 ---
 status: proposed
 audience: maintainer
-last_verified: 2026-05-10
+last_verified: 2026-05-11
 ---
 
 # 个人综合 pi coding toolkit 功能路线图
+
+> Status: Proposed / Roadmap. 本文记录可能的后续方向，不代表当前已实现能力；当前 public surface 以 [Reference index](../reference/README.md)、`src/` 和 `tests/` 为准。
 
 ## 目的
 

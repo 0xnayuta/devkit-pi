@@ -8,6 +8,8 @@ last_verified: 2026-05-08
 
 本目录记录重要设计决策，帮助后续维护者理解为什么这样简化。
 
+ADR 记录某个时间点的决策背景，不等同于当前 API reference；当 ADR 与当前实现不一致时，以 `docs/reference/`、`src/` 和 `tests/` 为准。
+
 | ADR | 标题 |
 |-----|------|
 | [0001](./0001-lightweight-foreground-subagents.md) | 采用轻量 foreground subagent 设计 |

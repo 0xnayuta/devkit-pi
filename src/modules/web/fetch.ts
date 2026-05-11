@@ -1,6 +1,8 @@
 import type { ResolvedWebConfig } from "../../shared/types.ts";
 import { isAbortLikeError, withTimeoutSignal } from "./abort.ts";
 import { withThrottle } from "./concurrency.ts";
+import type { WebErrorCode } from "./errors.ts";
+import { WEB_ERROR_CODES } from "./errors.ts";
 import {
   detectJinaTrigger,
   extractHeadingTitle,
@@ -51,7 +53,7 @@ function normalizeUrls(params: FetchContentInput): string[] {
   return [...new Set(urls)];
 }
 
-function error(code: string, message: string): WebToolError {
+function error(code: WebErrorCode, message: string): WebToolError {
   return { error: { code, message } };
 }
 
@@ -634,7 +636,7 @@ export async function fetchContent(
 ): Promise<FetchContentResult> {
   const urls = normalizeUrls(params);
   if (urls.length === 0) {
-    return error("INVALID_INPUT", "fetch_content requires url or urls");
+    return error(WEB_ERROR_CODES.INVALID_INPUT, "fetch_content requires url or urls");
   }
 
   try {
@@ -656,19 +658,34 @@ export async function fetchContent(
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (isAbortLikeError(err)) {
-      recordFetchActivity("error", "CONTENT_FETCH_TIMEOUT");
+      recordFetchActivity("error", WEB_ERROR_CODES.CONTENT_FETCH_TIMEOUT);
       return {
         error: {
-          code: "CONTENT_FETCH_TIMEOUT",
+          code: WEB_ERROR_CODES.CONTENT_FETCH_TIMEOUT,
           message: `fetch_content timed out or was aborted. Try fewer URLs or increase web.timeoutMs. (${message})`,
         },
       };
     }
-    recordFetchActivity("error", "FETCH_CONTENT_FAILED");
+
+    if (message.startsWith("Invalid URL:") || message.startsWith("Unsupported URL protocol:")) {
+      recordFetchActivity("error", WEB_ERROR_CODES.CONTENT_FETCH_INVALID_URL);
+      return {
+        error: {
+          code: WEB_ERROR_CODES.CONTENT_FETCH_INVALID_URL,
+          message,
+        },
+      };
+    }
+
+    // Queue saturation is currently treated as a generic fetch failure. It is
+    // caused by local throttling rather than the URL/content itself, and there
+    // is no dedicated canonical QUEUE_* code.
+    const code = WEB_ERROR_CODES.CONTENT_FETCH_FAILED;
+    recordFetchActivity("error", code);
     webDebugLog("fetch_content failed", { message, urls });
     return {
       error: {
-        code: "FETCH_CONTENT_FAILED",
+        code,
         message,
       },
     };

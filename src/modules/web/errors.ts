@@ -8,6 +8,10 @@
 // ============================================================================
 
 export const WEB_ERROR_CODES = {
+  // Common tool errors
+  INVALID_INPUT: "INVALID_INPUT",
+  NOT_FOUND: "NOT_FOUND",
+
   // Search errors
   WEB_SEARCH_FAILED: "WEB_SEARCH_FAILED",
   WEB_SEARCH_TIMEOUT: "WEB_SEARCH_TIMEOUT",

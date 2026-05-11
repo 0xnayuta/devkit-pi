@@ -52,6 +52,8 @@ pnpm test
 
 All agents are readonly by default. The main agent is the sole orchestrator — subagents cannot spawn other subagents.
 
+Writable custom subagents are experimental. The default and recommended mode is readonly; `subagents.allowWrite=true` does not provide a complete sandbox, audit trail, or rollback guarantee. See [Subagents reference](docs/reference/subagents.md) and [Security model](docs/guides/security-model.md).
+
 ### Custom agents
 
 Place markdown files in `.pi/agents/` (project) or `~/.pi/agent/agents/` (user):
@@ -111,60 +113,9 @@ The `/toolkit` command provides diagnostic and inspection subcommands:
 
 ## Configuration
 
-Config file: `~/.pi/agent/extensions/devkit-pi/config.json`
+Config file: `~/.pi/agent/extensions/devkit-pi/config.json`.
 
-Full configuration reference with defaults:
-
-```json
-{
-  "enabled": true,
-  "subagents": {
-    "enabled": true,
-    "maxDepth": 1,
-    "timeoutMs": 120000,
-    "allowWrite": false,
-    "allowLspTools": true,
-    "allowedLspActions": [
-      "definition", "references", "hover", "signature",
-      "symbols", "diagnostics", "workspace-diagnostics", "servers"
-    ],
-    "injectDelegationPolicy": true,
-    "retry": {
-      "enabled": true,
-      "maxAttempts": 2
-    }
-  },
-  "web": {
-    "enabled": true,
-    "provider": "ddgs",
-    "providerPriority": ["tavily", "serper", "brave", "openserp", "searxng", "ddgs"],
-    "timeoutMs": 10000,
-    "maxResponseBytes": 1048576,
-    "maxContentChars": 30000,
-    "maxResults": 5,
-    "enableJinaFallback": false,
-    "cache": { "enabled": false, "maxEntries": 50, "ttlMs": 300000 },
-    "concurrency": { "maxConcurrent": 3, "maxQueueSize": 10 },
-    "debug": false
-  },
-  "lsp": {
-    "enabled": true,
-    "tool": {
-      "enabled": true,
-      "allowMutatingActions": false
-    },
-    "hook": {
-      "enabled": true,
-      "mode": "agent_end"
-    }
-  },
-  "commands": {
-    "enabled": true
-  }
-}
-```
-
-Each module can be independently enabled or disabled.
+Each module can be independently enabled or disabled. See [Configuration reference](docs/reference/configuration.md) for the canonical defaults and normalize rules.
 
 ## Error Codes
 
@@ -174,7 +125,9 @@ Each module can be independently enabled or disabled.
 
 ### Web tool errors
 
-`INVALID_INPUT` | `WEB_SEARCH_FAILED` | `PROVIDER_AUTH_FAILED` | `PROVIDER_RATE_LIMITED` | `PROVIDER_UNAVAILABLE` | `WEB_SEARCH_TIMEOUT` | `FETCH_CONTENT_FAILED` | `NETWORK_ERROR` | `CONTENT_TOO_LARGE` | `CONTENT_FETCH_TIMEOUT` | `STORAGE_FULL` | `NOT_FOUND` | `CACHE_DISABLED`
+Web tools return structured errors with `error.code` and `error.message`. Common codes include `INVALID_INPUT`, `WEB_SEARCH_INVALID_QUERY`, `WEB_SEARCH_FAILED`, `WEB_SEARCH_TIMEOUT`, `PROVIDER_AUTH_FAILED`, `PROVIDER_RATE_LIMITED`, `PROVIDER_UNAVAILABLE`, `NETWORK_ERROR`, `CONTENT_FETCH_INVALID_URL`, `CONTENT_FETCH_FAILED`, `CONTENT_FETCH_TIMEOUT`, and `NOT_FOUND`.
+
+See the canonical list in [Web tools error codes](docs/reference/web-tools-error-codes.md).
 
 ## Project Structure
 
@@ -199,7 +152,7 @@ docs/                       # Documentation, guides, ADRs
 
 1. The main agent is the sole orchestrator
 2. Subagents cannot spawn other subagents (`maxDepth = 1`)
-3. Default readonly — write capability requires explicit configuration
+3. Default readonly — write capability requires explicit configuration and remains experimental for custom subagents
 4. LSP mutating actions (`rename`, `codeAction`, `restart`) are disabled by default and always blocked in subagent processes
 5. Each module can be independently enabled or disabled
 
@@ -216,10 +169,20 @@ pnpm docs:check   # Validate documentation
 
 ## Documentation
 
+- [Documentation index](docs/README.md)
+- [Reference index](docs/reference/README.md)
 - [Goals and scope](docs/guides/goals-and-scope.md)
 - [Architecture](docs/guides/architecture.md)
 - [Configuration reference](docs/reference/configuration.md)
+- [Subagents reference](docs/reference/subagents.md)
+- [Subagent tool reference](docs/reference/subagent-tool.md)
 - [Agent definition](docs/reference/agent-definition.md)
+- [Result schema](docs/reference/result-schema.md)
+- [Toolkit commands reference](docs/reference/toolkit-commands.md)
+- [LSP tools reference](docs/reference/lsp-tools.md)
+- [Web tools reference](docs/reference/web-tools.md)
+- [Web providers reference](docs/reference/web-providers.md)
+- [Web tools error codes](docs/reference/web-tools-error-codes.md)
 - [Security model](docs/guides/security-model.md)
 - [Architecture Decision Records](docs/adr/README.md)
 

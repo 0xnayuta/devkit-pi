@@ -8,6 +8,20 @@ const allowedAdrStatus = new Set(["proposed", "accepted", "rejected", "deprecate
 const allowedAudience = new Set(["user", "maintainer", "all"]);
 const errors = [];
 
+const keyReferenceFiles = [
+  "docs/reference/README.md",
+  "docs/reference/configuration.md",
+  "docs/reference/subagents.md",
+  "docs/reference/subagent-tool.md",
+  "docs/reference/agent-definition.md",
+  "docs/reference/result-schema.md",
+  "docs/reference/web-tools.md",
+  "docs/reference/web-providers.md",
+  "docs/reference/web-tools-error-codes.md",
+  "docs/reference/lsp-tools.md",
+  "docs/reference/toolkit-commands.md",
+];
+
 function read(file) {
   return fs.readFileSync(path.join(root, file), "utf8");
 }
@@ -132,10 +146,140 @@ function checkErrorCodes() {
   }
 }
 
+function checkReferenceNavigation() {
+  for (const file of keyReferenceFiles) {
+    if (!fs.existsSync(path.join(root, file))) {
+      errors.push(`missing key reference file ${file}`);
+    }
+  }
+
+  const readme = read("README.md");
+  const readmeZh = read("README.zh.md");
+  for (const file of ["docs/README.md", "docs/reference/README.md"]) {
+    if (!readme.includes(`](${file})`)) {
+      errors.push(`README.md: missing navigation link to ${file}`);
+    }
+    if (!readmeZh.includes(`](${file})`)) {
+      errors.push(`README.zh.md: missing navigation link to ${file}`);
+    }
+  }
+
+  const docsReadme = read("docs/README.md");
+  for (const file of keyReferenceFiles) {
+    const target = file.replace("docs/", "./");
+    if (!docsReadme.includes(`](${target})`)) {
+      errors.push(`docs/README.md: missing key reference link to ${target}`);
+    }
+  }
+
+  const referenceReadme = read("docs/reference/README.md");
+  for (const file of keyReferenceFiles.filter((file) => file !== "docs/reference/README.md")) {
+    const target = file.replace("docs/reference/", "./");
+    if (!referenceReadme.includes(`](${target})`)) {
+      errors.push(`docs/reference/README.md: missing reference link to ${target}`);
+    }
+  }
+}
+
+function checkGuideNavigation() {
+  const security = read("docs/guides/security-model.md");
+  for (const target of [
+    "../reference/subagents.md",
+    "../reference/web-tools.md",
+    "../reference/lsp-tools.md",
+    "../reference/configuration.md",
+  ]) {
+    if (!security.includes(`](${target})`)) {
+      errors.push(`docs/guides/security-model.md: missing security reference link to ${target}`);
+    }
+  }
+
+  const releaseChecklist = read("docs/guides/release-checklist.md");
+  for (const text of ["pnpm test", "pnpm docs:check", "CHANGELOG.md"]) {
+    if (!releaseChecklist.includes(text)) {
+      errors.push(`docs/guides/release-checklist.md: missing '${text}'`);
+    }
+  }
+
+  const testing = read("docs/guides/testing.md");
+  if (!testing.includes("docs:check")) {
+    errors.push("docs/guides/testing.md: missing docs:check mention");
+  }
+}
+
+function checkAllowWriteBoundary() {
+  const entryFiles = [
+    "README.md",
+    "README.zh.md",
+    "docs/README.md",
+    "docs/reference/README.md",
+    "docs/reference/configuration.md",
+    "docs/reference/subagents.md",
+    "docs/reference/subagent-tool.md",
+    "docs/reference/agent-definition.md",
+    "docs/guides/security-model.md",
+  ];
+
+  for (const file of entryFiles) {
+    const content = read(file);
+    if (!content.includes("allowWrite")) {
+      errors.push(`${file}: missing allowWrite boundary mention`);
+    }
+    if (!/experimental|实验性/.test(content)) {
+      errors.push(`${file}: allowWrite boundary must mention experimental status`);
+    }
+    if (!/sandbox|沙箱/.test(content) || !/audit|审计/.test(content) || !/rollback|回滚/.test(content)) {
+      errors.push(`${file}: allowWrite boundary must mention sandbox/audit/rollback limits`);
+    }
+  }
+}
+
+function checkWebErrorCodes() {
+  const source = read("src/modules/web/errors.ts");
+  const block = source.match(/export const WEB_ERROR_CODES = \{([\s\S]*?)\} as const;/)?.[1] ?? "";
+  const codes = [...block.matchAll(/:\s*"([A-Z_]+)"/g)].map((m) => m[1]);
+  if (codes.length === 0) {
+    errors.push("src/modules/web/errors.ts: no WEB_ERROR_CODES found");
+    return;
+  }
+
+  const doc = read("docs/reference/web-tools-error-codes.md");
+  for (const code of codes) {
+    if (!doc.includes(`\`${code}\``)) {
+      errors.push(`docs/reference/web-tools-error-codes.md: missing web error code ${code}`);
+    }
+  }
+
+  const nonCanonicalSectionMarkers = [
+    "## Not currently represented as dedicated error codes",
+    "## Deprecated / not canonical names",
+  ];
+  let canonicalDoc = doc;
+  for (const marker of nonCanonicalSectionMarkers) {
+    canonicalDoc = canonicalDoc.split(marker)[0] ?? canonicalDoc;
+  }
+  const sourceCodeSet = new Set(codes);
+  const referencedCodes = [
+    ...canonicalDoc.matchAll(/`([A-Z][A-Z0-9_]*(?:_[A-Z0-9]+)*)`/g),
+  ].map((m) => m[1]);
+  const webLikePattern = /^(INVALID_INPUT|NOT_FOUND|WEB_|CONTENT_|PROVIDER_|NETWORK_ERROR|PARSE_ERROR|CACHE_ERROR)/;
+  const ignoredIdentifiers = new Set(["WEB_ERROR_CODES"]);
+  for (const code of referencedCodes) {
+    if (ignoredIdentifiers.has(code)) continue;
+    if (webLikePattern.test(code) && !sourceCodeSet.has(code)) {
+      errors.push(`docs/reference/web-tools-error-codes.md: references unknown web error code ${code}`);
+    }
+  }
+}
+
 checkDocFrontmatter();
 checkLinks();
 checkAgentsInDocs();
 checkErrorCodes();
+checkReferenceNavigation();
+checkGuideNavigation();
+checkAllowWriteBoundary();
+checkWebErrorCodes();
 
 if (errors.length > 0) {
   console.error(errors.join("\n"));

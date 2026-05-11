@@ -320,12 +320,12 @@ export function recordFetchActivity(
   if (status === "success") {
     recordFetchSuccess();
   } else {
-    recordFetchFailure(errorCode ?? "FETCH_CONTENT_FAILED");
+    recordFetchFailure(errorCode ?? "CONTENT_FETCH_FAILED");
   }
 
   // Activity log
   const code =
-    status === "rate_limited" ? "PROVIDER_RATE_LIMITED" : (errorCode ?? "FETCH_CONTENT_FAILED");
+    status === "rate_limited" ? "PROVIDER_RATE_LIMITED" : (errorCode ?? "CONTENT_FETCH_FAILED");
 
   addActivityEntry({
     timestamp: startTs,

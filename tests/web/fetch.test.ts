@@ -25,12 +25,30 @@ describe("fetch_content", () => {
 	it("rejects private URLs and returns structured error", async () => {
 		const r1 = await fetchContent({ url: "file:///etc/passwd" }, mergeWebConfig({}));
 		assert.equal("error" in r1, true);
+		if ("error" in r1) {
+			assert.equal(r1.error.code, "CONTENT_FETCH_INVALID_URL");
+		}
 
 		const r2 = await fetchContent({ url: "http://localhost:3000" }, mergeWebConfig({}));
 		assert.equal("error" in r2, true);
+		if ("error" in r2) {
+			assert.equal(r2.error.code, "CONTENT_FETCH_FAILED");
+		}
 
 		const r3 = await fetchContent({ url: "http://[::1]/" }, mergeWebConfig({}));
 		assert.equal("error" in r3, true);
+		if ("error" in r3) {
+			assert.equal(r3.error.code, "CONTENT_FETCH_FAILED");
+		}
+	});
+
+	it("maps malformed URLs to CONTENT_FETCH_INVALID_URL", async () => {
+		const result = await fetchContent({ url: "not a url" }, mergeWebConfig({}));
+		assert.equal("error" in result, true);
+		if ("error" in result) {
+			assert.equal(result.error.code, "CONTENT_FETCH_INVALID_URL");
+			assert.match(result.error.message, /Invalid URL/);
+		}
 	});
 
 	it("extracts text from HTML and truncates tool output", async () => {
@@ -370,7 +388,7 @@ describe("fetch_content", () => {
 
 		assert.equal("error" in result, true);
 		if ("error" in result) {
-			assert.equal(result.error.code, "FETCH_CONTENT_FAILED");
+			assert.equal(result.error.code, "CONTENT_FETCH_FAILED");
 		}
 	});
 
@@ -517,7 +535,7 @@ describe("fetch_content", () => {
 
 		assert.equal("error" in result, true);
 		if ("error" in result) {
-			assert.equal(result.error.code, "FETCH_CONTENT_FAILED");
+			assert.equal(result.error.code, "CONTENT_FETCH_FAILED");
 			assert.match(result.error.message, /\.pdf/);
 			assert.match(result.error.message, /not supported/i);
 		}
@@ -539,7 +557,7 @@ describe("fetch_content", () => {
 
 		assert.equal("error" in result, true);
 		if ("error" in result) {
-			assert.equal(result.error.code, "FETCH_CONTENT_FAILED");
+			assert.equal(result.error.code, "CONTENT_FETCH_FAILED");
 			assert.match(result.error.message, /\.docx/);
 		}
 	});
@@ -564,7 +582,7 @@ describe("fetch_content", () => {
 
 		assert.equal("error" in result, true);
 		if ("error" in result) {
-			assert.equal(result.error.code, "FETCH_CONTENT_FAILED");
+			assert.equal(result.error.code, "CONTENT_FETCH_FAILED");
 			assert.match(result.error.message, /Binary content detected/i);
 		}
 	});
@@ -585,7 +603,7 @@ describe("fetch_content", () => {
 
 		assert.equal("error" in result, true);
 		if ("error" in result) {
-			assert.equal(result.error.code, "FETCH_CONTENT_FAILED");
+			assert.equal(result.error.code, "CONTENT_FETCH_FAILED");
 			assert.match(result.error.message, /Binary content detected/i);
 		}
 	});

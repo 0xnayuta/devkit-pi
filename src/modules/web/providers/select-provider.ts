@@ -1,4 +1,6 @@
 import type { ResolvedWebConfig } from "../../../shared/types.ts";
+import type { WebErrorCode } from "../errors.ts";
+import { WEB_ERROR_CODES } from "../errors.ts";
 import type { WebToolError } from "../types.ts";
 import { getSearchProvider } from "./registry.ts";
 import type { SearchProviderAdapter, WebSearchProviderName } from "./types.ts";
@@ -21,7 +23,7 @@ const ALL_PROVIDER_NAMES: WebSearchProviderName[] = [
   ...ZERO_CONFIG_PROVIDERS,
 ];
 
-function error(code: string, message: string): WebToolError {
+function error(code: WebErrorCode, message: string): WebToolError {
   return { error: { code, message } };
 }
 
@@ -74,7 +76,7 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     return {
       ok: false,
       error: error(
-        "WEB_SEARCH_FAILED",
+        WEB_ERROR_CODES.WEB_SEARCH_FAILED,
         `No available web_search provider for auto mode. Tried: ${providerNames.join(", ")}.`
       ),
     };
@@ -90,7 +92,10 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
   ) {
     return {
       ok: false,
-      error: error("INVALID_INPUT", `Unsupported web_search provider: ${configuredProvider}`),
+      error: error(
+        WEB_ERROR_CODES.INVALID_INPUT,
+        `Unsupported web_search provider: ${configuredProvider}`
+      ),
     };
   }
 
@@ -98,7 +103,7 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     return {
       ok: false,
       error: error(
-        "INVALID_INPUT",
+        WEB_ERROR_CODES.INVALID_INPUT,
         "Configured web_search provider 'openserp' is unavailable. Enable web.openserp.enabled and check provider settings."
       ),
     };
@@ -108,7 +113,7 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     return {
       ok: false,
       error: error(
-        "INVALID_INPUT",
+        WEB_ERROR_CODES.INVALID_INPUT,
         "Configured web_search provider 'searxng' is unavailable. Enable web.searxng.enabled and configure web.searxng.baseUrl."
       ),
     };
@@ -121,7 +126,7 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     return {
       ok: false,
       error: error(
-        "INVALID_INPUT",
+        WEB_ERROR_CODES.INVALID_INPUT,
         "Configured web_search provider 'searxng' is unavailable. Configure a valid web.searxng.baseUrl endpoint."
       ),
     };
@@ -131,7 +136,7 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     return {
       ok: false,
       error: error(
-        "INVALID_INPUT",
+        WEB_ERROR_CODES.INVALID_INPUT,
         "Configured web_search provider 'tavily' is unavailable. Enable web.tavily.enabled and check provider settings."
       ),
     };
@@ -141,7 +146,7 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     return {
       ok: false,
       error: error(
-        "INVALID_INPUT",
+        WEB_ERROR_CODES.INVALID_INPUT,
         "Configured web_search provider 'serper' is unavailable. Enable web.serper.enabled and check provider settings."
       ),
     };

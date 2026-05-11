@@ -1,10 +1,12 @@
 ---
 status: proposed
 audience: maintainer
-last_verified: 2026-05-10
+last_verified: 2026-05-11
 ---
 
 # 二、新增 `convert_content` 工具计划
+
+> Status: Proposed. 本文是未来工具计划，不代表当前 devkit-pi 已实现或公开注册了 `convert_content` tool。当前 public API 行为见 [Reference index](../reference/README.md)。
 
 ## 目标定位
 

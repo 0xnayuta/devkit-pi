@@ -2,6 +2,7 @@ import type { ResolvedWebConfig } from "../../shared/types.ts";
 import { isAbortLikeError } from "./abort.ts";
 import { getSearchCache } from "./cache.ts";
 import { withThrottle } from "./concurrency.ts";
+import type { WebErrorCode } from "./errors.ts";
 import { mapHttpStatusToError, mapNetworkErrorToWebError, WEB_ERROR_CODES } from "./errors.ts";
 import { truncateContent } from "./extract.ts";
 import { fetchUrlContent } from "./fetch.ts";
@@ -19,7 +20,7 @@ export type WebSearchResult = WebSearchSuccess | WebToolError;
 
 const MAX_QUERIES = 5;
 
-function error(code: string, message: string): WebToolError {
+function error(code: WebErrorCode, message: string): WebToolError {
   return { error: { code, message } };
 }
 
@@ -220,7 +221,10 @@ export async function webSearch(
 ): Promise<WebSearchResult> {
   const queries = normalizeQueries(params);
   if (queries.length === 0) {
-    return error("INVALID_INPUT", "web_search requires query or queries");
+    return error(
+      WEB_ERROR_CODES.WEB_SEARCH_INVALID_QUERY,
+      "web_search requires a non-empty query or queries"
+    );
   }
 
   const selection = await selectSearchProvider(config);
@@ -284,5 +288,8 @@ export async function webSearch(
     }
   }
 
-  return lastError ?? error("WEB_SEARCH_FAILED", "No web_search provider completed successfully.");
+  return (
+    lastError ??
+    error(WEB_ERROR_CODES.WEB_SEARCH_FAILED, "No web_search provider completed successfully.")
+  );
 }

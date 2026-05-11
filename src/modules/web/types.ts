@@ -1,4 +1,5 @@
 import type { Static } from "typebox";
+import type { WebErrorCode } from "./errors.ts";
 import type { FetchContentParams, GetSearchContentParams, WebSearchParams } from "./schemas.ts";
 
 export type WebToolName = "web_search" | "fetch_content" | "get_search_content";
@@ -47,7 +48,7 @@ export type StoredResult =
 
 export interface WebToolError {
   error: {
-    code: string;
+    code: WebErrorCode;
     message: string;
   };
 }

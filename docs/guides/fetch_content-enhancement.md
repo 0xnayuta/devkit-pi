@@ -1,12 +1,12 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-10
+last_verified: 2026-05-11
 ---
 
 # `fetch_content` 内容类型增强
 
-本文档记录 `fetch_content` 工具在 Phase 1-5 中的内容类型检测增强、handler 架构重构和安全配置变更。
+本文档记录 `fetch_content` 工具在 Phase 1-5 中的内容类型检测增强、handler 架构重构和安全配置变更。当前 `fetch_content` public API、配置和错误码以 [Web tools reference](../reference/web-tools.md)、[Configuration reference](../reference/configuration.md) 与 [Web tools error codes](../reference/web-tools-error-codes.md) 为准。
 
 ## 支持的内容类型
 
