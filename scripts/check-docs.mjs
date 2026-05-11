@@ -242,6 +242,12 @@ function checkVitePressSite() {
     }
   }
 
+  for (const file of ["docs/index.md", "docs/reference/index.md", "docs/adr/index.md"]) {
+    if (!fs.existsSync(path.join(root, file))) {
+      errors.push(`${file}: missing VitePress directory index page`);
+    }
+  }
+
   const configFile = "docs/.vitepress/config.ts";
   if (!fs.existsSync(path.join(root, configFile))) {
     errors.push(`${configFile}: missing VitePress config`);
@@ -249,6 +255,15 @@ function checkVitePressSite() {
     const config = read(configFile);
     if (!config.includes('base: "/"')) {
       errors.push(`${configFile}: missing custom-domain base: "/"`);
+    }
+    for (const nav of [
+      '{ text: "Guide", link: "/" }',
+      '{ text: "Reference", link: "/reference/" }',
+      '{ text: "ADRs", link: "/adr/" }',
+    ]) {
+      if (!config.includes(nav)) {
+        errors.push(`${configFile}: missing VitePress nav item ${nav}`);
+      }
     }
   }
 
