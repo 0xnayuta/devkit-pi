@@ -4,10 +4,12 @@ export default defineConfig({
   title: "devkit-pi",
   description:
     "A personal pi coding toolkit for subagents, Web tools, LSP code intelligence, and developer commands.",
-  // GitHub Pages repository-page deployments should use /devkit-pi/.
-  // If this site is later deployed to a custom domain or a user/org page,
-  // adjust base accordingly (often to /).
-  base: "/devkit-pi/",
+  // Current deployment target: custom subdomain https://devkit-pi.wangyan.life/.
+  // Custom subdomain deployments should use base: "/".
+  // If this site later moves back to a GitHub Pages repository path,
+  // such as https://www.wangyan.life/devkit-pi/ or https://0xnayuta.github.io/devkit-pi/,
+  // change this back to base: "/devkit-pi/".
+  base: "/",
   cleanUrls: true,
   // These links intentionally point outside the VitePress docs root for GitHub rendering.
   // Keep them in Markdown and ignore them during VitePress dead-link checks.

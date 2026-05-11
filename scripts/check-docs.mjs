@@ -247,15 +247,19 @@ function checkVitePressSite() {
     errors.push(`${configFile}: missing VitePress config`);
   } else {
     const config = read(configFile);
-    if (!config.includes('base: "/devkit-pi/"')) {
-      errors.push(`${configFile}: missing /devkit-pi/ base`);
+    if (!config.includes('base: "/"')) {
+      errors.push(`${configFile}: missing custom-domain base: "/"`);
     }
   }
 
-  for (const file of ["README.md", "README.zh.md"]) {
+  const docsSiteUrl = "https://devkit-pi.wangyan.life/";
+  for (const file of ["README.md", "README.zh.md", "docs/README.md"]) {
     const content = read(file);
     if (!content.includes("docs:dev") || !content.includes("docs:build")) {
       errors.push(`${file}: missing local documentation site commands`);
+    }
+    if (!content.includes(docsSiteUrl)) {
+      errors.push(`${file}: missing online documentation site URL ${docsSiteUrl}`);
     }
   }
 

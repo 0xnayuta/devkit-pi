@@ -169,6 +169,8 @@ pnpm docs:check   # 验证文档
 
 ### 文档站
 
+线上文档站：https://devkit-pi.wangyan.life/
+
 可以在本地预览 VitePress 文档站：
 
 ```bash
@@ -176,8 +178,6 @@ pnpm docs:dev
 pnpm docs:build
 pnpm docs:preview
 ```
-
-GitHub Pages 部署完成后再补充线上地址。
 
 ## 文档
 

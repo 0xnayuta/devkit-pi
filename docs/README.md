@@ -21,6 +21,8 @@ last_verified: 2026-05-11
 
 ## Local documentation site
 
+线上文档站：https://devkit-pi.wangyan.life/
+
 VitePress 文档站可在本地预览：
 
 ```bash
@@ -28,8 +30,6 @@ pnpm docs:dev
 pnpm docs:build
 pnpm docs:preview
 ```
-
-GitHub Pages 部署完成后再补充线上地址。
 
 ## Recommended reading path
 

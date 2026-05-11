@@ -241,13 +241,13 @@ Archive 不建议放进主 sidebar。
 
 ### Base path / GitHub Pages
 
-若后续部署到 GitHub Pages 且仓库名为 `devkit-pi`，可能需要：
+当前部署目标为独立子域名 `https://devkit-pi.wangyan.life/`，因此 VitePress 使用：
 
 ```ts
-base: "/devkit-pi/"
+base: "/"
 ```
 
-如果使用自定义域名或组织/用户主页，则 base 可能不同。该项需要在配置阶段由人工确认部署目标。
+只有改回 GitHub Pages 仓库路径部署时，例如 `https://www.wangyan.life/devkit-pi/` 或 `https://0xnayuta.github.io/devkit-pi/`，才应使用 `base: "/devkit-pi/"`。最终线上路径以 GitHub Pages Settings → Custom domain 和 DNS 配置为准。
 
 ### Route style
 

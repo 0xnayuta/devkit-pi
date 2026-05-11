@@ -169,6 +169,8 @@ pnpm docs:check   # Validate documentation
 
 ### Documentation site
 
+Online documentation site: https://devkit-pi.wangyan.life/
+
 The VitePress documentation site can be previewed locally:
 
 ```bash
@@ -176,8 +178,6 @@ pnpm docs:dev
 pnpm docs:build
 pnpm docs:preview
 ```
-
-The deployed site URL will be added after GitHub Pages is configured.
 
 ## Documentation
 
