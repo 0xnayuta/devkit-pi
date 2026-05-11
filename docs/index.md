@@ -4,6 +4,10 @@ audience: all
 last_verified: 2026-05-11
 ---
 
+<p align="center">
+  <img src="/logo.png" alt="devkit-pi logo" width="80" height="80" />
+</p>
+
 # devkit-pi
 
 `devkit-pi` is a personal all-in-one pi coding toolkit for agentic coding workflows. It combines subagents, Web research tools, LSP code intelligence, automatic diagnostics hooks, and developer commands into a modular pi extension.

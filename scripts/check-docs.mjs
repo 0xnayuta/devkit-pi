@@ -159,6 +159,8 @@ function checkReferenceNavigation() {
     if (!readme.includes(`](${file})`)) {
       errors.push(`README.md: missing navigation link to ${file}`);
     }
+  }
+  for (const file of ["docs/zh/README.md", "docs/zh/reference/README.md"]) {
     if (!readmeZh.includes(`](${file})`)) {
       errors.push(`README.zh.md: missing navigation link to ${file}`);
     }
@@ -400,6 +402,38 @@ function checkDocsReadmeSections() {
   }
 }
 
+function checkPublicAssets() {
+  const requiredAssets = [
+    "docs/public/favicon.png",
+    "docs/public/logo.png",
+    "docs/public/apple-touch-icon.png",
+    "docs/public/social-preview.png",
+  ];
+  for (const file of requiredAssets) {
+    if (!fs.existsSync(path.join(root, file))) {
+      errors.push(`missing public asset ${file}`);
+    }
+  }
+}
+
+function checkVitePressHeadMeta() {
+  const configFile = "docs/.vitepress/config.ts";
+  if (!fs.existsSync(path.join(root, configFile))) return;
+  const config = read(configFile);
+
+  const requiredHeadEntries = [
+    { pattern: 'rel: "icon"', label: "favicon link" },
+    { pattern: 'rel: "apple-touch-icon"', label: "apple-touch-icon link" },
+    { pattern: 'property: "og:image"', label: "og:image meta" },
+    { pattern: 'name: "twitter:card"', label: "twitter:card meta" },
+  ];
+  for (const { pattern, label } of requiredHeadEntries) {
+    if (!config.includes(pattern)) {
+      errors.push(`${configFile}: missing head config for ${label}`);
+    }
+  }
+}
+
 checkDocFrontmatter();
 checkLinks();
 checkAgentsInDocs();
@@ -408,6 +442,8 @@ checkReferenceNavigation();
 checkGuideNavigation();
 checkAllowWriteBoundary();
 checkVitePressSite();
+checkVitePressHeadMeta();
+checkPublicAssets();
 checkWebErrorCodes();
 checkPlanningDocs();
 checkPlanningNotInMainSidebar();

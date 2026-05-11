@@ -114,6 +114,19 @@ const zhGuideSidebar = [
 
 export default defineConfig({
   title: "devkit-pi",
+  head: [
+    ["link", { rel: "icon", type: "image/png", href: "/favicon.png" }],
+    ["link", { rel: "apple-touch-icon", href: "/apple-touch-icon.png" }],
+    ["meta", { property: "og:type", content: "website" }],
+    ["meta", { property: "og:title", content: "devkit-pi" }],
+    ["meta", { property: "og:description", content: "Personal pi coding toolkit for subagents, Web tools, LSP code intelligence, and developer commands." }],
+    ["meta", { property: "og:url", content: "https://devkit-pi.wangyan.life/" }],
+    ["meta", { property: "og:image", content: "https://devkit-pi.wangyan.life/social-preview.png" }],
+    ["meta", { name: "twitter:card", content: "summary_large_image" }],
+    ["meta", { name: "twitter:title", content: "devkit-pi" }],
+    ["meta", { name: "twitter:description", content: "Personal pi coding toolkit for subagents, Web tools, LSP code intelligence, and developer commands." }],
+    ["meta", { name: "twitter:image", content: "https://devkit-pi.wangyan.life/social-preview.png" }],
+  ],
   description:
     "A personal pi coding toolkit for subagents, Web tools, LSP code intelligence, and developer commands.",
   // Current deployment target: custom subdomain https://devkit-pi.wangyan.life/.
