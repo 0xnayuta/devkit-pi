@@ -23,7 +23,7 @@ Configuration follows the architecture consistency policy: similar modules use n
 
 ## Complete default configuration example
 
-Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG` in `src/config/load-config.ts`.
+Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG`, `DEFAULT_CONVERT_CONTENT_CONFIG` in `src/config/load-config.ts`.
 
 ```json
 {
@@ -105,6 +105,15 @@ Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG` in `s
       "apiKeyEnv": "SERPER_API_KEY"
     }
   },
+  "convertContent": {
+    "enabled": true,
+    "provider": "markitdown",
+    "command": "markitdown",
+    "timeoutMs": 30000,
+    "maxResponseBytes": 10485760,
+    "maxContentChars": 50000,
+    "allowPrivateNetwork": false
+  },
   "lsp": {
     "enabled": true,
     "tool": {
@@ -139,6 +148,7 @@ Source: `src/config/load-config.ts`.
 | `normalizeJinaTriggers` | `web.jinaTriggers` | Accepts non-empty string array and deduplicates; non-array falls back to default; empty array can be retained as empty |
 | `normalizeLspReadonlyActions` | `subagents.allowedLspActions` | Only retains readonly-safe LSP actions and deduplicates |
 | `normalizeLspHookMode` | `lsp.hook.mode` | Only accepts `agent_end`, `edit_write`, `disabled` |
+| `nonEmptyString` | External command / provider URLs / env var names | Trimmed non-empty strings take effect, otherwise uses default |
 
 ## Top-level configuration
 
@@ -150,6 +160,7 @@ Source: `DEFAULT_CONFIG`, `mergeConfig()`.
 | `subagents` | object | See below | No | Subagent tool, built-in agents, delegation policy, subagent LSP exposure | `src/modules/subagents/*` |
 | `web` | object | See below | No | `web_search` / `fetch_content` / `get_search_content` | `src/modules/web/*` |
 | `lsp` | object | See below | No | `lsp` tool and automatic diagnostics hook | `src/modules/lsp/*` |
+| `convertContent` | object | See below | No | `convert_content` document conversion tool configuration. Local `path` and remote `url` conversion use MarkItDown provider after safe source handling | `src/modules/convert/*` |
 | `commands` | object | See below | No | Unified `/toolkit` developer command | `src/modules/commands/register.ts` |
 
 Example: disable entire extension.
@@ -489,6 +500,55 @@ Example: enable Jina fallback.
     "enableJinaFallback": true,
     "jinaTimeoutMs": 8000,
     "jinaTriggers": ["short-html", "js-heavy-html"]
+  }
+}
+```
+
+## Convert content configuration
+
+`convert_content` is an optional document conversion tool. The current public tool supports local `path` conversion and remote `url` conversion through the configured MarkItDown CLI provider. Remote URLs are safely downloaded to a temporary file before conversion. TUI renderers and toolkit-level activity integration are implemented.
+
+Source: `DEFAULT_CONVERT_CONTENT_CONFIG`, `normalizeConvertContentConfig()`, `src/modules/convert/index.ts`, `src/modules/convert/schemas.ts`, `src/modules/convert/errors.ts`, `src/modules/convert/provider.ts`, `src/modules/convert/renderers.ts`, `src/modules/convert/observability.ts`.
+
+| Key | Type | Default | Required | Purpose | Related source |
+|---|---|---:|---|---|---|
+| `convertContent.enabled` | boolean | `true` | No | Whether to register the `convert_content` tool | `src/modules/convert/index.ts` |
+| `convertContent.provider` | `markitdown` | `markitdown` | No | Conversion provider name. Current config normalizes all values to `markitdown` | `src/config/load-config.ts` |
+| `convertContent.command` | string | `markitdown` | No | External MarkItDown CLI command/path used by the internal MarkItDown provider | `src/config/load-config.ts`, `src/modules/convert/provider.ts` |
+| `convertContent.timeoutMs` | number | `30000` | No | Timeout in ms for remote download and MarkItDown provider execution; must be positive integer | `src/config/load-config.ts`, `src/modules/convert/security.ts`, `src/modules/convert/provider.ts` |
+| `convertContent.maxResponseBytes` | number | `10485760` | No | Max local/remote source bytes for conversion execution; must be positive integer | `src/config/load-config.ts`, `src/modules/convert/security.ts`, `src/modules/convert/provider.ts` |
+| `convertContent.maxContentChars` | number | `50000` | No | Max returned Markdown characters; provider output beyond this limit is truncated with `truncated=true` | `src/config/load-config.ts`, `src/modules/convert/provider.ts` |
+| `convertContent.allowPrivateNetwork` | boolean | `false` | No | Whether URL download may access private-network targets; defaults to blocked. Every redirect hop is revalidated with this policy | `src/config/load-config.ts`, `src/modules/convert/security.ts` |
+
+Current tool schema fields:
+
+```json
+{
+  "path": "./document.pdf",
+  "url": "https://example.com/document.pdf",
+  "maxContentChars": 50000,
+  "timeoutMs": 30000
+}
+```
+
+`path` and `url` are mutually exclusive at execution time; providing both or neither returns `INVALID_INPUT`. `path` converts an existing local file inside the active workspace (`process.cwd()` for the extension process) through MarkItDown; paths outside the workspace return `INVALID_INPUT`. `url` is validated, safely downloaded to a temporary file, size-limited by `maxResponseBytes`, converted through MarkItDown, and then cleaned up. URL redirects are followed manually and each hop reruns private-network validation.
+
+Example: disable convert_content registration.
+
+```json
+{
+  "convertContent": {
+    "enabled": false
+  }
+}
+```
+
+Example: configure MarkItDown command path.
+
+```json
+{
+  "convertContent": {
+    "command": "/usr/local/bin/markitdown"
   }
 }
 ```

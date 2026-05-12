@@ -7,7 +7,7 @@ language: chinese
 
 # `fetch_content` 内容类型增强
 
-本文档记录 `fetch_content` 工具在 Phase 1-5 中的内容类型检测增强、handler 架构重构和安全配置变更。当前 `fetch_content` public API、配置和错误码以 [Web tools reference](../reference/web-tools.md)、[Configuration reference](../reference/configuration.md) 与 [Web tools error codes](../reference/web-tools-error-codes.md) 为准。
+本文档记录 `fetch_content` 工具的内容类型检测增强、handler 架构重构、安全配置变更，以及 Phase 6 与 `convert_content` 的 handoff guidance。当前 `fetch_content` public API、配置和错误码以 [Web tools reference](../reference/web-tools.md)、[Configuration reference](../reference/configuration.md) 与 [Web tools error codes](../reference/web-tools-error-codes.md) 为准。
 
 ## 支持的内容类型
 
@@ -45,7 +45,7 @@ language: chinese
 - **音频/视频**：`audio/*`, `video/*`（通过 Content-Type 拦截）
 - **其他二进制**：通过 magic bytes 检测的 PDF/ZIP/ELF/图片/音频/视频等 24 种签名
 
-当遇到不支持的类型时，`fetch_content` 返回错误，**不会**引导 agent 调用尚未实现的 `convert_content` 工具。
+当遇到不支持的类型时，`fetch_content` 返回 `CONTENT_FETCH_FAILED`。对于 PDF、Office 等疑似文档格式，错误信息可以引导 agent 使用已实现的 `convert_content` 工具。该引导只存在于 message 中；`fetch_content` 不公开 `suggestion` / `nextAction` 字段，也不会自动转换。
 
 ## Jina Reader Fallback
 

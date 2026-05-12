@@ -40,7 +40,7 @@ Subagents 模块让主代理把一个聚焦任务委派给一个专职 child pi 
 | Delegation policy injection | 给主代理提示何时委派 | 默认 `subagents.injectDelegationPolicy=true` | system prompt 追加 policy/examples | 是提示策略，不是强制调度器 | `src/shared/delegation-policy.ts` |
 | `/toolkit agents` | 查看已发现 agents | 手动运行 command | console agent list | 不启动子代理 | `src/modules/subagents/commands/list.ts` |
 | `/toolkit doctor` | 诊断配置、agents、providers、权限、LSP 等 | 手动运行 command | doctor report | report fail/warn 是诊断项，不是 command failure | `src/modules/subagents/commands/doctor.ts` |
-| `/toolkit logs` / `/toolkit activity` | 查看 Web activity logs/stats | 手动运行 command | text log / TUI panel | 主要面向 Web observability，不是 subagent execution log | `src/modules/subagents/commands/logs.ts`, `activity.ts` |
+| `/toolkit logs` / `/toolkit activity` | 查看 toolkit activity logs/stats | 手动运行 command | text log / TUI panel | 主要面向 Web/convert tool observability，不是 subagent execution log | `src/modules/subagents/commands/logs.ts`, `activity.ts` |
 | Output collection | 从 child pi JSONL/stdout 收集最终结果、usage、错误 | 自动内部执行 | `details.results[]`、`content[0].text` | 内部 helper，不是 public tool | `src/modules/subagents/collect-output.ts`, `execution.ts` |
 
 ## 内置 agents
@@ -251,7 +251,7 @@ Focus only on the delegated task. Do not call other subagents.
 
 日志/activity：
 
-- `/toolkit logs` 与 `/toolkit activity` 当前主要展示 Web observability logs/stats，不是 subagent execution history。
+- `/toolkit logs` 与 `/toolkit activity` 当前展示 Web 与 convert 工具的 toolkit activity logs/stats，不是 subagent execution history。
 - 子代理 session file 是调试线索，但不是稳定外部 API。
 
 机器解析：
@@ -279,7 +279,7 @@ Focus only on the delegated task. Do not call other subagents.
 
 - `/toolkit agents`：查看发现到的 agents。
 - `/toolkit doctor`：诊断 agents、providers、权限、Web/LSP 状态。
-- `/toolkit logs` / `/toolkit activity`：查看 Web activity logs/stats。
+- `/toolkit logs` / `/toolkit activity`：查看 toolkit activity logs/stats。
 - `/toolkit` 只在主代理进程注册，子代理进程不注册。
 - Commands 详情见 [`toolkit-commands.md`](./toolkit-commands.md)。
 

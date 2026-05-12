@@ -19,6 +19,7 @@ For the full reference directory policy, see [Reference README](./README.md).
 - [Agent definition](./agent-definition.md)
 - [Result schema](./result-schema.md)
 - [Web tools](./web-tools.md)
+- [Convert content tool](./convert-tools.md)
 - [Web providers](./web-providers.md)
 - [Web tools error codes](./web-tools-error-codes.md)
 - [LSP tools](./lsp-tools.md)

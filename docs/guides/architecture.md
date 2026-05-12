@@ -62,6 +62,16 @@ src/
 │  │  ├─ schemas.ts              # lsp tool parameter schema/actions
 │  │  ├─ tool.ts                 # lsp tool implementation
 │  │  └─ register.ts             # LSP module registration
+│  ├─ convert/                   # convert_content document conversion
+│  │  ├─ index.ts                # convert tool registration
+│  │  ├─ schemas.ts              # convert_content parameter schema
+│  │  ├─ errors.ts               # convert error codes and provider error class
+│  │  ├─ types.ts                # convert tool result/config-adjacent types
+│  │  ├─ provider.ts             # provider interface + MarkItDown CLI provider
+│  │  ├─ security.ts             # safe URL download, redirect validation, temp-file cleanup
+│  │  ├─ renderers.ts            # compact/expanded TUI renderers
+│  │  ├─ observability.ts        # toolkit-level convert activity recording
+│  │  └─ tool.ts                 # path/URL orchestration and error mapping
 │  └─ ...
 └─ shared/
    ├─ types.ts                   # shared types, config types, subagent error codes
@@ -91,6 +101,7 @@ loadConfig()
   → registerWebTools(pi, config.web)
   → registerLspModule(pi, config.lsp)
   → registerSubagentsModule(pi, effectiveSubagentsConfig)
+  → registerConvertTools(pi, config.convertContent)
   → registerToolkitCommands(pi, config)
 ```
 
@@ -99,8 +110,9 @@ Current semantics of registration order:
 1. `web` tools can be registered in both main agent and subagent processes.
 2. `lsp` tool can be registered in both main agent and subagent processes, but privileged actions are always blocked in subagent processes.
 3. The `subagents` module internally checks `PI_SUBAGENT_CHILD`; subagent processes do not register the `subagent` tool.
-4. `/toolkit` commands are only registered in the main agent process.
-5. `subagents.allowLspTools` is merged with `lsp.enabled` and `lsp.tool.enabled` before taking effect.
+4. `convert_content` can be registered in both main agent and subagent processes; local `path` and remote `url` conversion use the MarkItDown CLI provider after local validation or safe URL download.
+5. `/toolkit` commands are only registered in the main agent process.
+6. `subagents.allowLspTools` is merged with `lsp.enabled` and `lsp.tool.enabled` before taking effect.
 
 ## Module responsibilities
 
@@ -109,7 +121,7 @@ Current semantics of registration order:
 Currently implemented:
 
 - Config file path: `~/.pi/agent/extensions/devkit-pi/config.json`
-- Default configs: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG`
+- Default configs: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG`, `DEFAULT_CONVERT_CONTENT_CONFIG`
 - Config merge and normalize: `mergeConfig()`
 - Invalid value fallback: boolean, positive integer, non-negative integer, provider name, LSP hook mode, readonly LSP actions, etc.
 
@@ -176,6 +188,25 @@ Requires human confirmation:
 
 - Docs can list supported language servers from source comments, but actual availability depends on the corresponding server being installed locally.
 
+### `src/modules/convert/`
+
+Currently implemented:
+
+- Adds the `convertContent` configuration namespace.
+- Registers the `convert_content` tool when `convertContent.enabled=true`.
+- Defines input schema fields: `path`, `url`, `maxContentChars`, `timeoutMs`.
+- Defines convert-specific structured error codes and `ConvertProviderError`.
+- Provides a provider interface and MarkItDown CLI provider.
+- MarkItDown provider checks command availability, runs `markitdown <input-file>` without shell interpolation, enforces timeout, captures stdout/stderr, truncates output, and maps provider failures to convert error codes.
+- Public tool execution validates `path`/`url` mutual exclusion, enforces local path workspace boundaries, handles local file existence/type/size checks, safely downloads remote URLs to temporary files, invokes the provider, cleans up downloaded files, and returns structured provider errors.
+
+Current boundaries:
+
+- URL download validates the initial URL and every redirect hop with private-network protection before following redirects.
+- Provides compact/expanded TUI renderers for `convert_content` calls and results.
+- Records convert success/error entries in the shared toolkit-level activity log.
+- `path` is the canonical local file input field; `file_path` is not used.
+
 ### `src/modules/commands/`
 
 Currently implemented:
@@ -184,7 +215,7 @@ Currently implemented:
 - Subcommands:
   - `/toolkit doctor`
   - `/toolkit modules`
-  - `/toolkit logs [--search|--fetch] [--limit N]`
+  - `/toolkit logs [--search|--fetch|--convert] [--limit N]`
   - `/toolkit agents`
   - `/toolkit lsp`
   - `/toolkit activity`
@@ -265,6 +296,7 @@ tests/
 ├─ web/                        # src/modules/web/*
 │  └─ providers/               # src/modules/web/providers/*
 ├─ lsp/                        # src/modules/lsp/*
+├─ convert/                    # src/modules/convert/*
 ├─ commands/                   # src/modules/commands/*
 ├─ shared/                     # src/shared/*
 └─ package-manifest.test.ts    # package.json publish entry/file checks
@@ -280,6 +312,7 @@ Mapping examples:
 | `tests/web/*.test.ts` | `src/modules/web/*.ts` | fetch/search/security/storage/cache/concurrency/renderers |
 | `tests/web/providers/*.test.ts` | `src/modules/web/providers/*.ts` | Provider adapter and selection |
 | `tests/lsp/tool.test.ts` | `src/modules/lsp/*` | Tool registration, permission gating, hook registration boundary |
+| `tests/convert/*.test.ts` | `src/modules/convert/*` | Config, schema, error inventory, registration, MarkItDown provider behavior, local path conversion, safe URL download/conversion, renderers, and convert activity recording |
 | `tests/commands/register.test.ts` | `src/modules/commands/register.ts` | `/toolkit` registration and subcommand output |
 | `tests/shared/path-handling.test.ts` | `src/shared/*` | Path and scope handling |
 

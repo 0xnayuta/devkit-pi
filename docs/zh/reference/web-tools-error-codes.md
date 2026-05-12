@@ -97,7 +97,7 @@ Canonical source：
 
 ### `fetch_content` 内容类型与大小限制
 
-- PDF、Office、ZIP、图片、音视频、可执行文件、magic bytes 检测到二进制内容：当前归入 `CONTENT_FETCH_FAILED`。
+- PDF、Office、ZIP、图片、音视频、可执行文件、magic bytes 检测到二进制内容：当前归入 `CONTENT_FETCH_FAILED`。对于 PDF、Office 等文档格式，错误信息可能提示下一步改用 `convert_content`。
 - `maxResponseBytes` 和 `maxContentChars` 当前用于截断读取/输出；截断结果通过 `truncated: true` 表示，不返回 `CONTENT_FETCH_TOO_LARGE`。
 - 当前保持"截断成功"的语义：`fetch_content` 面向 agent 阅读，截断内容通常比直接失败更有用。
 - 如果未来增加 strict/full mode 或 `allowTruncate=false`，可启用 reserved code `CONTENT_FETCH_TOO_LARGE`。
@@ -154,6 +154,8 @@ Canonical source：
 | `abort` | 配置或输入错误，通常不应自动重试 |
 
 并非所有实际返回的 `WebToolError` 都携带 recovery 字段；当前 tool 返回结构只保证 `error.code` 和 `error.message`。
+
+Phase 6 的 web/convert 联动明确保持 message-based follow-up guidance。`fetch_content` 对疑似文档格式可以在 `error.message` 中提到 `convert_content`，但不公开 `suggestion`、`nextAction`、`suggestedTool` 等字段。只有当多个模块都需要统一的结构化建议时，才应新增 shared structured suggestion schema。
 
 ## Deprecated / not canonical names
 

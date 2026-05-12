@@ -215,7 +215,7 @@ Therefore:
 
 ## Logs and activity
 
-- `/toolkit logs` and `/toolkit activity` currently primarily display Web observability logs/stats.
+- `/toolkit logs` and `/toolkit activity` currently display toolkit activity logs/stats for Web and convert tools.
 - They are not a stable machine interface for subagent execution history.
 - Subagent debugging mainly relies on the tool result's `details` and `sessionFile`.
 

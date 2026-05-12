@@ -52,10 +52,10 @@ doctor, modules, logs, agents, lsp, activity, help
 | `/toolkit help` | 显示 help | usage text | `src/modules/commands/register.ts` |
 | `/toolkit doctor` | 运行统一诊断检查 | doctor report + UI notification | `src/modules/subagents/commands/doctor.ts` |
 | `/toolkit modules` | 查看模块启用状态 | modules overview + UI notification | `src/modules/commands/register.ts` |
-| `/toolkit logs [--search|--fetch] [--limit N]` | 查看近期 Web 活动日志 | activity log + stats + UI notification | `src/modules/subagents/commands/logs.ts` |
+| `/toolkit logs [--search|--fetch|--convert] [--limit N]` | 查看近期 toolkit 活动日志 | activity log + stats + UI notification | `src/modules/subagents/commands/logs.ts` |
 | `/toolkit agents` | 列出 builtin/user/project agents | agent list + UI notification | `src/modules/subagents/commands/list.ts` |
 | `/toolkit lsp` | 查看 LSP tool/hook 配置 | LSP overview + UI notification | `src/modules/commands/register.ts` |
-| `/toolkit activity` | 打开 Web activity TUI 面板 | interactive panel + close notification | `src/modules/subagents/commands/activity.ts` |
+| `/toolkit activity` | 打开 toolkit activity TUI 面板 | interactive panel + close notification | `src/modules/subagents/commands/activity.ts` |
 
 未知 subcommand 当前会显示 help，不会抛出命令错误。
 
@@ -88,7 +88,7 @@ devkit-pi toolkit command
 Usage:
   /toolkit doctor     Run unified diagnostics checks
   /toolkit modules    Show module enablement status
-  /toolkit logs       Show recent web activity logs
+  /toolkit logs       Show recent toolkit activity logs
   /toolkit agents     List builtin/user/project agents
   /toolkit lsp        Show LSP tool/hook configuration
   /toolkit activity   Open activity panel
@@ -210,27 +210,28 @@ commands:  enabled
 
 | 项 | 说明 |
 |---|---|
-| Syntax | `/toolkit logs [--search|--fetch] [--limit N]` |
-| Arguments / flags | `--search`、`--fetch`、`--limit N` |
-| 用途 | 查看近期 Web activity log 和统计信息 |
+| Syntax | `/toolkit logs [--search|--fetch|--convert] [--limit N]` |
+| Arguments / flags | `--search`、`--fetch`、`--convert`、`--limit N` |
+| 用途 | 查看近期 toolkit activity log 和统计信息 |
 | 输出 | console 输出 recent activity 与 statistics；UI notification 显示 `Activity logs printed to console` |
-| 成功语义 | 打印当前进程内 Web activity log；无日志时显示 `(no recent activity)` |
+| 成功语义 | 打印当前进程内 toolkit activity log；无日志时显示 `(no recent activity)` |
 | 失败语义 | handler 捕获异常并通过 UI notification 显示失败 |
-| 相关配置 | Web tools 是否启用会影响是否产生日志；命令本身受 `commands.enabled` 控制 |
-| 相关源码 | `src/modules/subagents/commands/logs.ts`, `src/modules/web/observability.ts` |
+| 相关配置 | Web/convert tools 是否启用会影响是否产生日志；命令本身受 `commands.enabled` 控制 |
+| 相关源码 | `src/modules/subagents/commands/logs.ts`, `src/shared/activity.ts`, `src/modules/web/observability.ts`, `src/modules/convert/observability.ts` |
 
 参数行为：
 
 - `--search`：只显示 `type === "search"` 的 activity entries。
 - `--fetch`：只显示 `type === "fetch"` 的 activity entries。
-- 同时出现时，源码优先处理 `--search`。
+- `--convert`：只显示 `type === "convert"` 的 activity entries。
+- 多个类型过滤同时出现时，源码优先处理 `--search`，其次 `--fetch`，再其次 `--convert`。
 - `--limit N`：读取匹配正则 `--limit\s+(\d+)` 的正整数；未提供时默认 20。
 
 输出包含：
 
 - Recent Activity 列表
 - timestamp
-- activity type：`web_search`、`fetch`、`get_content`
+- activity type：`web_search`、`fetch`、`get_content`、`convert`
 - provider（如存在）
 - status：success / rate_limited / error / pending
 - duration（如存在）
@@ -238,7 +239,7 @@ commands:  enabled
 
 是否读写文件：
 
-- 读取内存中的 Web observability log/stats。
+- 读取内存中的 toolkit activity log 与 Web/convert stats。
 - 不写文件。
 - 不发起 Web 请求。
 - 不启动子代理。
@@ -249,6 +250,7 @@ commands:  enabled
 /toolkit logs
 /toolkit logs --search --limit 10
 /toolkit logs --fetch
+/toolkit logs --convert
 ```
 
 内部存在 `formatLogsJson()` helper，但当前 `/toolkit logs` 命令没有公开 `--json` flag；不要把它当作 public command 输出格式。
@@ -259,17 +261,17 @@ commands:  enabled
 |---|---|
 | Syntax | `/toolkit activity` |
 | Arguments / flags | 无 |
-| 用途 | 打开交互式 Web Tool Activity TUI 面板 |
+| 用途 | 打开交互式 Toolkit Activity TUI 面板 |
 | 输出 | TUI custom panel；关闭后 UI notification 显示 `Activity panel closed` |
 | 成功语义 | 打开面板，用户关闭后返回 |
 | 失败语义 | TUI custom panel 抛错时由外层 handler 捕获并通知 |
-| 相关配置 | Web observability 数据来自 Web tools；命令本身受 `commands.enabled` 控制 |
+| 相关配置 | Shared toolkit activity 数据来自 Web 与 convert tools；命令本身受 `commands.enabled` 控制 |
 | 相关源码 | `src/modules/subagents/commands/activity.ts` |
 
 面板内容：
 
-- Web tool activity entries
-- total/success/errors/rate/avg stats
+- Web 与 convert tool activity entries
+- total/success/errors/rate/avg toolkit stats，包括 convert activity
 - selected entry 摘要
 - help bar
 
@@ -285,7 +287,7 @@ commands:  enabled
 
 是否读写文件：
 
-- 读取和修改内存中的 Web activity log/stats。
+- 读取和修改内存中的 toolkit activity log 与 Web/convert stats。
 - 不写项目文件。
 - 不发起 Web 请求。
 - 不启动子代理。
@@ -353,8 +355,8 @@ Web 相关公开能力主要通过 tools 暴露：
 
 `/toolkit` 中和 Web 相关的命令是：
 
-- `/toolkit logs`：查看 Web observability activity log 和 stats
-- `/toolkit activity`：打开 Web Tool Activity 面板
+- `/toolkit logs`：查看 toolkit activity log 和 stats
+- `/toolkit activity`：打开 Toolkit Activity 面板
 - `/toolkit doctor`：检查 Web tools enabled 状态和 provider availability
 - `/toolkit modules`：显示 web module enabled/disabled
 
@@ -384,7 +386,7 @@ Toolkit command failed: <message>
 命令内部的诊断状态不等于命令失败：
 
 - `/toolkit doctor` report 中的 `warn` / `fail` 是诊断结果，不是 slash command 失败。
-- `/toolkit logs` 中的 Web activity error 是历史 Web tool activity，不是命令失败。
+- `/toolkit logs` 中的 activity error 是历史 tool activity，不是命令失败。
 - `/toolkit lsp` 只显示配置，不返回 LSP diagnostics，也不代表 LSP tool 调用成功/失败。
 
 不要把 `/toolkit` failure 误写成 `WebToolError`，也不要把 LSP diagnostics 误写成命令失败。
@@ -444,7 +446,7 @@ Developer convenience / 可能调整：
 | LSP schemas/actions | `src/modules/lsp/schemas.ts` |
 | Web registration/tools | `src/modules/web/register.ts` |
 | Web schemas | `src/modules/web/schemas.ts` |
-| Web observability logs/stats | `src/modules/web/observability.ts` |
+| Toolkit activity logs / Web stats | `src/shared/activity.ts`, `src/modules/web/observability.ts`, `src/modules/convert/observability.ts` |
 | Command tests | `tests/commands/` |
 | Subagent command tests | `tests/subagents/commands/` |
 | LSP tests | `tests/lsp/` |

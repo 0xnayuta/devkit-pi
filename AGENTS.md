@@ -134,13 +134,13 @@ query + options → normalized SearchResult[]
 - LLM 图片描述
 - 递归压缩包解析
 
-遇到复杂或不支持的类型时，应返回结构化错误。当前项目没有公开注册 `convert_content` 工具；不要在文档、错误建议或 agent 指令中把它描述为已实现能力。
+遇到复杂或不支持的类型时，应返回结构化错误。`convert_content` 已作为独立工具实现，用于通过 optional external provider 将本地文件或安全下载后的远程文件转换为 Markdown；文档、错误建议或 agent 指令可以将其描述为已实现能力，但必须准确说明依赖 MarkItDown CLI 且受配置与安全边界限制。
 
-### 未来可能的 `convert_content`
+### `convert_content`
 
-如未来添加复杂文件转 Markdown 能力，应作为独立工具或 optional provider 实现，并补齐配置、测试和参考文档。
+复杂文件转 Markdown 能力应保持为独立工具或 optional provider，并同步配置、测试和参考文档。
 
-第一优先级应是 optional external provider，例如 MarkItDown CLI。不得把 Python、Java、browser engine、OCR、Docling、Tika、Pandoc、Marker 等重依赖强制加入核心包。
+第一优先级是 optional external provider，例如 MarkItDown CLI。不得把 Python、Java、browser engine、OCR、Docling、Tika、Pandoc、Marker 等重依赖强制加入核心包。
 
 ---
 

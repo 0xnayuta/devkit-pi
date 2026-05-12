@@ -40,7 +40,7 @@ Differences from other capabilities:
 | Delegation policy injection | Hints to main agent when to delegate | Default `subagents.injectDelegationPolicy=true` | system prompt appended with policy/examples | Is a hint strategy, not a forced dispatcher | `src/shared/delegation-policy.ts` |
 | `/toolkit agents` | View discovered agents | Manual command | console agent list | Does not start subagents | `src/modules/subagents/commands/list.ts` |
 | `/toolkit doctor` | Diagnose config, agents, providers, permissions, LSP, etc. | Manual command | doctor report | report fail/warn are diagnostic items, not command failure | `src/modules/subagents/commands/doctor.ts` |
-| `/toolkit logs` / `/toolkit activity` | View Web activity logs/stats | Manual command | text log / TUI panel | Primarily for Web observability, not subagent execution log | `src/modules/subagents/commands/logs.ts`, `activity.ts` |
+| `/toolkit logs` / `/toolkit activity` | View toolkit activity logs/stats | Manual command | text log / TUI panel | Primarily for Web/convert tool observability, not subagent execution log | `src/modules/subagents/commands/logs.ts`, `activity.ts` |
 | Output collection | Collect final result, usage, errors from child pi JSONL/stdout | Automatic internal execution | `details.results[]`, `content[0].text` | Internal helper, not public tool | `src/modules/subagents/collect-output.ts`, `execution.ts` |
 
 ## Built-in agents
@@ -251,7 +251,7 @@ Semantics:
 
 Logs/activity:
 
-- `/toolkit logs` and `/toolkit activity` currently primarily display Web observability logs/stats, not subagent execution history.
+- `/toolkit logs` and `/toolkit activity` currently display toolkit activity logs/stats for Web and convert tools, not subagent execution history.
 - Subagent session file is a debugging clue, but not a stable external API.
 
 Machine parsing:
@@ -279,7 +279,7 @@ Machine parsing:
 
 - `/toolkit agents`: view discovered agents.
 - `/toolkit doctor`: diagnose agents, providers, permissions, Web/LSP status.
-- `/toolkit logs` / `/toolkit activity`: view Web activity logs/stats.
+- `/toolkit logs` / `/toolkit activity`: view toolkit activity logs/stats.
 - `/toolkit` is only registered in main agent process, not in subagent processes.
 - Commands details: [`toolkit-commands.md`](./toolkit-commands.md).
 

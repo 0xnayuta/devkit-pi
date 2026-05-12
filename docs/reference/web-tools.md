@@ -240,7 +240,7 @@ Security policy rejection is currently classified as `CONTENT_FETCH_FAILED`, not
 - YAML
 - Common source code/config text extensions
 
-Unsupported binary or document types include PDF, Office, ZIP, images, audio, video, executables, etc.; currently classified as `CONTENT_FETCH_FAILED`.
+Unsupported binary or document types include PDF, Office, ZIP, images, audio, video, executables, etc.; currently classified as `CONTENT_FETCH_FAILED`. For likely document formats such as PDF and Office files, the error message also suggests `convert_content` as an alternative. This guidance is intentionally message-based; the public error shape remains `error.code` + `error.message` without `suggestion` / `nextAction` fields.
 
 Content handlers try to produce readable text. JSON/CSV/XML handler parse failures usually fall back to plain text with `parseWarning` set, not directly returning `PARSE_ERROR`.
 

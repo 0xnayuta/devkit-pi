@@ -164,6 +164,7 @@ describe("fetch_content supported and unsupported content types", () => {
 		const cases: Array<[string, string | Uint8Array, string, RegExp?]> = [
 			["https://93.184.216.34/image.png", "\x89PNG\r\n\x1a\n", "image/png"],
 			["https://93.184.216.34/document.pdf", "%PDF-1.4 fake content", "application/octet-stream", /\.pdf|not supported/i],
+			["https://93.184.216.34/download", "%PDF-1.4 fake content", "application/pdf", /Unsupported content type/i],
 			["https://93.184.216.34/report.docx", "PK\x03\x04 fake docx", "application/octet-stream", /\.docx/i],
 			["https://93.184.216.34/unknown", new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), "application/octet-stream", /Binary content detected/i],
 			["https://93.184.216.34/video", new Uint8Array([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]), "application/octet-stream", /Binary content detected/i],
@@ -173,6 +174,12 @@ describe("fetch_content supported and unsupported content types", () => {
 			mockFetch(body, contentType);
 			const result = await assertFetchError({ url }, "CONTENT_FETCH_FAILED");
 			if (message) assert.match(result.error.message, message);
+			if (url.endsWith(".pdf") || url.endsWith(".docx") || contentType === "application/pdf") {
+				assert.match(result.error.message, /try convert_content/i);
+				assert.match(result.error.message, /MarkItDown CLI provider/i);
+			} else {
+				assert.doesNotMatch(result.error.message, /try convert_content/i);
+			}
 		}
 	});
 

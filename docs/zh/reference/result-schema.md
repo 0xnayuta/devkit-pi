@@ -215,7 +215,7 @@ Canonical source：`src/shared/types.ts` 中的 `SUBAGENT_ERROR_CODES`。
 
 ## 日志和 activity
 
-- `/toolkit logs` 与 `/toolkit activity` 当前主要展示 Web observability logs/stats。
+- `/toolkit logs` 与 `/toolkit activity` 当前展示 Web 与 convert 工具的 toolkit activity logs/stats。
 - 它们不是 subagent execution history 的稳定机器接口。
 - 子代理调试主要依赖 tool result 的 `details` 与 `sessionFile`。
 

@@ -279,12 +279,23 @@ export interface CommandsConfig {
   enabled?: boolean;
 }
 
+export interface ConvertContentConfig {
+  enabled?: boolean;
+  provider?: "markitdown";
+  command?: string;
+  timeoutMs?: number;
+  maxResponseBytes?: number;
+  maxContentChars?: number;
+  allowPrivateNetwork?: boolean;
+}
+
 export interface ToolkitConfig {
   enabled?: boolean;
   subagents?: SubagentsConfig;
   web?: WebConfig;
   lsp?: LspConfig;
   commands?: CommandsConfig;
+  convertContent?: ConvertContentConfig;
 }
 
 export type ResolvedSubagentsConfig = Required<Omit<SubagentsConfig, "retry">> & {
@@ -316,6 +327,8 @@ export type ResolvedWebConfig = Required<
 
 export type RequiredLspHookConfig = Required<LspHookConfig>;
 
+export type ResolvedConvertContentConfig = Required<ConvertContentConfig>;
+
 export type ResolvedLspConfig = Required<Omit<LspConfig, "tool" | "hook">> & {
   tool: Required<LspToolConfig>;
   hook: RequiredLspHookConfig;
@@ -327,6 +340,7 @@ export interface ResolvedToolkitConfig {
   web: ResolvedWebConfig;
   lsp: ResolvedLspConfig;
   commands: Required<CommandsConfig>;
+  convertContent: ResolvedConvertContentConfig;
 }
 
 // ============================================================================

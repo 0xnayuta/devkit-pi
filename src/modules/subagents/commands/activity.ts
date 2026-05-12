@@ -3,6 +3,7 @@
  * Phase 6: UI Integration - Interactive activity log viewer
  */
 
+import { getConvertToolStats, resetConvertToolStats } from "../../convert/observability.ts";
 import type { ActivityEntry, WebToolStats } from "../../web/observability.ts";
 import {
   clearActivityLog,
@@ -23,6 +24,29 @@ export interface ActivityPanelOptions {
   maxEntries?: number;
   showStats?: boolean;
   autoRefresh?: boolean;
+}
+
+function combineStats(web: WebToolStats, convert: WebToolStats): WebToolStats {
+  const totalRequests = web.totalRequests + convert.totalRequests;
+  const weightedLatency =
+    web.averageLatencyMs * web.totalRequests + convert.averageLatencyMs * convert.totalRequests;
+  return {
+    totalRequests,
+    successCount: web.successCount + convert.successCount,
+    errorCount: web.errorCount + convert.errorCount,
+    rateLimitedCount: web.rateLimitedCount + convert.rateLimitedCount,
+    averageLatencyMs: totalRequests > 0 ? Math.round(weightedLatency / totalRequests) : 0,
+    providerStats: { ...web.providerStats, ...convert.providerStats },
+  };
+}
+
+function getToolkitStats(): WebToolStats {
+  return combineStats(getWebToolStats(), getConvertToolStats());
+}
+
+function resetToolkitStats(): void {
+  resetWebToolStats();
+  resetConvertToolStats();
 }
 
 interface ActivityPanelState {
@@ -54,7 +78,7 @@ export class ActivityPanel {
     this.state = {
       selectedIndex: 0,
       scrollOffset: 0,
-      stats: getWebToolStats(),
+      stats: getToolkitStats(),
       entries: getActivityLog(100),
     };
   }
@@ -80,7 +104,7 @@ export class ActivityPanel {
   }
 
   refresh(): void {
-    this.state.stats = getWebToolStats();
+    this.state.stats = getToolkitStats();
     this.state.entries = getActivityLog(100);
     this.cachedLines = undefined;
     this.cachedWidth = undefined;
@@ -102,7 +126,7 @@ export class ActivityPanel {
 
     // Reset stats on 's' key
     if (data === "s") {
-      resetWebToolStats();
+      resetToolkitStats();
       this.refresh();
       return;
     }
@@ -152,7 +176,7 @@ export class ActivityPanel {
     const { entries, stats } = this.state;
 
     // Header
-    lines.push(`┌─ Web Tool Activity ${"─".repeat(Math.max(0, width - 25))}┐`);
+    lines.push(`┌─ Toolkit Activity ${"─".repeat(Math.max(0, width - 24))}┐`);
 
     // Stats bar
     const statsLine = this.formatStatsBar(stats);
@@ -213,7 +237,13 @@ export class ActivityPanel {
   private formatEntry(entry: ActivityEntry, maxWidth: number, isSelected: boolean): string {
     const time = formatTimestamp(entry.timestamp);
     const typeTag =
-      entry.type === "search" ? "SEARCH" : entry.type === "fetch" ? "FETCH" : "CONTENT";
+      entry.type === "search"
+        ? "SEARCH"
+        : entry.type === "fetch"
+          ? "FETCH"
+          : entry.type === "convert"
+            ? "CONVERT"
+            : "CONTENT";
     const provider = entry.provider ?? "-";
     const status =
       entry.status === "success"

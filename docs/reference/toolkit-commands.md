@@ -11,7 +11,7 @@ This document is the public reference for devkit-pi's `/toolkit` developer comma
 
 ## Overview
 
-`/toolkit` is devkit-pi's registered unified slash command for pi, used to view module status, run diagnostics, list agents, view Web activity logs, view LSP configuration, and open activity panels.
+`/toolkit` is devkit-pi's registered unified slash command for pi, used to view module status, run diagnostics, list agents, view toolkit activity logs, view LSP configuration, and open activity panels.
 
 Difference from tools:
 
@@ -52,10 +52,10 @@ There are no independent `/toolkit web`, `/toolkit config`, `/toolkit restart`, 
 | `/toolkit help` | Show help | usage text | `src/modules/commands/register.ts` |
 | `/toolkit doctor` | Run unified diagnostic checks | doctor report + UI notification | `src/modules/subagents/commands/doctor.ts` |
 | `/toolkit modules` | View module enablement status | modules overview + UI notification | `src/modules/commands/register.ts` |
-| `/toolkit logs [--search|--fetch] [--limit N]` | View recent Web activity logs | activity log + stats + UI notification | `src/modules/subagents/commands/logs.ts` |
+| `/toolkit logs [--search|--fetch|--convert] [--limit N]` | View recent toolkit activity logs | activity log + stats + UI notification | `src/modules/subagents/commands/logs.ts` |
 | `/toolkit agents` | List builtin/user/project agents | agent list + UI notification | `src/modules/subagents/commands/list.ts` |
 | `/toolkit lsp` | View LSP tool/hook configuration | LSP overview + UI notification | `src/modules/commands/register.ts` |
-| `/toolkit activity` | Open Web activity TUI panel | interactive panel + close notification | `src/modules/subagents/commands/activity.ts` |
+| `/toolkit activity` | Open toolkit activity TUI panel | interactive panel + close notification | `src/modules/subagents/commands/activity.ts` |
 
 Unknown subcommands currently show help, not a command error.
 
@@ -121,6 +121,7 @@ devkit-pi modules
 =
 subagents: enabled
 web:       enabled
+convert:   enabled
 lsp:       enabled (tool=on, hook=agent_end)
 commands:  enabled
 ```
@@ -210,27 +211,28 @@ Internally has `formatAgentListJson()` helper, but current `/toolkit agents` com
 
 | Item | Description |
 |---|---|
-| Syntax | `/toolkit logs [--search|--fetch] [--limit N]` |
-| Arguments / flags | `--search`, `--fetch`, `--limit N` |
-| Purpose | View recent Web activity log and statistics |
+| Syntax | `/toolkit logs [--search|--fetch|--convert] [--limit N]` |
+| Arguments / flags | `--search`, `--fetch`, `--convert`, `--limit N` |
+| Purpose | View recent toolkit activity log and statistics |
 | Output | Console outputs recent activity and statistics; UI notification shows `Activity logs printed to console` |
-| Success semantics | Prints current process Web activity log; shows `(no recent activity)` when empty |
+| Success semantics | Prints current process toolkit activity log; shows `(no recent activity)` when empty |
 | Failure semantics | Handler catches exceptions and shows failure via UI notification |
-| Related config | Web tools enablement affects whether logs are generated; command itself controlled by `commands.enabled` |
-| Related source | `src/modules/subagents/commands/logs.ts`, `src/modules/web/observability.ts` |
+| Related config | Web/convert tool enablement affects whether logs are generated; command itself controlled by `commands.enabled` |
+| Related source | `src/modules/subagents/commands/logs.ts`, `src/shared/activity.ts`, `src/modules/web/observability.ts`, `src/modules/convert/observability.ts` |
 
 Parameter behavior:
 
 - `--search`: Only show `type === "search"` activity entries.
 - `--fetch`: Only show `type === "fetch"` activity entries.
-- When both present, source prioritizes `--search`.
+- `--convert`: Only show `type === "convert"` activity entries.
+- When multiple type filters are present, source prioritizes `--search`, then `--fetch`, then `--convert`.
 - `--limit N`: Reads positive integer matching regex `--limit\s+(\d+)`; defaults to 20 when not provided.
 
 Output includes:
 
 - Recent Activity list
 - timestamp
-- activity type: `web_search`, `fetch`, `get_content`
+- activity type: `web_search`, `fetch`, `get_content`, `convert`
 - provider (if present)
 - status: success / rate_limited / error / pending
 - duration (if present)
@@ -238,7 +240,7 @@ Output includes:
 
 File read/write behavior:
 
-- Reads in-memory Web observability log/stats.
+- Reads in-memory toolkit activity log and combined Web/convert stats.
 - Does not write files.
 - Does not make Web requests.
 - Does not start subagents.
@@ -249,6 +251,7 @@ Example:
 /toolkit logs
 /toolkit logs --search --limit 10
 /toolkit logs --fetch
+/toolkit logs --convert
 ```
 
 Internally has `formatLogsJson()` helper, but current `/toolkit logs` command does not expose `--json` flag; do not treat it as public command output format.
@@ -259,17 +262,17 @@ Internally has `formatLogsJson()` helper, but current `/toolkit logs` command do
 |---|---|
 | Syntax | `/toolkit activity` |
 | Arguments / flags | None |
-| Purpose | Open interactive Web Tool Activity TUI panel |
+| Purpose | Open interactive Toolkit Activity TUI panel |
 | Output | TUI custom panel; after closing, UI notification shows `Activity panel closed` |
 | Success semantics | Opens panel, returns after user closes |
 | Failure semantics | TUI custom panel errors caught by outer handler and notified |
-| Related config | Web observability data from Web tools; command itself controlled by `commands.enabled` |
+| Related config | Shared toolkit activity data from Web and convert tools; command itself controlled by `commands.enabled` |
 | Related source | `src/modules/subagents/commands/activity.ts` |
 
 Panel content:
 
-- Web tool activity entries
-- total/success/errors/rate/avg stats
+- Web and convert tool activity entries
+- total/success/errors/rate/avg toolkit stats, including convert activity
 - Selected entry summary
 - Help bar
 
@@ -285,7 +288,7 @@ Keyboard operations based on source code:
 
 File read/write behavior:
 
-- Reads and modifies in-memory Web activity log/stats.
+- Reads and modifies in-memory toolkit activity log and combined Web/convert stats.
 - Does not write project files.
 - Does not make Web requests.
 - Does not start subagents.
@@ -353,10 +356,10 @@ Web-related public capabilities are mainly exposed through tools:
 
 Web-related commands in `/toolkit`:
 
-- `/toolkit logs`: View Web observability activity log and stats
-- `/toolkit activity`: Open Web Tool Activity panel
+- `/toolkit logs`: View toolkit activity log and stats
+- `/toolkit activity`: Open Toolkit Activity panel
 - `/toolkit doctor`: Check Web tools enabled status and provider availability
-- `/toolkit modules`: Show web module enabled/disabled
+- `/toolkit modules`: Show web and convert module enabled/disabled
 
 Web tools API: [`web-tools.md`](./web-tools.md); providers: [`web-providers.md`](./web-providers.md); error codes: [`web-tools-error-codes.md`](./web-tools-error-codes.md).
 
@@ -384,7 +387,7 @@ Toolkit command failed: <message>
 Diagnostic states inside commands do not equal command failure:
 
 - `/toolkit doctor` report's `warn` / `fail` are diagnostic results, not slash command failure.
-- `/toolkit logs` Web activity errors are historical Web tool activity, not command failure.
+- `/toolkit logs` activity errors are historical tool activity, not command failure.
 - `/toolkit lsp` only shows configuration, does not return LSP diagnostics, and does not represent LSP tool call success/failure.
 
 Do not mistake `/toolkit` failure for `WebToolError`, and do not mistake LSP diagnostics for command failure.
@@ -444,7 +447,7 @@ Not recommended for external scripts to strongly depend on `/toolkit`'s human-re
 | LSP schemas/actions | `src/modules/lsp/schemas.ts` |
 | Web registration/tools | `src/modules/web/register.ts` |
 | Web schemas | `src/modules/web/schemas.ts` |
-| Web observability logs/stats | `src/modules/web/observability.ts` |
+| Toolkit activity logs / Web stats | `src/shared/activity.ts`, `src/modules/web/observability.ts`, `src/modules/convert/observability.ts` |
 | Command tests | `tests/commands/` |
 | Subagent command tests | `tests/subagents/commands/` |
 | LSP tests | `tests/lsp/` |

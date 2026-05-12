@@ -45,6 +45,32 @@ interface ContentDetectionResult {
 const MAX_REDIRECTS = 5;
 const JINA_READER_BASE = "https://r.jina.ai/";
 
+const CONVERT_CONTENT_HINT_EXTENSIONS = new Set([
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".ppt",
+  ".pptx",
+  ".odt",
+  ".ods",
+  ".odp",
+]);
+
+const CONVERT_CONTENT_HINT_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.ms-excel",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.oasis.opendocument.text",
+  "application/vnd.oasis.opendocument.spreadsheet",
+  "application/vnd.oasis.opendocument.presentation",
+]);
+
 function normalizeUrls(params: FetchContentInput): string[] {
   const urls = [params.url, ...(params.urls ?? [])]
     .filter((url): url is string => typeof url === "string")
@@ -323,6 +349,20 @@ function detectTypeFromHeader(rawContentType: string): DetectedContentType | nul
   }
 }
 
+function buildConvertContentHint(url: string, rawContentType: string | null): string | null {
+  const ext = getExtensionFromUrl(url);
+  const normalizedContentType = rawContentType?.split(";")[0]?.trim().toLowerCase() ?? "";
+
+  if (
+    !CONVERT_CONTENT_HINT_EXTENSIONS.has(ext) &&
+    !CONVERT_CONTENT_HINT_TYPES.has(normalizedContentType)
+  ) {
+    return null;
+  }
+
+  return 'This looks like a document format; try convert_content with the same URL, for example convert_content({ url: "..." }). convert_content safely downloads the URL first and requires the optional MarkItDown CLI provider.';
+}
+
 function isWeakHeaderContentType(rawContentType: string): boolean {
   const normalized = rawContentType.split(";")[0]?.trim().toLowerCase() ?? "";
   return (
@@ -575,7 +615,9 @@ export async function fetchUrlContent(
   const detected = detectSupportedContent(contentTypeHeader, finalUrl, body);
 
   if (detected.type === "unsupported") {
-    throw new Error(detected.unsupportedReason ?? `Unsupported content type for ${finalUrl}`);
+    const baseMessage = detected.unsupportedReason ?? `Unsupported content type for ${finalUrl}`;
+    const hint = buildConvertContentHint(finalUrl, contentTypeHeader);
+    throw new Error(hint ? `${baseMessage}. ${hint}` : baseMessage);
   }
 
   // Phase 2: handler dispatch — select handler by detected type, run with fallback

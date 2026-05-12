@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: implemented
 audience: maintainer
 last_verified: 2026-05-12
 language: english
@@ -7,7 +7,7 @@ language: english
 
 # Plan: Add `convert_content` Tool
 
-> **⚠️ Status: Proposed — not current behavior.** This document describes a future tool plan. devkit-pi has **not** implemented or publicly registered a `convert_content` tool. The features, interfaces, and behavior described here are **not part of the current public API**. For the current public contract, see [Reference index](../reference/README.md), `src/`, and `tests/`.
+> **⚠️ Status: Implemented phased plan / historical design record — not current behavior reference.** Phase 0–6 have been implemented and `convert_content` is publicly registered when enabled. This document records the implementation plan and remaining/future ideas; for the current public contract, see [Convert Content Tool Reference](../reference/convert-tools.md), [Reference index](../reference/README.md), `src/`, and `tests/`.
 
 ## Positioning
 
@@ -61,6 +61,8 @@ tests/convert/
 └─ renderers.test.ts
 ```
 
+Test script synchronization requirement: after adding `tests/convert/*.test.ts`, update the `test:unit` script in `package.json` in the same change so convert tests are included in the default `pnpm test` scope. The current script explicitly includes only `tests/subagents`, `tests/commands`, `tests/web`, `tests/lsp`, and the package manifest test; without updating it, convert tests will not run.
+
 ### Registration Entry
 
 Add registration call in `src/index.ts`:
@@ -113,7 +115,7 @@ These are inter-module public API imports, not deep private implementation depen
 Add new independent module src/modules/convert/
 Add new independent agent tool convert_content
 Integrate MarkItDown CLI (optional provider, user self-installs)
-Support local file_path input
+Support local path input
 Support remote url input, securely download to temp file before conversion
 Output Markdown
 Support timeout, maxResponseBytes, maxContentChars
@@ -149,6 +151,18 @@ Don't change WebToolError interface structure (no suggestedTool structured field
 ---
 
 ## Recommended Phase Breakdown
+
+---
+
+## Phase 0: Pre-implementation Consistency Decisions (Clarified)
+
+This phase only aligns the plan; it does not implement code. Later phases must follow these decisions:
+
+1. **Use `path` consistently for local file input**: all local file input, schemas, tests, error messages, and docs use `path`; do not use `file_path`.
+2. **Oversized output truncates successfully by default**: when `content` exceeds `maxContentChars`, return truncated Markdown with `truncated=true`; v1 does not keep an `OUTPUT_TOO_LARGE` error code unless a future independently non-truncatable failure mode appears.
+3. **Test scripts must be updated together with tests**: the same change that adds `tests/convert/*.test.ts` must update `package.json` `test:unit` so `pnpm test` runs convert tests.
+4. **URL download must defend against redirect SSRF**: validating only the initial URL is not enough. Every HTTP 30x redirect target must go through `validatePublicHttpUrl({ allowPrivateNetwork })`, with a maximum redirect count. Before Phase 4 implementation, prefer extracting or reusing the existing `fetch_content` safe-download pattern to avoid inconsistent network security logic.
+5. **Observability must abstract activity sources first**: `/toolkit activity` currently mainly consumes web activity. Phase 5 should not record logs only inside the convert module; the activity panel must display `search` / `fetch` / `get_content` / `convert` through a unified interface. Viable approaches include a shared toolkit-level activity registry or normalizing the existing web activity model into toolkit-level activity.
 
 ---
 
@@ -201,13 +215,12 @@ New `src/modules/convert/errors.ts`:
 ```ts
 export const CONVERT_ERROR_CODES = {
   INVALID_INPUT: "INVALID_INPUT",                 // neither path nor url provided, or both provided
-  FILE_NOT_FOUND: "FILE_NOT_FOUND",               // file_path does not exist
+  FILE_NOT_FOUND: "FILE_NOT_FOUND",               // file pointed to by path does not exist
   FILE_TOO_LARGE: "FILE_TOO_LARGE",               // file exceeds maxResponseBytes
   UNSUPPORTED_PROTOCOL: "UNSUPPORTED_PROTOCOL",   // not file/http/https
   COMMAND_NOT_FOUND: "COMMAND_NOT_FOUND",         // markitdown not installed
   CONVERT_TIMEOUT: "CONVERT_TIMEOUT",             // conversion timeout
   CONVERT_FAILED: "CONVERT_FAILED",               // markitdown returned non-zero exit code
-  OUTPUT_TOO_LARGE: "OUTPUT_TOO_LARGE",           // output exceeds maxContentChars (truncation success is not an error)
   NETWORK_ERROR: "NETWORK_ERROR",                 // URL download failure
   PRIVATE_NETWORK_BLOCKED: "PRIVATE_NETWORK_BLOCKED", // SSRF block
 } as const;
@@ -398,7 +411,7 @@ Cross-provider extension
 
 ---
 
-## Phase 3: Support Local file_path Input
+## Phase 3: Support Local path Input
 
 ### Goal
 
@@ -443,16 +456,19 @@ Allow agents to call `convert_content({ url })` for remote files, always downloa
 ### Recommended Flow
 
 ```text
-1. Reuse web/security.ts validatePublicHttpUrl() to validate URL
-   — SSRF protection, private network blocking, redirect limits
+1. Reuse web/security.ts validatePublicHttpUrl() to validate the initial URL
+   — SSRF protection and private network blocking
 2. Reuse web/http-pool.ts pooledFetch() + web/abort.ts withTimeoutSignal()
-   to download to temp file (under TEMP_ROOT_DIR)
-3. Apply maxResponseBytes to limit download size
-4. Apply timeoutMs to limit download time
-5. Record contentType / fileName / fileSize
-6. Call provider.convertFile() to convert temp file
-7. Delete temp file (cleanup in finally block, ensuring cleanup on exceptions)
-8. Return Markdown
+   to download to temp file (under TEMP_ROOT_DIR); fetch must use manual redirect handling
+3. Re-run validatePublicHttpUrl({ allowPrivateNetwork }) for every 30x redirect Location
+   — enforce a maximum redirect count; exceeding it returns NETWORK_ERROR
+   — redirecting to a private network target returns PRIVATE_NETWORK_BLOCKED
+4. Apply maxResponseBytes to limit download size
+5. Apply timeoutMs to limit download time
+6. Record contentType / fileName / fileSize
+7. Call provider.convertFile() to convert temp file
+8. Delete temp file (cleanup in finally block, ensuring cleanup on exceptions)
+9. Return Markdown
 ```
 
 ### Why Not Directly Give MarkItDown URL?
@@ -488,6 +504,7 @@ Even if MarkItDown CLI supports URLs natively, devkit-pi's download flow should 
 - SSRF blocking works (private network URLs are rejected)
 - Temp files are cleaned up on both success and exception paths
 - Download timeout and size limits work
+- Every hop in a redirect chain is SSRF-checked; redirects to private network targets are blocked
 
 ### Synchronized Updates
 
@@ -541,7 +558,7 @@ export function recordConvertActivity(
 
 Activity type is `"convert"`, parallel to web's `"search"` / `"fetch"` / `"get_content"`.
 
-The `/toolkit activity` command needs to display convert activity — modify the activity subcommand in `src/modules/commands/register.ts`.
+The `/toolkit activity` command needs to display convert activity. Do not only modify the activity subcommand in `src/modules/commands/register.ts`; also handle the activity data-source boundary. The current activity panel depends on web observability. Phase 5 should first extract activity recording/reading into a toolkit-level or shared-level API, or equivalently normalize existing web activity so convert and web activity enter the panel through the same interface.
 
 ### Acceptance Criteria
 
@@ -559,7 +576,7 @@ Let the two tools collaborate, but don't couple them.
 
 ### Recommended Approach
 
-Modify the error message in `src/modules/web/fetch.ts` when `detectSupportedContent` returns `unsupported`, adding an actionable suggestion:
+Modify the error message in `src/modules/web/fetch.ts` when `detectSupportedContent` returns `unsupported` for likely document formats, adding an actionable suggestion:
 
 ```ts
 // Current code
@@ -576,12 +593,26 @@ if (detected.type === "unsupported") {
 }
 ```
 
-### Why Not Change the WebToolError Interface
+### Phase 6 Decision: Message Hint Only
 
-- Current `WebToolError` is a public API contract (`error.code` + `error.message`); adding `suggestedTool` / `contentType` fields would be a breaking change.
+Do **not** add public `suggestion`, `nextAction`, `suggestedTool`, or similar fields for Phase 6. Keep the public web error shape stable:
+
+```ts
+{
+  error: {
+    code: string;
+    message: string;
+  };
+}
+```
+
+Rationale:
+
+- Current `WebToolError` is a public API contract (`error.code` + `error.message`); expanding it for one web/convert integration point would create a new public schema before there is a cross-module need.
 - Existing code already includes actionable suggestions in `message` (e.g., timeout errors suggest "Try fewer URLs or increase web.timeoutMs").
-- Agent models can understand "use convert_content" from natural language messages; no structured field needed.
-- If structured suggestions are truly needed in the future, they should be a standalone error schema enhancement plan.
+- Agent models can understand "use convert_content" from natural language messages; no structured field is needed for this phase.
+- A one-off `suggestion` / `nextAction` field would be inconsistent with other tool errors unless introduced as a shared cross-module pattern.
+- If multiple modules later need structured recovery suggestions, design a dedicated shared error suggestion schema in a separate phase and update web / convert / lsp / subagent consistently.
 
 ### Whether to Support `fetch_content.autoConvert`
 
@@ -617,12 +648,13 @@ Supplementary test cases beyond what each phase already covers:
 [Phase 2] markitdown command missing → COMMAND_NOT_FOUND
 [Phase 2] markitdown returns non-zero exit code → CONVERT_FAILED
 [Phase 2] markitdown stderr summary included in error message
-[Phase 3] Local file_path successful conversion, using mock command
-[Phase 3] file_path does not exist → FILE_NOT_FOUND
+[Phase 3] Local path successful conversion, using mock command
+[Phase 3] file pointed to by path does not exist → FILE_NOT_FOUND
 [Phase 3] File exceeds maxResponseBytes → FILE_TOO_LARGE
 [Phase 3] Output exceeds maxContentChars → truncated=true (truncation success, not an error)
 [Phase 4] url download to temp file then convert
-[Phase 4] SSRF block (private network URL) → PRIVATE_NETWORK_BLOCKED
+[Phase 4] SSRF block (initial private network URL) → PRIVATE_NETWORK_BLOCKED
+[Phase 4] redirect to private network URL → PRIVATE_NETWORK_BLOCKED
 [Phase 4] Download timeout → CONVERT_TIMEOUT
 [Phase 4] Non http/https protocol → UNSUPPORTED_PROTOCOL
 [Phase 4] Temp file cleanup on both success and exception paths

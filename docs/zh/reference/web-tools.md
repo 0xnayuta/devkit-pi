@@ -240,7 +240,7 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 - YAML
 - 常见源码/配置文本扩展名
 
-不支持的二进制或文档类型包括 PDF、Office、ZIP、图片、音频、视频、可执行文件等；当前归入 `CONTENT_FETCH_FAILED`。
+不支持的二进制或文档类型包括 PDF、Office、ZIP、图片、音频、视频、可执行文件等；当前归入 `CONTENT_FETCH_FAILED`。对于 PDF、Office 等疑似文档格式，错误信息会提示可改用 `convert_content`。该引导有意保持 message-based；公共错误形状仍为 `error.code` + `error.message`，不新增 `suggestion` / `nextAction` 字段。
 
 content handlers 会尽量产生可读文本。JSON/CSV/XML 等 handler 解析失败时通常 fallback 为纯文本并设置 `parseWarning`，不直接返回 `PARSE_ERROR`。
 

@@ -3,9 +3,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type {
   CommandsConfig,
+  ConvertContentConfig,
   DebugLevel,
   LspConfig,
   LspReadonlyAction,
+  ResolvedConvertContentConfig,
   ResolvedSubagentsConfig,
   ResolvedToolkitConfig,
   ResolvedWebConfig,
@@ -82,6 +84,16 @@ export const DEFAULT_SUBAGENT_LSP_ACTIONS: LspReadonlyAction[] = [
   "servers",
 ];
 
+export const DEFAULT_CONVERT_CONTENT_CONFIG: ResolvedConvertContentConfig = {
+  enabled: true,
+  provider: "markitdown",
+  command: "markitdown",
+  timeoutMs: 30000,
+  maxResponseBytes: 10485760,
+  maxContentChars: 50000,
+  allowPrivateNetwork: false,
+};
+
 export const DEFAULT_SUBAGENTS_CONFIG: ResolvedSubagentsConfig = {
   enabled: true,
   maxDepth: 1,
@@ -114,6 +126,7 @@ export const DEFAULT_CONFIG: ResolvedToolkitConfig = {
   commands: {
     enabled: true,
   },
+  convertContent: DEFAULT_CONVERT_CONTENT_CONFIG,
 };
 
 export function getConfigPath(): string {
@@ -364,6 +377,29 @@ function normalizeCommandsConfig(
   };
 }
 
+function normalizeConvertContentConfig(
+  base: ConvertContentConfig | undefined
+): ResolvedConvertContentConfig {
+  return {
+    enabled: booleanValue(base?.enabled, DEFAULT_CONVERT_CONTENT_CONFIG.enabled),
+    provider: "markitdown",
+    command: nonEmptyString(base?.command, DEFAULT_CONVERT_CONTENT_CONFIG.command),
+    timeoutMs: positiveInteger(base?.timeoutMs, DEFAULT_CONVERT_CONTENT_CONFIG.timeoutMs),
+    maxResponseBytes: positiveInteger(
+      base?.maxResponseBytes,
+      DEFAULT_CONVERT_CONTENT_CONFIG.maxResponseBytes
+    ),
+    maxContentChars: positiveInteger(
+      base?.maxContentChars,
+      DEFAULT_CONVERT_CONTENT_CONFIG.maxContentChars
+    ),
+    allowPrivateNetwork: booleanValue(
+      base?.allowPrivateNetwork,
+      DEFAULT_CONVERT_CONTENT_CONFIG.allowPrivateNetwork
+    ),
+  };
+}
+
 export function mergeConfig(base: ToolkitConfig): ResolvedToolkitConfig {
   return {
     enabled: booleanValue(base.enabled, DEFAULT_CONFIG.enabled),
@@ -371,5 +407,6 @@ export function mergeConfig(base: ToolkitConfig): ResolvedToolkitConfig {
     web: normalizeWebConfig(base.web),
     lsp: normalizeLspConfig(base.lsp),
     commands: normalizeCommandsConfig(base.commands),
+    convertContent: normalizeConvertContentConfig(base.convertContent),
   };
 }

@@ -13,7 +13,7 @@ For the full planning directory, see [README.md](./README.md).
 
 ## Planning documents
 
-- [add-convert_content-tool-plan.md](./add-convert_content-tool-plan.md): Proposed `convert_content` tool design. Not yet implemented.
+- [add-convert_content-tool-plan.md](./add-convert_content-tool-plan.md): Implemented phased `convert_content` plan and historical design record. Current behavior is documented in [Convert Content Tool Reference](../reference/convert-tools.md).
 - [personal-toolkit-feature-roadmap.md](./personal-toolkit-feature-roadmap.md): Roadmap for future toolkit features. Not yet implemented.
 
 ## Policy

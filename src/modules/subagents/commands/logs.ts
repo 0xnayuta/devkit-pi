@@ -2,6 +2,7 @@
  * /subagents logs - Show recent tool activity logs
  */
 
+import { getConvertToolStats } from "../../convert/observability.ts";
 import type { ActivityEntry, WebToolStats } from "../../web/observability.ts";
 import { getActivityLog, getWebToolStats } from "../../web/observability.ts";
 
@@ -12,12 +13,26 @@ import { getActivityLog, getWebToolStats } from "../../web/observability.ts";
 export interface LogsOptions {
   limit?: number;
   format?: "text" | "json";
-  type?: "search" | "fetch" | "all";
+  type?: "search" | "fetch" | "convert" | "all";
 }
 
 // ============================================================================
 // Main Functions
 // ============================================================================
+
+function combineStats(web: WebToolStats, convert: WebToolStats): WebToolStats {
+  const totalRequests = web.totalRequests + convert.totalRequests;
+  const weightedLatency =
+    web.averageLatencyMs * web.totalRequests + convert.averageLatencyMs * convert.totalRequests;
+  return {
+    totalRequests,
+    successCount: web.successCount + convert.successCount,
+    errorCount: web.errorCount + convert.errorCount,
+    rateLimitedCount: web.rateLimitedCount + convert.rateLimitedCount,
+    averageLatencyMs: totalRequests > 0 ? Math.round(weightedLatency / totalRequests) : 0,
+    providerStats: { ...web.providerStats, ...convert.providerStats },
+  };
+}
 
 export function getRecentLogs(options: LogsOptions = {}): {
   entries: ActivityEntry[];
@@ -34,7 +49,7 @@ export function getRecentLogs(options: LogsOptions = {}): {
 
   return {
     entries,
-    stats: getWebToolStats(),
+    stats: combineStats(getWebToolStats(), getConvertToolStats()),
   };
 }
 
@@ -58,7 +73,13 @@ export function formatLogs(options: LogsOptions = {}): string {
     for (const entry of entries.reverse()) {
       const timestamp = formatTimestamp(entry.timestamp);
       const typeTag =
-        entry.type === "search" ? "web_search" : entry.type === "fetch" ? "fetch" : "get_content";
+        entry.type === "search"
+          ? "web_search"
+          : entry.type === "fetch"
+            ? "fetch"
+            : entry.type === "convert"
+              ? "convert"
+              : "get_content";
       const provider = entry.provider ? entry.provider.padEnd(8) : "".padEnd(8);
       const duration =
         entry.duration !== undefined ? `${entry.duration}ms`.padEnd(7) : "".padEnd(7);

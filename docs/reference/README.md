@@ -50,6 +50,7 @@ This means legacy flat configuration fields, old directory layouts, or one-off c
 | Document | When to read | Canonical source |
 |---|---|---|
 | [web-tools.md](./web-tools.md) | Call `web_search`, `fetch_content`, `get_search_content` | `src/modules/web/register.ts`, `schemas.ts`, `types.ts`, `search.ts`, `fetch.ts`, `storage.ts` |
+| [convert-tools.md](./convert-tools.md) | Call `convert_content` for local files or safely downloaded remote files | `src/modules/convert/`, `src/config/load-config.ts` |
 | [web-providers.md](./web-providers.md) | Configure/select ddgs, brave, tavily, serper, openserp, searxng | `src/modules/web/providers/`, `src/modules/web/providers/select-provider.ts` |
 | [web-tools-error-codes.md](./web-tools-error-codes.md) | Determine Web tool structured errors and reserved/deprecated code boundaries | `src/modules/web/errors.ts`, `src/modules/web/types.ts` |
 
@@ -89,7 +90,7 @@ This means legacy flat configuration fields, old directory layouts, or one-off c
 
 Relatively stable:
 
-- Public tool names: `subagent`, `web_search`, `fetch_content`, `get_search_content`, `lsp`
+- Public tool names: `subagent`, `web_search`, `fetch_content`, `get_search_content`, `lsp`, `convert_content`
 - Public command root/subcommands: `/toolkit`, `doctor`, `modules`, `logs`, `agents`, `lsp`, `activity`, `help`
 - Input schema fields explicitly listed in documentation
 - Output contracts / structured error codes explicitly listed in documentation

@@ -13,7 +13,7 @@ language: chinese
 
 ## 规划文档
 
-- [add-convert_content-tool-plan.md](./add-convert_content-tool-plan.md)：提议的 `convert_content` 工具设计。尚未实现。
+- [add-convert_content-tool-plan.md](./add-convert_content-tool-plan.md)：已实现的 `convert_content` 分阶段计划与历史设计记录。当前行为见 [Convert Content Tool Reference](../../reference/convert-tools.md)。
 - [personal-toolkit-feature-roadmap.md](./personal-toolkit-feature-roadmap.md)：未来 toolkit 功能的路线图。尚未实现。
 
 ## 策略

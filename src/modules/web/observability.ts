@@ -1,14 +1,12 @@
+import {
+  addToolkitActivityEntry,
+  clearToolkitActivityLog,
+  getToolkitActivityLog,
+  type ToolkitActivityEntry,
+} from "../../shared/activity.ts";
 import type { DebugLevel } from "../../shared/types.ts";
 
-export interface ActivityEntry {
-  timestamp: number;
-  type: "search" | "fetch" | "get_content";
-  provider?: string;
-  status: "pending" | "success" | "error" | "rate_limited";
-  duration?: number;
-  error?: string;
-  requestId: string;
-}
+export type ActivityEntry = ToolkitActivityEntry;
 
 export interface ProviderStats {
   requests: number;
@@ -52,33 +50,11 @@ const stats: RawStats = {
 
 let debugEnabled: DebugLevel = false;
 
-// Activity log (ring buffer)
-const MAX_ACTIVITY_ENTRIES = 100;
-const activityLog: ActivityEntry[] = [];
-let activityIndex = 0;
-
 function ensureRawProvider(provider: string): RawProviderStats {
   if (!stats.providers[provider]) {
     stats.providers[provider] = { calls: 0, success: 0, failure: 0, latencyMsTotal: 0 };
   }
   return stats.providers[provider];
-}
-
-function addActivityEntry(
-  entry: Omit<ActivityEntry, "requestId"> & { requestId?: string }
-): string {
-  const requestId =
-    entry.requestId ?? `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const fullEntry: ActivityEntry = { ...entry, requestId };
-
-  if (activityLog.length < MAX_ACTIVITY_ENTRIES) {
-    activityLog.push(fullEntry);
-  } else {
-    activityLog[activityIndex] = fullEntry;
-  }
-  activityIndex = (activityIndex + 1) % MAX_ACTIVITY_ENTRIES;
-
-  return requestId;
 }
 
 // ============================================================================
@@ -98,25 +74,11 @@ export function getDebugLevel(): DebugLevel {
 // ============================================================================
 
 export function getActivityLog(limit?: number): ActivityEntry[] {
-  if (activityLog.length === 0) return [];
-
-  if (activityLog.length < MAX_ACTIVITY_ENTRIES) {
-    const slice = limit ? activityLog.slice(-limit) : [...activityLog];
-    return slice;
-  }
-
-  // Ring buffer: entries from activityIndex onwards, then from 0 to activityIndex
-  const ordered: ActivityEntry[] = [
-    ...activityLog.slice(activityIndex),
-    ...activityLog.slice(0, activityIndex),
-  ];
-
-  return limit ? ordered.slice(-limit) : ordered;
+  return getToolkitActivityLog(limit);
 }
 
 export function clearActivityLog(): void {
-  activityLog.length = 0;
-  activityIndex = 0;
+  clearToolkitActivityLog();
 }
 
 // ============================================================================
@@ -268,7 +230,7 @@ export function recordSearchActivity(
   errorCode?: string
 ): void {
   if (typeof providerOrEntry === "object") {
-    addActivityEntry({
+    addToolkitActivityEntry({
       timestamp: providerOrEntry.timestamp ?? Date.now(),
       type: providerOrEntry.type,
       provider: providerOrEntry.provider,
@@ -299,7 +261,7 @@ export function recordSearchActivity(
       ? "PROVIDER_RATE_LIMITED"
       : (errorCode ?? "WEB_SEARCH_FAILED");
 
-  addActivityEntry({
+  addToolkitActivityEntry({
     timestamp: effectiveStartTs,
     type: "search",
     provider,
@@ -327,7 +289,7 @@ export function recordFetchActivity(
   const code =
     status === "rate_limited" ? "PROVIDER_RATE_LIMITED" : (errorCode ?? "CONTENT_FETCH_FAILED");
 
-  addActivityEntry({
+  addToolkitActivityEntry({
     timestamp: startTs,
     type: "fetch",
     status,
@@ -345,7 +307,7 @@ export function recordGetContentActivity(status: "success" | "error", errorCode?
       (stats.errorCodes[errorCode ?? "GET_SEARCH_CONTENT_FAILED"] ?? 0) + 1;
   }
 
-  addActivityEntry({
+  addToolkitActivityEntry({
     timestamp: Date.now(),
     type: "get_content",
     status,

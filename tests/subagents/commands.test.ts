@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
+import { addToolkitActivityEntry } from "../../src/shared/activity.ts";
+import { resetConvertToolStats } from "../../src/modules/convert/observability.ts";
 import { ActivityPanel, createActivityPanel } from "../../src/modules/subagents/commands/activity.ts";
 import { formatDoctorReport, runDoctorChecks, type DoctorReport } from "../../src/modules/subagents/commands/doctor.ts";
 import { formatAgentList, formatAgentListJson, getAgentList } from "../../src/modules/subagents/commands/list.ts";
@@ -106,11 +108,13 @@ describe("subagent commands - list", () => {
 describe("subagent commands - logs", () => {
 	beforeEach(() => {
 		resetWebToolStats();
+		resetConvertToolStats();
 		clearActivityLog();
 	});
 
 	afterEach(() => {
 		resetWebToolStats();
+		resetConvertToolStats();
 		clearActivityLog();
 	});
 
@@ -118,6 +122,7 @@ describe("subagent commands - logs", () => {
 		const startTs = Date.now() - 1000;
 		for (let i = 0; i < 10; i++) recordSearchActivity("ddgs", "success", startTs + i);
 		recordFetchActivity("success");
+		addToolkitActivityEntry({ timestamp: startTs + 11, type: "convert", status: "success", provider: "markitdown" });
 
 		const result = getRecentLogs();
 		assert.ok(Array.isArray(result.entries));
@@ -131,6 +136,7 @@ describe("subagent commands - logs", () => {
 		assert.ok(getRecentLogs({ limit: 5 }).entries.length <= 5);
 		assert.ok(getRecentLogs({ type: "search" }).entries.every((entry) => entry.type === "search"));
 		assert.ok(getRecentLogs({ type: "fetch" }).entries.every((entry) => entry.type === "fetch"));
+		assert.ok(getRecentLogs({ type: "convert" }).entries.every((entry) => entry.type === "convert"));
 	});
 
 	it("formats text and JSON logs", () => {
@@ -162,6 +168,7 @@ describe("subagent commands - activity panel", () => {
 	beforeEach(() => {
 		clearActivityLog();
 		resetWebToolStats();
+		resetConvertToolStats();
 		panel = new ActivityPanel({ maxEntries: 10 });
 	});
 
@@ -169,11 +176,12 @@ describe("subagent commands - activity panel", () => {
 		panel.dispose();
 		clearActivityLog();
 		resetWebToolStats();
+		resetConvertToolStats();
 	});
 
 	it("renders header, stats, help, empty state, and activity entries", () => {
 		let lines = panel.render(80);
-		assert.ok(lines[0]?.includes("Web Tool Activity"));
+		assert.ok(lines[0]?.includes("Toolkit Activity"));
 		assert.ok(lines.some((line) => line.includes("total:")));
 		assert.ok(lines.some((line) => line.includes("success:")));
 		assert.ok(lines.some((line) => line.includes("navigate")));

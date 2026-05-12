@@ -50,6 +50,7 @@ Reference 文档不是教程，也不记录 roadmap。若 proposal、ADR 或 arc
 | 文档 | 适合什么时候读 | Canonical source |
 |---|---|---|
 | [web-tools.md](./web-tools.md) | 调用 `web_search`、`fetch_content`、`get_search_content` | `src/modules/web/register.ts`, `schemas.ts`, `types.ts`, `search.ts`, `fetch.ts`, `storage.ts` |
+| [convert-tools.md](../../reference/convert-tools.md) | 调用 `convert_content` 转换本地文件或安全下载的远程文件 | `src/modules/convert/`, `src/config/load-config.ts` |
 | [web-providers.md](./web-providers.md) | 配置/选择 ddgs、brave、tavily、serper、openserp、searxng | `src/modules/web/providers/`, `src/modules/web/providers/select-provider.ts` |
 | [web-tools-error-codes.md](./web-tools-error-codes.md) | 判断 Web tool structured errors 和 reserved/deprecated code 边界 | `src/modules/web/errors.ts`, `src/modules/web/types.ts` |
 
@@ -89,7 +90,7 @@ Reference 文档不是教程，也不记录 roadmap。若 proposal、ADR 或 arc
 
 相对稳定：
 
-- Public tool names：`subagent`、`web_search`、`fetch_content`、`get_search_content`、`lsp`
+- Public tool names：`subagent`、`web_search`、`fetch_content`、`get_search_content`、`lsp`、`convert_content`
 - Public command root/subcommands：`/toolkit`、`doctor`、`modules`、`logs`、`agents`、`lsp`、`activity`、`help`
 - 文档中明确列出的 input schema 字段
 - 文档中明确列出的 output contract / structured error code

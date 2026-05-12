@@ -29,6 +29,8 @@ function parseLogsOptions(args: string): LogsOptions {
     options.type = "search";
   } else if (args.includes("--fetch")) {
     options.type = "fetch";
+  } else if (args.includes("--convert")) {
+    options.type = "convert";
   }
   const match = args.match(/--limit\s+(\d+)/);
   if (match) {
@@ -43,6 +45,7 @@ function formatModulesOverview(config: ResolvedToolkitConfig): string {
   lines.push("=");
   lines.push(`subagents: ${config.subagents.enabled ? "enabled" : "disabled"}`);
   lines.push(`web:       ${config.web.enabled ? "enabled" : "disabled"}`);
+  lines.push(`convert:   ${config.convertContent.enabled ? "enabled" : "disabled"}`);
   lines.push(
     `lsp:       ${
       config.lsp.enabled

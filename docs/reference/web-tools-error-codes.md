@@ -97,7 +97,7 @@ The table below covers all error codes currently defined in `WEB_ERROR_CODES`.
 
 ### `fetch_content` content type and size limits
 
-- PDF, Office, ZIP, images, audio/video, executables, magic bytes detecting binary content: currently classified as `CONTENT_FETCH_FAILED`.
+- PDF, Office, ZIP, images, audio/video, executables, magic bytes detecting binary content: currently classified as `CONTENT_FETCH_FAILED`. For document-like formats such as PDF and Office, the error message may suggest `convert_content` as a follow-up action.
 - `maxResponseBytes` and `maxContentChars` currently used for truncating read/output; truncation results indicated by `truncated: true`, not returning `CONTENT_FETCH_TOO_LARGE`.
 - Currently maintains "truncation success" semantics: `fetch_content` is for agent reading; truncated content is usually more useful than direct failure.
 - If strict/full mode or `allowTruncate=false` is added in the future, reserved code `CONTENT_FETCH_TOO_LARGE` may be enabled.
@@ -154,6 +154,8 @@ Current `mapHttpStatusToError()` is used for search provider error classificatio
 | `abort` | Configuration or input error, usually should not auto-retry |
 
 Not all actual returned `WebToolError` carry a recovery field; current tool return structure only guarantees `error.code` and `error.message`.
+
+Phase 6 web/convert integration deliberately keeps follow-up guidance message-based. `fetch_content` may mention `convert_content` in `error.message` for likely document formats, but it does not expose public `suggestion`, `nextAction`, or `suggestedTool` fields. Add such fields only if multiple modules need a shared structured suggestion schema.
 
 ## Deprecated / not canonical names
 

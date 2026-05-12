@@ -77,6 +77,7 @@ describe("commands module", () => {
     await pi.commands[0].handler("modules", pi.createCtx());
 
     assert.match(output.join("\n"), /devkit-pi modules/);
+    assert.match(output.join("\n"), /convert:/);
     assert.match(output.join("\n"), /lsp:/);
   });
 });

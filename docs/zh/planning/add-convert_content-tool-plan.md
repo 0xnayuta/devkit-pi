@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: implemented
 audience: maintainer
 last_verified: 2026-05-12
 language: chinese
@@ -7,7 +7,7 @@ language: chinese
 
 # 二、新增 `convert_content` 工具计划
 
-> **⚠️ Status: Proposed — not current behavior.** This document describes a future tool plan. devkit-pi has **not** implemented or publicly registered a `convert_content` tool. The features, interfaces, and behavior described here are **not part of the current public API**. For the current public contract, see [Reference index](../reference/README.md), `src/`, and `tests/`.
+> **⚠️ 状态：已实现的分阶段计划 / 历史设计记录 — not current behavior reference。** Phase 0–6 已实现，`convert_content` 在启用时会公开注册。本文件记录实现计划与剩余/未来想法；当前公开契约以 [Convert Content Tool Reference](../../reference/convert-tools.md)、[Reference index](../../reference/README.md)、`src/` 和 `tests/` 为准。
 
 ## 目标定位
 
@@ -61,6 +61,8 @@ tests/convert/
 └─ renderers.test.ts
 ```
 
+测试脚本同步要求：新增 `tests/convert/*.test.ts` 后，必须同步更新 `package.json` 的 `test:unit` 脚本，让 convert 测试进入默认 `pnpm test` 范围。当前脚本只显式包含 `tests/subagents`、`tests/commands`、`tests/web`、`tests/lsp` 和 package manifest 测试；如果不更新脚本，convert 测试不会被执行。
+
 ### 注册入口
 
 `src/index.ts` 新增注册调用：
@@ -113,7 +115,7 @@ export default function registerExtension(pi: ExtensionAPI): void {
 新增独立模块 src/modules/convert/
 新增独立 agent 工具 convert_content
 接入 MarkItDown CLI（optional provider，用户自行安装）
-支持本地 file_path 输入
+支持本地 path 输入
 支持远程 url 输入，先安全下载到临时文件再转换
 输出 Markdown
 支持 timeout、maxResponseBytes、maxContentChars
@@ -149,6 +151,18 @@ TUI renderer（renderCall / renderResult）
 ---
 
 ## 推荐阶段拆分
+
+---
+
+## Phase 0：执行前一致性约定（已澄清）
+
+本阶段只统一计划口径，不实现代码。后续 Phase 必须遵守以下约定：
+
+1. **输入字段统一使用 `path`**：所有本地文件输入、schema、测试、错误消息和文档都使用 `path`，不再使用 `file_path`。
+2. **输出超长默认截断成功**：`content` 超过 `maxContentChars` 时返回截断后的 Markdown，并设置 `truncated=true`；第一版不保留 `OUTPUT_TOO_LARGE` 错误码，除非未来出现无法安全截断的独立失败模式。
+3. **测试脚本必须同步更新**：新增 `tests/convert/*.test.ts` 的同一轮必须修改 `package.json` 的 `test:unit` 脚本，确保 `pnpm test` 会运行 convert 测试。
+4. **URL 下载必须防重定向 SSRF**：不能只校验初始 URL。每一次 HTTP 30x 跳转都必须重新执行 `validatePublicHttpUrl({ allowPrivateNetwork })`，并设置最大重定向次数。Phase 4 实现前应优先抽取或复用现有 `fetch_content` 的安全下载模式，避免复制出不一致的网络安全逻辑。
+5. **Observability 需要先抽象活动来源**：当前 `/toolkit activity` 主要消费 web activity。Phase 5 不应只在 convert 模块内孤立记录日志；需要让 activity panel 能统一展示 `search` / `fetch` / `get_content` / `convert`，可选方案是在 shared 层抽通用 activity registry，或把现有 web activity 模型规范化为 toolkit-level activity。
 
 ---
 
@@ -201,13 +215,12 @@ TUI renderer（renderCall / renderResult）
 ```ts
 export const CONVERT_ERROR_CODES = {
   INVALID_INPUT: "INVALID_INPUT",                 // path 和 url 都未提供，或同时提供
-  FILE_NOT_FOUND: "FILE_NOT_FOUND",               // file_path 不存在
+  FILE_NOT_FOUND: "FILE_NOT_FOUND",               // path 指向的文件不存在
   FILE_TOO_LARGE: "FILE_TOO_LARGE",               // 文件超过 maxResponseBytes
   UNSUPPORTED_PROTOCOL: "UNSUPPORTED_PROTOCOL",   // 非 file/http/https
   COMMAND_NOT_FOUND: "COMMAND_NOT_FOUND",         // markitdown 未安装
   CONVERT_TIMEOUT: "CONVERT_TIMEOUT",             // 转换超时
   CONVERT_FAILED: "CONVERT_FAILED",               // markitdown 返回非零 exit code
-  OUTPUT_TOO_LARGE: "OUTPUT_TOO_LARGE",           // 输出超过 maxContentChars（截断成功时不算错误）
   NETWORK_ERROR: "NETWORK_ERROR",                 // URL 下载失败
   PRIVATE_NETWORK_BLOCKED: "PRIVATE_NETWORK_BLOCKED", // SSRF 拦截
 } as const;
@@ -398,7 +411,7 @@ CLI 方式更适合：
 
 ---
 
-## Phase 3：支持本地 file_path 输入
+## Phase 3：支持本地 path 输入
 
 ### 目标
 
@@ -443,16 +456,19 @@ CLI 方式更适合：
 ### 推荐流程
 
 ```text
-1. 复用 web/security.ts 的 validatePublicHttpUrl() 校验 URL
-   - SSRF 防护、私网拦截、重定向限制
+1. 复用 web/security.ts 的 validatePublicHttpUrl() 校验初始 URL
+   - SSRF 防护、私网拦截
 2. 复用 web/http-pool.ts 的 pooledFetch() + web/abort.ts 的 withTimeoutSignal()
-   下载到临时文件（放在 TEMP_ROOT_DIR 下）
-3. 应用 maxResponseBytes 限制下载大小
-4. 应用 timeoutMs 限制下载时间
-5. 记录 contentType / fileName / fileSize
-6. 调用 provider.convertFile() 转换临时文件
-7. 删除临时文件（finally 块中清理，确保异常时也清理）
-8. 返回 Markdown
+   下载到临时文件（放在 TEMP_ROOT_DIR 下），fetch 必须使用 manual redirect
+3. 对每一次 30x redirect 的 Location 重新调用 validatePublicHttpUrl({ allowPrivateNetwork })
+   - 设置最大重定向次数，超过时报 NETWORK_ERROR
+   - redirect 目标如指向私网，返回 PRIVATE_NETWORK_BLOCKED
+4. 应用 maxResponseBytes 限制下载大小
+5. 应用 timeoutMs 限制下载时间
+6. 记录 contentType / fileName / fileSize
+7. 调用 provider.convertFile() 转换临时文件
+8. 删除临时文件（finally 块中清理，确保异常时也清理）
+9. 返回 Markdown
 ```
 
 ### 为什么不直接给 MarkItDown URL
@@ -488,6 +504,7 @@ metadata
 - SSRF 拦截生效（私网 URL 被拒绝）
 - 临时文件在成功和异常路径都被清理
 - 下载超时和大小限制生效
+- redirect 链路每一跳都执行 SSRF 校验，redirect 到私网会被拦截
 
 ### 同步更新
 
@@ -541,7 +558,7 @@ export function recordConvertActivity(
 
 活动类型为 `"convert"`，与 web 的 `"search"` / `"fetch"` / `"get_content"` 平行。
 
-`/toolkit activity` 命令需要能展示 convert 活动——修改 `src/modules/commands/register.ts` 中的 activity 子命令。
+`/toolkit activity` 命令需要能展示 convert 活动。实现时不要只修改 `src/modules/commands/register.ts` 的 activity 子命令；还需要处理 activity 数据来源的边界：当前 activity panel 依赖 web observability。Phase 5 应先把 activity 记录/读取抽成 toolkit-level 或 shared-level API，或等价地规范化现有 web activity，使 convert 活动和 web 活动通过同一接口进入面板。
 
 ### 验收标准
 
@@ -559,7 +576,7 @@ export function recordConvertActivity(
 
 ### 推荐方式
 
-修改 `src/modules/web/fetch.ts` 中 `detectSupportedContent` 返回 `unsupported` 时的错误消息，增加可操作建议：
+修改 `src/modules/web/fetch.ts` 中 `detectSupportedContent` 对疑似文档格式返回 `unsupported` 时的错误消息，增加可操作建议：
 
 ```ts
 // 现有代码
@@ -576,12 +593,26 @@ if (detected.type === "unsupported") {
 }
 ```
 
-### 为什么不改 WebToolError 接口
+### Phase 6 决策：只保留 message hint
 
-- 当前 `WebToolError` 是公共 API 契约（`error.code` + `error.message`），添加 `suggestedTool` / `contentType` 等字段是 breaking change。
+**不要**在 Phase 6 中新增 public `suggestion`、`nextAction`、`suggestedTool` 或类似字段。保持公共 web 错误形状稳定：
+
+```ts
+{
+  error: {
+    code: string;
+    message: string;
+  };
+}
+```
+
+理由：
+
+- 当前 `WebToolError` 是公共 API 契约（`error.code` + `error.message`）；为了一个 web/convert 联动点扩展它，会在尚无跨模块需要时提前引入新的公共 schema。
 - 现有代码已经在 `message` 中包含可操作建议（如 timeout 错误提示 "Try fewer URLs or increase web.timeoutMs"）。
-- Agent 模型能从自然语言 message 中理解"用 convert_content"，不需要结构化字段。
-- 如果未来确实需要结构化 suggestions，应作为独立的 error schema 增强计划。
+- Agent 模型能从自然语言 message 中理解"用 convert_content"，这个阶段不需要结构化字段。
+- 单独为一个场景加入 `suggestion` / `nextAction`，会在其他工具错误上形成不一致。
+- 如果未来多个模块都稳定需要结构化恢复建议，应单独设计 shared error suggestion schema，并在 web / convert / lsp / subagent 中统一落地。
 
 ### 是否支持 `fetch_content.autoConvert`
 
@@ -617,12 +648,13 @@ fetch_content 失败并建议 convert_content
 [Phase 2] markitdown command missing → COMMAND_NOT_FOUND
 [Phase 2] markitdown 返回非零 exit code → CONVERT_FAILED
 [Phase 2] markitdown stderr 摘要包含在错误消息中
-[Phase 3] 本地 file_path 成功转换，使用 mock command
-[Phase 3] file_path 不存在 → FILE_NOT_FOUND
+[Phase 3] 本地 path 成功转换，使用 mock command
+[Phase 3] path 指向的文件不存在 → FILE_NOT_FOUND
 [Phase 3] 文件超过 maxResponseBytes → FILE_TOO_LARGE
 [Phase 3] 输出超过 maxContentChars → truncated=true（截断成功，不是错误）
 [Phase 4] url 下载到 temp file 后转换
-[Phase 4] SSRF 拦截（私网 URL）→ PRIVATE_NETWORK_BLOCKED
+[Phase 4] SSRF 拦截（初始私网 URL）→ PRIVATE_NETWORK_BLOCKED
+[Phase 4] redirect 到私网 URL → PRIVATE_NETWORK_BLOCKED
 [Phase 4] 下载超时 → CONVERT_TIMEOUT
 [Phase 4] 非 http/https 协议 → UNSUPPORTED_PROTOCOL
 [Phase 4] 临时文件在成功和异常路径都被清理

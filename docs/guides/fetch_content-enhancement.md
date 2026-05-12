@@ -7,7 +7,7 @@ language: english
 
 # `fetch_content` Content Type Enhancement
 
-This document records `fetch_content` tool enhancements for content type detection, handler architecture restructuring, and security configuration changes from Phases 1–5. Current `fetch_content` public API, configuration, and error codes are defined in [Web tools reference](../reference/web-tools.md), [Configuration reference](../reference/configuration.md), and [Web tools error codes](../reference/web-tools-error-codes.md).
+This document records `fetch_content` tool enhancements for content type detection, handler architecture restructuring, security configuration changes, and Phase 6 `convert_content` handoff guidance. Current `fetch_content` public API, configuration, and error codes are defined in [Web tools reference](../reference/web-tools.md), [Configuration reference](../reference/configuration.md), and [Web tools error codes](../reference/web-tools-error-codes.md).
 
 ## Supported content types
 
@@ -45,7 +45,7 @@ The following types are explicitly rejected with a friendly error message:
 - **Audio/Video**: `audio/*`, `video/*` (blocked via Content-Type)
 - **Other binary**: PDF/ZIP/ELF/image/audio/video and 24 other signatures detected via magic bytes
 
-When an unsupported type is encountered, `fetch_content` returns an error and does **not** direct the agent to call an unimplemented `convert_content` tool.
+When an unsupported type is encountered, `fetch_content` returns `CONTENT_FETCH_FAILED`. For likely document formats such as PDF and Office files, the error message may direct the agent to the implemented `convert_content` tool. This guidance is message-based only; `fetch_content` does not expose public `suggestion` / `nextAction` fields and does not auto-convert.
 
 ## Jina Reader Fallback
 

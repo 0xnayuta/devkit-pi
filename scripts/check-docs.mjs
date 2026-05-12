@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const allowedDocStatus = new Set(["current", "deprecated", "proposed"]);
+const allowedDocStatus = new Set(["current", "deprecated", "proposed", "implemented"]);
 const allowedAdrStatus = new Set(["proposed", "accepted", "rejected", "deprecated", "superseded"]);
 const allowedAudience = new Set(["user", "maintainer", "all"]);
 const allowedLanguage = new Set(["english", "chinese"]);
@@ -365,11 +365,12 @@ function checkPlanningDocs() {
     }
   }
 
-  // Planning docs must have proposed status
-  for (const file of [
-    "docs/planning/add-convert_content-tool-plan.md",
-    "docs/planning/personal-toolkit-feature-roadmap.md",
-  ]) {
+  const planningStatusByFile = new Map([
+    ["docs/planning/add-convert_content-tool-plan.md", new Set(["implemented"])],
+    ["docs/planning/personal-toolkit-feature-roadmap.md", new Set(["proposed"])],
+  ]);
+
+  for (const [file, allowedStatuses] of planningStatusByFile) {
     if (!fs.existsSync(path.join(root, file))) continue;
     const content = read(file);
     const fm = parseFrontmatter(content);
@@ -377,8 +378,12 @@ function checkPlanningDocs() {
       errors.push(`${file}: missing frontmatter`);
       continue;
     }
-    if (fm.status !== "proposed") {
-      errors.push(`${file}: planning doc must have status 'proposed', got '${fm.status}'`);
+    if (!allowedStatuses.has(fm.status)) {
+      errors.push(
+        `${file}: planning doc must have status ${[...allowedStatuses]
+          .map((status) => `'${status}'`)
+          .join(" or ")}, got '${fm.status}'`
+      );
     }
     // Check for warning about not being current behavior
     if (!/not current behavior|不代表当前/.test(content)) {
