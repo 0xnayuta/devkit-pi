@@ -44,14 +44,14 @@ function getApiKey(config: ResolvedWebConfig): string | undefined {
 
 function normalizeResults(items: BraveSearchResult[], count: number): SearchResultItem[] {
   return items
-    .filter((item) => typeof item.url === "string" && typeof item.title === "string")
-    .slice(0, count)
     .map((item) => ({
       title: item.title ?? item.url ?? "Untitled",
       url: item.url ?? "",
       snippet: item.description,
       source: "brave",
-    }));
+    }))
+    .filter((item) => item.url.length > 0)
+    .slice(0, count);
 }
 
 async function search(

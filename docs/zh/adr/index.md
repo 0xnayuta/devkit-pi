@@ -19,3 +19,4 @@ ADR 是历史决策记录。它们解释过去设计选择的背景和取舍，�
 - [0003 自主触发子代理的改进方案](./0003-autonomous-subagent-triggering.md)
 - [0004 内置极简 readonly web tools](./0004-bundled-readonly-web-tools.md)
 - [0005 从 pi-subagents 演进为 devkit-pi](./0005-evolve-into-devkit-pi.md)
+- [0006 架构一致性优先于 legacy layout](./0006-architecture-consistency-over-legacy-layout.md)

@@ -94,7 +94,6 @@ async function search(
 }
 
 function isAvailable(config: ResolvedWebConfig): boolean {
-  if (!config.searxng.enabled) return false;
   try {
     const baseUrl = new URL(config.searxng.baseUrl);
     return baseUrl.protocol === "http:" || baseUrl.protocol === "https:";

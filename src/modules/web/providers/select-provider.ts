@@ -2,6 +2,12 @@ import type { ResolvedWebConfig } from "../../../shared/types.ts";
 import type { WebErrorCode } from "../errors.ts";
 import { WEB_ERROR_CODES } from "../errors.ts";
 import type { WebToolError } from "../types.ts";
+import {
+  getProviderApiKeyEnv,
+  isProviderEnabled,
+  providerNamesByTier,
+  SEARCH_PROVIDER_NAMES,
+} from "./metadata.ts";
 import { getSearchProvider } from "./registry.ts";
 import type { SearchProviderAdapter, WebSearchProviderName } from "./types.ts";
 
@@ -14,14 +20,9 @@ export type ProviderSelection =
     }
   | { ok: false; error: WebToolError };
 
-const COMMERCIAL_PROVIDERS: WebSearchProviderName[] = ["tavily", "serper", "brave"];
-const SELF_HOST_OR_OPEN_PROVIDERS: WebSearchProviderName[] = ["openserp", "searxng"];
-const ZERO_CONFIG_PROVIDERS: WebSearchProviderName[] = ["ddgs"];
-const ALL_PROVIDER_NAMES: WebSearchProviderName[] = [
-  ...COMMERCIAL_PROVIDERS,
-  ...SELF_HOST_OR_OPEN_PROVIDERS,
-  ...ZERO_CONFIG_PROVIDERS,
-];
+const COMMERCIAL_PROVIDERS = providerNamesByTier("commercial");
+const SELF_HOST_OR_OPEN_PROVIDERS = providerNamesByTier("self-host-or-open");
+const ZERO_CONFIG_PROVIDERS = providerNamesByTier("zero-config");
 
 function error(code: WebErrorCode, message: string): WebToolError {
   return { error: { code, message } };
@@ -39,6 +40,14 @@ async function isAvailable(
   }
 }
 
+function hasMissingApiKey(config: ResolvedWebConfig, providerName: WebSearchProviderName): boolean {
+  const apiKeyEnv = getProviderApiKeyEnv(config, providerName);
+  if (!apiKeyEnv) return false;
+
+  const value = process.env[apiKeyEnv];
+  return typeof value !== "string" || value.trim().length === 0;
+}
+
 function orderedTier(
   tier: WebSearchProviderName[],
   priority: WebSearchProviderName[]
@@ -47,7 +56,7 @@ function orderedTier(
 }
 
 function autoProviderOrder(config: ResolvedWebConfig): WebSearchProviderName[] {
-  const priority = config.providerPriority.filter((name) => ALL_PROVIDER_NAMES.includes(name));
+  const priority = config.providerPriority.filter((name) => SEARCH_PROVIDER_NAMES.includes(name));
   return [
     ...orderedTier(COMMERCIAL_PROVIDERS, priority),
     ...orderedTier(SELF_HOST_OR_OPEN_PROVIDERS, priority),
@@ -63,6 +72,8 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     const providers: SearchProviderAdapter[] = [];
 
     for (const providerName of providerNames) {
+      if (!isProviderEnabled(config, providerName)) continue;
+
       const candidate = getSearchProvider(providerName);
       if (await isAvailable(candidate, config)) {
         providers.push(candidate);
@@ -82,14 +93,7 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     };
   }
 
-  if (
-    configuredProvider !== "brave" &&
-    configuredProvider !== "ddgs" &&
-    configuredProvider !== "openserp" &&
-    configuredProvider !== "searxng" &&
-    configuredProvider !== "tavily" &&
-    configuredProvider !== "serper"
-  ) {
+  if (!SEARCH_PROVIDER_NAMES.includes(configuredProvider as WebSearchProviderName)) {
     return {
       ok: false,
       error: error(
@@ -99,71 +103,40 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     };
   }
 
-  // Check each provider's enabled flag
-  if (configuredProvider === "openserp" && !config.openserp.enabled) {
+  // Check each provider's enabled flag in explicit mode.
+  if (!isProviderEnabled(config, configuredProvider)) {
     return {
       ok: false,
       error: error(
         WEB_ERROR_CODES.INVALID_INPUT,
-        "Configured web_search provider 'openserp' is unavailable. Enable web.openserp.enabled and check provider settings."
+        `Configured web_search provider '${configuredProvider}' is unavailable. Enable web.${configuredProvider}.enabled and check provider settings.`
       ),
     };
   }
 
-  if (configuredProvider === "searxng" && !config.searxng.enabled) {
+  const providerName = configuredProvider as WebSearchProviderName;
+  const provider = getSearchProvider(providerName);
+
+  if (!(await isAvailable(provider, config))) {
+    if (hasMissingApiKey(config, providerName)) {
+      const apiKeyEnv = getProviderApiKeyEnv(config, providerName);
+      return {
+        ok: false,
+        error: error(
+          WEB_ERROR_CODES.PROVIDER_AUTH_FAILED,
+          `${apiKeyEnv} is required for web_search provider '${providerName}'. Configure provider authentication and try again.`
+        ),
+      };
+    }
+
     return {
       ok: false,
       error: error(
         WEB_ERROR_CODES.INVALID_INPUT,
-        "Configured web_search provider 'searxng' is unavailable. Enable web.searxng.enabled and configure web.searxng.baseUrl."
+        `Configured web_search provider '${providerName}' is unavailable. Check web.${providerName}.baseUrl and provider settings.`
       ),
     };
   }
 
-  if (configuredProvider === "tavily" && !config.tavily.enabled) {
-    return {
-      ok: false,
-      error: error(
-        WEB_ERROR_CODES.INVALID_INPUT,
-        "Configured web_search provider 'tavily' is unavailable. Enable web.tavily.enabled and check provider settings."
-      ),
-    };
-  }
-
-  if (configuredProvider === "serper" && !config.serper.enabled) {
-    return {
-      ok: false,
-      error: error(
-        WEB_ERROR_CODES.INVALID_INPUT,
-        "Configured web_search provider 'serper' is unavailable. Enable web.serper.enabled and check provider settings."
-      ),
-    };
-  }
-
-  if (configuredProvider === "brave" && !config.brave.enabled) {
-    return {
-      ok: false,
-      error: error(
-        WEB_ERROR_CODES.INVALID_INPUT,
-        "Configured web_search provider 'brave' is unavailable. Enable web.brave.enabled and check provider settings."
-      ),
-    };
-  }
-
-  // Additional availability checks for providers that need more than just enabled flag
-  if (
-    configuredProvider === "searxng" &&
-    !(await isAvailable(getSearchProvider("searxng"), config))
-  ) {
-    return {
-      ok: false,
-      error: error(
-        WEB_ERROR_CODES.INVALID_INPUT,
-        "Configured web_search provider 'searxng' is unavailable. Configure a valid web.searxng.baseUrl endpoint."
-      ),
-    };
-  }
-
-  const provider = getSearchProvider(configuredProvider as WebSearchProviderName);
   return { ok: true, provider, providers: [provider], mode: "explicit" };
 }

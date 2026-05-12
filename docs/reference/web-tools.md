@@ -83,8 +83,8 @@ All fields are optional in the TypeBox schema, but at runtime at least one non-e
 ### Provider selection behavior
 
 - `web.provider="ddgs"`: default zero-config DuckDuckGo Lite fallback provider.
-- `web.provider` is an explicit provider: only that provider is used; explicit provider failure does not fall back to other providers.
-- `web.provider="auto"`: filters candidates by provider availability and tries in tiered order: commercial (`tavily`, `serper`, `brave`) → self-host/open (`openserp`, `searxng`) → zero-config (`ddgs`). Within each tier, sorted by `web.providerPriority`.
+- `web.provider` is an explicit provider: selection requires that provider to be enabled and technically available; only that provider is used, and provider failure does not fall back to other providers.
+- `web.provider="auto"`: filters candidates by config enabled gates plus provider technical availability, then tries in tiered order: commercial (`tavily`, `serper`, `brave`) → self-host/open (`openserp`, `searxng`) → zero-config (`ddgs`). Within each tier, sorted by `web.providerPriority`.
 - Provider configuration details: [`web-providers.md`](./web-providers.md).
 
 ### Success response shape
@@ -432,7 +432,7 @@ Complete configuration: [`configuration.md`](./configuration.md):
 
 - `web.*`: basic switches, timeout, result count, size limits, storage, security boundary, debug
 - `web.provider` / `web.providerPriority`: search provider selection
-- Provider sub-configs: `web.openserp`, `web.searxng`, `web.tavily`, `web.serper`, and Brave's `BRAVE_SEARCH_API_KEY`
+- Provider sub-configs: `web.brave`, `web.openserp`, `web.searxng`, `web.tavily`, `web.serper`
 - `web.cache.*`: search cache
 - `web.concurrency.*`: request concurrency and queue
 - `web.connectionPool.*`: HTTP/HTTPS keep-alive pool

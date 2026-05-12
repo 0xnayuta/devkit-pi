@@ -10,6 +10,7 @@ import {
   runDoctorChecks,
   type DoctorReport,
 } from "../../../src/modules/subagents/commands/doctor.ts";
+import { SEARCH_PROVIDER_NAMES } from "../../../src/modules/web/providers/metadata.ts";
 
 describe("commands/doctor - runDoctorChecks", () => {
   it("returns valid report structure", async () => {
@@ -125,7 +126,7 @@ describe("commands/doctor - diagnostic status", () => {
     assert.ok(["pass", "warn"].includes(ddgsItem.status));
 
     // disabled providers are info
-    for (const provider of ["tavily", "serper", "brave", "openserp", "searxng"]) {
+    for (const provider of SEARCH_PROVIDER_NAMES.filter((name) => name !== "ddgs")) {
       const item = report.items.find((i) => i.message?.toLowerCase().includes(provider.toLowerCase()));
       if (item) {
         assert.ok(["pass", "warn", "info"].includes(item.status));

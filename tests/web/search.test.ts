@@ -172,7 +172,7 @@ describe("web_search", () => {
 
     const result = await webSearch(
       { query: "typescript", numResults: 1 },
-      mergeWebConfig({ web: { provider: "auto" } })
+      mergeWebConfig({ web: { provider: "auto", tavily: { enabled: true } } })
     );
 
     assert.equal("responseId" in result, true);

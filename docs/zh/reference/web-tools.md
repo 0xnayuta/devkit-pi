@@ -83,8 +83,8 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 ### Provider selection 行为
 
 - `web.provider="ddgs"`：默认零配置 DuckDuckGo Lite fallback provider。
-- `web.provider` 为显式 provider 时：只使用该 provider；显式 provider 失败不会 fallback 到其他 provider。
-- `web.provider="auto"`：按 provider availability 过滤候选 provider，并按分层顺序尝试：commercial（`tavily`、`serper`、`brave`）→ self-host/open（`openserp`、`searxng`）→ zero-config（`ddgs`）。每层内部按 `web.providerPriority` 排序。
+- `web.provider` 为显式 provider 时：selection 要求该 provider 已启用且技术上可用；只使用该 provider，provider 失败不会 fallback 到其他 provider。
+- `web.provider="auto"`：按 config enabled gate 和 provider 技术可用性过滤候选 provider，并按分层顺序尝试：commercial（`tavily`、`serper`、`brave`）→ self-host/open（`openserp`、`searxng`）→ zero-config（`ddgs`）。每层内部按 `web.providerPriority` 排序。
 - provider 详细配置见 [`web-providers.md`](./web-providers.md)。
 
 ### 成功响应结构
@@ -432,7 +432,7 @@ Web tools 的错误结果统一为：
 
 - `web.*`：基础开关、超时、结果数、大小限制、storage、安全边界、debug
 - `web.provider` / `web.providerPriority`：search provider 选择
-- provider 子配置：`web.openserp`、`web.searxng`、`web.tavily`、`web.serper`，以及 Brave 的 `BRAVE_SEARCH_API_KEY`
+- provider 子配置：`web.brave`、`web.openserp`、`web.searxng`、`web.tavily`、`web.serper`
 - `web.cache.*`：search cache
 - `web.concurrency.*`：请求并发与队列
 - `web.connectionPool.*`：HTTP/HTTPS keep-alive pool

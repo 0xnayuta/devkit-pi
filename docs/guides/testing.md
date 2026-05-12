@@ -17,7 +17,7 @@ This document describes devkit-pi's current test organization. Public API and co
 
 ## Test directory
 
-Test directory mirrors `src/modules/` and `src/shared/` structure:
+Test directory mirrors `src/modules/` and `src/shared/` structure. This is part of devkit-pi's architecture consistency policy: similar modules and feature areas should use similar source/test/documentation layouts instead of preserving legacy or one-off layouts.
 
 ```text
 tests/subagents/          # subagents module
@@ -32,6 +32,8 @@ tests/package-manifest.test.ts
 ## Current strategy
 
 Current tests are primarily unit tests, not depending on real pi child processes or real language servers.
+
+When adding or refactoring comparable modules, tools, providers, commands, or feature areas, prefer aligned test patterns: matching directory paths, comparable fixtures, similar naming, and equivalent coverage for config defaults, normalize behavior, schema validation, registration, permissions, errors, and documentation updates.
 
 Documentation contracts are checked via `pnpm docs:check`, covering frontmatter, relative links, built-in agent tool lists, subagent/web error codes, and key reference navigation. When adding or modifying public API, update `docs/reference/` accordingly and ensure related tests cover current behavior.
 

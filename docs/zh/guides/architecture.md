@@ -10,6 +10,20 @@ last_verified: 2026-05-12
 
 Public API、配置和命令契约请从 [Reference index](../reference/README.md) 进入；核心 reference 包括 [Configuration](../reference/configuration.md)、[Subagents](../reference/subagents.md)、[Web tools](../reference/web-tools.md)、[LSP tools](../reference/lsp-tools.md) 与 [Toolkit commands](../reference/toolkit-commands.md)。
 
+## 架构一致性策略
+
+`devkit-pi` 优先考虑结构一致性，而不是保留旧有布局。当旧项目结构、一次性目录命名或先前实现模式与当前模块化架构冲突时，不应为了兼容而保留。
+
+当多个模块、工具、提供者、命令或功能区域承担类似角色时，优先使用统一结构与约定：
+
+- 相同职责 → 相同源码 / 测试 / 文档结构
+- 相同概念 → 相同命名模式
+- 相同生命周期 → 相同注册 / 执行模式
+- 相同提供者类型 → 相同 adapter interface 与 registry 模式
+- 相同工具类别 → 相同 schema、配置、错误、测试和 reference 文档模式
+
+例外应在实现附近或 ADR 中记录。
+
 ## 当前已实现的源码结构
 
 ```text
@@ -241,7 +255,7 @@ hook 不在子代理进程注册。
 
 ## 测试结构如何镜像源码
 
-当前测试主要是 unit tests，不依赖真实 pi 子进程或真实 language server。测试目录按模块镜像：
+当前测试主要是 unit tests，不依赖真实 pi 子进程或真实 language server。测试目录按模块镜像。该镜像结构是有意的架构策略，而不只是当前约定：新增模块或相似功能区域时，应在匹配路径下补充测试，除非存在已记录的例外：
 
 ```text
 tests/

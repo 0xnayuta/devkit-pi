@@ -18,6 +18,8 @@ Default configuration file:
 
 devkit-pi uses namespace-based configuration and does not support legacy flat configuration fields. When the config file is missing or unreadable, the default config `{}` merged with `DEFAULT_CONFIG` is used.
 
+Configuration follows the architecture consistency policy: similar modules use namespace-based config objects, aligned `enabled` switches, default/normalize behavior, and matching source/test/documentation coverage. Legacy flat fields are not retained when they conflict with this structure.
+
 ## Complete default configuration example
 
 Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG` in `src/config/load-config.ts`.
@@ -85,6 +87,11 @@ Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG` in `s
       "enabled": false,
       "baseUrl": "",
       "defaultEngine": "google"
+    },
+    "brave": {
+      "enabled": false,
+      "baseUrl": "https://api.search.brave.com/res/v1/web/search",
+      "apiKeyEnv": "BRAVE_SEARCH_API_KEY"
     },
     "tavily": {
       "enabled": false,
@@ -331,15 +338,15 @@ Provider names from `WebSearchProviderName` in `src/shared/types.ts` and `src/mo
 
 | Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| No `web.brave` config | - | - | - | Source code determines availability and makes requests via fixed environment variable `BRAVE_SEARCH_API_KEY` | `src/modules/web/providers/brave.ts` |
-
-Note: current `WebConfig` has no `web.brave.apiKeyEnv` configuration; do not assume it exists in documentation.
+| `web.brave.enabled` | boolean | `false` | No | Selection enabled gate for explicit and auto modes | `src/modules/web/providers/select-provider.ts` |
+| `web.brave.baseUrl` | string | `https://api.search.brave.com/res/v1/web/search` | No | Brave Search API endpoint | `src/modules/web/providers/brave.ts` |
+| `web.brave.apiKeyEnv` | string | `BRAVE_SEARCH_API_KEY` | No | Which environment variable to read API key from | `src/modules/web/providers/brave.ts` |
 
 ### `openserp`
 
 | Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.openserp.enabled` | boolean | `false` | No | Must be enabled before explicit provider use; also used for availability in auto mode | `src/modules/web/providers/openserp.ts` |
+| `web.openserp.enabled` | boolean | `false` | No | Selection enabled gate for explicit and auto modes | `src/modules/web/providers/select-provider.ts` |
 | `web.openserp.baseUrl` | string | `https://api.openserp.com/search` | No | OpenSERP endpoint | `src/config/load-config.ts` |
 | `web.openserp.apiKeyEnv` | string | `OPENSERP_API_KEY` | No | Which environment variable to read API key from | `src/modules/web/providers/openserp.ts` |
 
@@ -347,7 +354,7 @@ Note: current `WebConfig` has no `web.brave.apiKeyEnv` configuration; do not ass
 
 | Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.searxng.enabled` | boolean | `false` | No | Must be enabled before explicit provider use; also used for availability in auto mode | `src/modules/web/providers/searxng.ts` |
+| `web.searxng.enabled` | boolean | `false` | No | Selection enabled gate for explicit and auto modes | `src/modules/web/providers/select-provider.ts` |
 | `web.searxng.baseUrl` | string | `""` | No | SearXNG base URL; must be valid http/https URL to be available | `src/modules/web/providers/searxng.ts` |
 | `web.searxng.defaultEngine` | string | `google` | No | Default value for request parameter `engines` | `src/modules/web/providers/searxng.ts` |
 
@@ -355,7 +362,7 @@ Note: current `WebConfig` has no `web.brave.apiKeyEnv` configuration; do not ass
 
 | Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.tavily.enabled` | boolean | `false` | No | Must be enabled before explicit provider use | `src/modules/web/providers/select-provider.ts` |
+| `web.tavily.enabled` | boolean | `false` | No | Selection enabled gate for explicit and auto modes | `src/modules/web/providers/select-provider.ts` |
 | `web.tavily.baseUrl` | string | `https://api.tavily.com/search` | No | Tavily endpoint | `src/modules/web/providers/tavily.ts` |
 | `web.tavily.apiKeyEnv` | string | `TAVILY_API_KEY` | No | Which environment variable to read API key from | `src/modules/web/providers/tavily.ts` |
 
@@ -363,13 +370,13 @@ Note: current `WebConfig` has no `web.brave.apiKeyEnv` configuration; do not ass
 
 | Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `web.serper.enabled` | boolean | `false` | No | Must be enabled before explicit provider use | `src/modules/web/providers/select-provider.ts` |
+| `web.serper.enabled` | boolean | `false` | No | Selection enabled gate for explicit and auto modes | `src/modules/web/providers/select-provider.ts` |
 | `web.serper.baseUrl` | string | `https://google.serper.dev/search` | No | Serper endpoint | `src/modules/web/providers/serper.ts` |
 | `web.serper.apiKeyEnv` | string | `SERPER_API_KEY` | No | Which environment variable to read API key from | `src/modules/web/providers/serper.ts` |
 
 ### `provider="auto"` behavior
 
-Auto mode filters and tries available providers based on `providerPriority`. Current source code divides candidate providers into three tiers:
+Auto mode filters providers by the same enabled gate and technical availability checks used by explicit mode, then applies `providerPriority`. Current source code divides candidate providers into three tiers:
 
 1. commercial: `tavily`, `serper`, `brave`
 2. self-host-or-open: `openserp`, `searxng`
@@ -381,7 +388,7 @@ Final order is sorted by `providerPriority` within each tier, then concatenated.
 tavily → serper → brave → openserp → searxng → ddgs
 ```
 
-Provider availability is determined by each provider adapter. For example, `brave` depends on `BRAVE_SEARCH_API_KEY`, `searxng` depends on being enabled and `baseUrl` being a valid http/https URL.
+Selection availability combines provider `enabled` gates with adapter-level technical checks. For example, `brave` requires `web.brave.enabled=true`, a valid baseUrl, and an API key from `web.brave.apiKeyEnv`; `searxng` requires `web.searxng.enabled=true` and a valid http/https baseUrl.
 
 ## Web cache configuration
 
@@ -556,14 +563,10 @@ Example:
 
 ## Known environment / future notes
 
-1. **`web.brave` namespace does not exist**
-   - Source code currently configures Brave via fixed environment variable `BRAVE_SEARCH_API_KEY`.
-   - If `web.brave.apiKeyEnv` is needed in the future, source code and tests must be modified first, then documentation updated.
-
-2. **`subagents.allowWrite` is not a stable write-capability contract**
+1. **`subagents.allowWrite` is not a stable write-capability contract**
    - Configuration item exists, defaults to `false`.
    - Currently recorded as experimental/advanced/unsafe switch; default and recommended mode is still readonly.
    - If formally supporting writable custom subagents in the future, permission strategy, audit logging, rollback recommendations, and test coverage should be supplemented separately.
 
-3. **LSP language server availability depends on local environment**
+2. **LSP language server availability depends on local environment**
    - Configuration only controls whether devkit-pi registers tools/hooks, not automatic language server installation.

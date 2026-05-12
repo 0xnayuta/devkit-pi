@@ -11,8 +11,14 @@ import {
   type ResolvedToolkitConfig,
   type ResolvedWebConfig,
 } from "../../../shared/types.ts";
+import {
+  getProviderApiKeyEnv,
+  getProviderDisplayName,
+  isProviderEnabled,
+  SEARCH_PROVIDER_NAMES,
+} from "../../web/providers/metadata.ts";
 import { getSearchProvider } from "../../web/providers/registry.ts";
-import type { SearchProviderAdapter } from "../../web/providers/types.ts";
+import type { SearchProviderAdapter, WebSearchProviderName } from "../../web/providers/types.ts";
 import { discoverAgents } from "../agents.ts";
 
 // ============================================================================
@@ -42,39 +48,14 @@ export interface DoctorReport {
 // ============================================================================
 
 async function checkProvider(
-  name: string,
+  name: WebSearchProviderName,
   provider: SearchProviderAdapter,
   config: ResolvedWebConfig
 ): Promise<DiagnosticItem> {
-  const displayName =
-    name === "brave"
-      ? "Brave Search"
-      : name === "ddgs"
-        ? "DuckDuckGo Lite"
-        : name === "openserp"
-          ? "OpenSERP"
-          : name === "searxng"
-            ? "SearXNG"
-            : name === "tavily"
-              ? "Tavily"
-              : name === "serper"
-                ? "Serper"
-                : name;
+  const displayName = getProviderDisplayName(name);
 
   // Check if provider is enabled in config
-  const providerConfig = config;
-  const isEnabled =
-    name === "openserp"
-      ? providerConfig.openserp.enabled
-      : name === "searxng"
-        ? providerConfig.searxng.enabled
-        : name === "tavily"
-          ? providerConfig.tavily.enabled
-          : name === "serper"
-            ? providerConfig.serper.enabled
-            : true;
-
-  if (!isEnabled) {
+  if (!isProviderEnabled(config, name)) {
     return {
       status: "info",
       category: "provider",
@@ -83,16 +64,7 @@ async function checkProvider(
   }
 
   // Check API key if required
-  const apiKeyEnv =
-    name === "openserp"
-      ? providerConfig.openserp.apiKeyEnv
-      : name === "tavily"
-        ? providerConfig.tavily.apiKeyEnv
-        : name === "serper"
-          ? providerConfig.serper.apiKeyEnv
-          : name === "brave"
-            ? "BRAVE_SEARCH_API_KEY"
-            : null;
+  const apiKeyEnv = getProviderApiKeyEnv(config, name);
 
   if (apiKeyEnv && !process.env[apiKeyEnv]) {
     return {
@@ -256,7 +228,7 @@ export async function runDoctorChecks(
   }
 
   // Check other providers based on config
-  const providerNames = ["tavily", "serper", "brave", "openserp", "searxng"] as const;
+  const providerNames = SEARCH_PROVIDER_NAMES.filter((name) => name !== "ddgs");
   for (const name of providerNames) {
     const provider = getSearchProvider(name);
     const result = await checkProvider(name, provider, config.web);

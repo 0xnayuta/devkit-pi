@@ -17,6 +17,7 @@ ADRs record decision context at a point in time and are not equivalent to curren
 | [0003](./0003-autonomous-subagent-triggering.md) | Autonomous Subagent Triggering |
 | [0004](./0004-bundled-readonly-web-tools.md) | Bundled Readonly Web Tools |
 | [0005](./0005-evolve-into-devkit-pi.md) | Evolve from pi-subagents to devkit-pi |
+| [0006](./0006-architecture-consistency-over-legacy-layout.md) | Architecture consistency over legacy layout |
 
 Naming format:
 

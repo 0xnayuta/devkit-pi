@@ -43,13 +43,15 @@ describe("openserp - name", () => {
 // ---------------------------------------------------------------------------
 
 describe("openserp - isAvailable", () => {
-  it("returns false when disabled in config", () => {
+  // NOTE: openserp.isAvailable does NOT check config.openserp.enabled.
+  // The enabled gate is handled at the selectSearchProvider level.
+  it("returns true even when disabled, if baseUrl and key are valid", () => {
     setApiKey("test-key");
     assert.equal(
       openserpProvider.isAvailable!(
         cfg({ openserp: { enabled: false, baseUrl: "http://localhost:7000", apiKeyEnv: ENV_KEY } })
       ),
-      false
+      true
     );
   });
 

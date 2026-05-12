@@ -18,6 +18,8 @@ last_verified: 2026-05-12
 
 devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配置文件缺失或读取失败时，使用默认配置 `{}` 与 `DEFAULT_CONFIG` merge 后的结果。
 
+配置遵循架构一致性策略：相似模块使用 namespace 化配置对象、对齐的 `enabled` 开关、默认值 / normalize 行为，以及匹配的源码 / 测试 / 文档覆盖。当 legacy flat fields 与该结构冲突时，不再保留。
+
 ## 完整默认配置示例
 
 对应源码：`src/config/load-config.ts` 中的 `DEFAULT_CONFIG`、`DEFAULT_SUBAGENTS_CONFIG`、`DEFAULT_WEB_CONFIG`。
@@ -85,6 +87,11 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配�
       "enabled": false,
       "baseUrl": "",
       "defaultEngine": "google"
+    },
+    "brave": {
+      "enabled": false,
+      "baseUrl": "https://api.search.brave.com/res/v1/web/search",
+      "apiKeyEnv": "BRAVE_SEARCH_API_KEY"
     },
     "tavily": {
       "enabled": false,
@@ -331,15 +338,15 @@ Provider 名称来自 `src/shared/types.ts` 的 `WebSearchProviderName` 与 `src
 
 | Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
 |---|---|---:|---|---|---|
-| 无 `web.brave` 配置 | - | - | - | 源码通过环境变量 `BRAVE_SEARCH_API_KEY` 判断 availability 和发起请求 | `src/modules/web/providers/brave.ts` |
-
-注意：当前 `WebConfig` 没有 `web.brave.apiKeyEnv` 配置项；不要在文档中假设存在。
+| `web.brave.enabled` | boolean | `false` | 否 | explicit 和 auto mode 共用的 selection enabled gate | `src/modules/web/providers/select-provider.ts` |
+| `web.brave.baseUrl` | string | `https://api.search.brave.com/res/v1/web/search` | 否 | Brave Search API endpoint | `src/modules/web/providers/brave.ts` |
+| `web.brave.apiKeyEnv` | string | `BRAVE_SEARCH_API_KEY` | 否 | 从哪个环境变量读取 API key | `src/modules/web/providers/brave.ts` |
 
 ### `openserp`
 
 | Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
 |---|---|---:|---|---|---|
-| `web.openserp.enabled` | boolean | `false` | 否 | 显式 provider 使用前必须启用；auto mode 下也用于 availability | `src/modules/web/providers/openserp.ts` |
+| `web.openserp.enabled` | boolean | `false` | 否 | explicit 和 auto mode 共用的 selection enabled gate | `src/modules/web/providers/select-provider.ts` |
 | `web.openserp.baseUrl` | string | `https://api.openserp.com/search` | 否 | OpenSERP endpoint | `src/config/load-config.ts` |
 | `web.openserp.apiKeyEnv` | string | `OPENSERP_API_KEY` | 否 | 从哪个环境变量读取 API key | `src/modules/web/providers/openserp.ts` |
 
@@ -347,7 +354,7 @@ Provider 名称来自 `src/shared/types.ts` 的 `WebSearchProviderName` 与 `src
 
 | Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
 |---|---|---:|---|---|---|
-| `web.searxng.enabled` | boolean | `false` | 否 | 显式 provider 使用前必须启用；auto mode 下也用于 availability | `src/modules/web/providers/searxng.ts` |
+| `web.searxng.enabled` | boolean | `false` | 否 | explicit 和 auto mode 共用的 selection enabled gate | `src/modules/web/providers/select-provider.ts` |
 | `web.searxng.baseUrl` | string | `""` | 否 | SearXNG base URL；必须是有效 http/https URL 才可用 | `src/modules/web/providers/searxng.ts` |
 | `web.searxng.defaultEngine` | string | `google` | 否 | 请求参数 `engines` 的默认值 | `src/modules/web/providers/searxng.ts` |
 
@@ -355,7 +362,7 @@ Provider 名称来自 `src/shared/types.ts` 的 `WebSearchProviderName` 与 `src
 
 | Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
 |---|---|---:|---|---|---|
-| `web.tavily.enabled` | boolean | `false` | 否 | 显式 provider 使用前必须启用 | `src/modules/web/providers/select-provider.ts` |
+| `web.tavily.enabled` | boolean | `false` | 否 | explicit 和 auto mode 共用的 selection enabled gate | `src/modules/web/providers/select-provider.ts` |
 | `web.tavily.baseUrl` | string | `https://api.tavily.com/search` | 否 | Tavily endpoint | `src/modules/web/providers/tavily.ts` |
 | `web.tavily.apiKeyEnv` | string | `TAVILY_API_KEY` | 否 | 从哪个环境变量读取 API key | `src/modules/web/providers/tavily.ts` |
 
@@ -363,13 +370,13 @@ Provider 名称来自 `src/shared/types.ts` 的 `WebSearchProviderName` 与 `src
 
 | Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
 |---|---|---:|---|---|---|
-| `web.serper.enabled` | boolean | `false` | 否 | 显式 provider 使用前必须启用 | `src/modules/web/providers/select-provider.ts` |
+| `web.serper.enabled` | boolean | `false` | 否 | explicit 和 auto mode 共用的 selection enabled gate | `src/modules/web/providers/select-provider.ts` |
 | `web.serper.baseUrl` | string | `https://google.serper.dev/search` | 否 | Serper endpoint | `src/modules/web/providers/serper.ts` |
 | `web.serper.apiKeyEnv` | string | `SERPER_API_KEY` | 否 | 从哪个环境变量读取 API key | `src/modules/web/providers/serper.ts` |
 
 ### `provider="auto"` 行为
 
-`auto` mode 会根据 `providerPriority` 过滤并尝试可用 provider。当前源码将候选 provider 分为三类：
+`auto` mode 使用与 explicit mode 相同的 enabled gate 和技术可用性检查过滤 provider，然后应用 `providerPriority`。当前源码将候选 provider 分为三类：
 
 1. commercial：`tavily`、`serper`、`brave`
 2. self-host-or-open：`openserp`、`searxng`
@@ -381,7 +388,7 @@ Provider 名称来自 `src/shared/types.ts` 的 `WebSearchProviderName` 与 `src
 tavily → serper → brave → openserp → searxng → ddgs
 ```
 
-provider availability 由各 provider adapter 判断。例如 `brave` 依赖 `BRAVE_SEARCH_API_KEY`，`searxng` 依赖启用且 `baseUrl` 是有效 http/https URL。
+selection availability 由 provider `enabled` gate 和 adapter 层技术检查共同决定。例如 `brave` 需要 `web.brave.enabled=true`、有效 baseUrl，并从 `web.brave.apiKeyEnv` 指定的环境变量读取 API key；`searxng` 需要 `web.searxng.enabled=true` 且 `baseUrl` 是有效 http/https URL。
 
 ## Web cache 配置
 
@@ -556,14 +563,10 @@ doctor, modules, logs, agents, lsp, activity, help
 
 ## Known environment / future notes
 
-1. **`web.brave` namespace 不存在**
-   - 源码当前通过固定环境变量 `BRAVE_SEARCH_API_KEY` 配置 Brave。
-   - 如果未来需要 `web.brave.apiKeyEnv`，应先修改源码和 tests，再更新文档。
-
-2. **`subagents.allowWrite` 不是 stable write-capability contract**
+1. **`subagents.allowWrite` 不是 stable write-capability contract**
    - 配置项存在，默认 `false`。
    - 当前作为 experimental / advanced / unsafe 开关记录；默认且推荐模式仍是 readonly。
    - 若未来要正式支持 writable custom subagents，应单独补齐权限策略、审计日志、回滚建议和测试覆盖。
 
-3. **LSP language server 可用性依赖本机环境**
+2. **LSP language server 可用性依赖本机环境**
    - 配置只控制 devkit-pi 是否注册工具/hook，不自动安装 language server。

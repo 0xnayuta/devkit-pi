@@ -24,3 +24,5 @@ For the full reference directory policy, see [Reference README](./README.md).
 - [Toolkit commands](./toolkit-commands.md)
 
 Proposal, roadmap, archive, and ADR documents are intentionally not included in this reference entry. If non-reference material differs from current reference docs, source, or tests, treat `docs/reference/`, `src/`, and `tests/` as authoritative.
+
+Reference contracts should remain structurally consistent across similar modules, tools, providers, commands, configuration namespaces, tests, and documentation pages. Legacy layouts are not retained when they conflict with the current modular architecture.

@@ -20,16 +20,18 @@ ddgs, brave, tavily, serper, openserp, searxng
 
 Provider 只用于 `web_search`。`fetch_content` 的 Jina Reader fallback 不是普通 search provider，见下方 [Jina fallback](#jina-fallback)。
 
+Provider 实现遵循架构一致性策略：每个 search provider 应使用共享 provider adapter interface、provider registry、selection flow、配置命名模式和 provider-focused tests，除非存在已记录的例外。
+
 ## Provider 矩阵
 
-| Provider | API key | 配置 key | 环境变量 | 默认可用性 | 主要用途 | 限制说明 |
+| Provider | API key | 配置 key | 环境变量 | Selection availability | 主要用途 | 限制说明 |
 |---|---|---|---|---|---|---|
-| `ddgs` | 不需要 | 无 provider 子配置 | 无 | 默认 provider；`isAvailable()` 始终为 true | 零配置 DuckDuckGo Lite fallback | 每次最多返回 5 条；依赖 DuckDuckGo Lite HTML 结构 |
-| `brave` | 需要 | 无 `web.brave` 配置 | `BRAVE_SEARCH_API_KEY` | 无 config gate；availability 取决环境变量；不是默认 provider | Brave Search API | API key env 名称固定，不支持通过 config 改名 |
-| `tavily` | 需要 | `web.tavily.*` | 默认 `TAVILY_API_KEY`，可由 `web.tavily.apiKeyEnv` 修改 | `web.tavily.enabled=false`；auto availability 还要求 baseUrl 有效且 key 存在 | Tavily Search API | 显式使用前必须启用；第三方 rate limit/API 行为可能变化 |
-| `serper` | 需要 | `web.serper.*` | 默认 `SERPER_API_KEY`，可由 `web.serper.apiKeyEnv` 修改 | `web.serper.enabled=false`；auto availability 还要求 baseUrl 有效且 key 存在 | Serper Google Search API | 显式使用前必须启用；第三方 rate limit/API 行为可能变化 |
-| `openserp` | 需要 | `web.openserp.*` | 默认 `OPENSERP_API_KEY`，可由 `web.openserp.apiKeyEnv` 修改 | `web.openserp.enabled=false`；auto availability 还要求 baseUrl 有效且 key 存在 | OpenSERP-compatible API | 显式使用前必须启用；响应字段支持 `organic_results` 或 `results` |
-| `searxng` | 不需要 | `web.searxng.*` | 无 | `web.searxng.enabled=false`；availability 要求 baseUrl 是有效 HTTP/HTTPS URL | 自托管 SearXNG JSON search | 需要可访问的 SearXNG instance；请求固定 `format=json` |
+| `ddgs` | 不需要 | 无 provider 子配置 | 无 | 始终启用；adapter `isAvailable()` 始终为 true | 零配置 DuckDuckGo Lite fallback | 每次最多返回 5 条；依赖 DuckDuckGo Lite HTML 结构 |
+| `brave` | 需要 | `web.brave.*` | 默认 `BRAVE_SEARCH_API_KEY`，可由 `web.brave.apiKeyEnv` 修改 | 需要 `web.brave.enabled=true`、有效 baseUrl 和 key | Brave Search API | 第三方 rate limit/API 行为可能变化 |
+| `tavily` | 需要 | `web.tavily.*` | 默认 `TAVILY_API_KEY`，可由 `web.tavily.apiKeyEnv` 修改 | 需要 `web.tavily.enabled=true`、有效 baseUrl 和 key | Tavily Search API | 第三方 rate limit/API 行为可能变化 |
+| `serper` | 需要 | `web.serper.*` | 默认 `SERPER_API_KEY`，可由 `web.serper.apiKeyEnv` 修改 | 需要 `web.serper.enabled=true`、有效 baseUrl 和 key | Serper Google Search API | 第三方 rate limit/API 行为可能变化 |
+| `openserp` | 需要 | `web.openserp.*` | 默认 `OPENSERP_API_KEY`，可由 `web.openserp.apiKeyEnv` 修改 | 需要 `web.openserp.enabled=true`、有效 baseUrl 和 key | OpenSERP-compatible API | 响应字段支持 `organic_results` 或 `results` |
+| `searxng` | 不需要 | `web.searxng.*` | 无 | 需要 `web.searxng.enabled=true` 和有效 HTTP/HTTPS baseUrl | 自托管 SearXNG JSON search | 需要可访问的 SearXNG instance；请求固定 `format=json` |
 
 ## Provider 配置概要
 
@@ -49,21 +51,20 @@ Provider 只用于 `web_search`。`fetch_content` 的 Jina Reader fallback 不�
 
 ### `brave`
 
-Brave 没有 `web.brave.*` 配置 namespace。源码固定读取 `BRAVE_SEARCH_API_KEY`。
-
-```bash
-BRAVE_SEARCH_API_KEY=...
-```
-
 ```json
 {
   "web": {
-    "provider": "brave"
+    "provider": "brave",
+    "brave": {
+      "enabled": true,
+      "baseUrl": "https://api.search.brave.com/res/v1/web/search",
+      "apiKeyEnv": "BRAVE_SEARCH_API_KEY"
+    }
   }
 }
 ```
 
-如果显式选择 `brave` 但缺少 key，搜索时会返回 `PROVIDER_AUTH_FAILED`。
+显式选择 `brave` 时，`web.brave.enabled` 必须为 `true`；key 缺失会在 provider 请求阶段归类为 `PROVIDER_AUTH_FAILED`。
 
 ### `tavily`
 
@@ -142,13 +143,13 @@ BRAVE_SEARCH_API_KEY=...
 - 只使用该 provider。
 - provider 失败不会 fallback 到其他 provider。
 - 不支持的 provider 名称返回 `INVALID_INPUT`。
-- `openserp`、`searxng`、`tavily`、`serper` 显式使用前必须在对应配置中启用。
-- `searxng` 还会在 selection 阶段检查 baseUrl availability。
-- `brave` 没有 enabled gate；缺少 `BRAVE_SEARCH_API_KEY` 会在搜索阶段被归类为 `PROVIDER_AUTH_FAILED`。
+- `brave`、`openserp`、`searxng`、`tavily`、`serper` 显式使用前必须在对应配置中启用。
+- 所有 explicit provider 都会在 selection 阶段执行相同的技术可用性检查。
+- keyed provider 缺少 API key 时返回 `PROVIDER_AUTH_FAILED`；endpoint 无效时返回 `INVALID_INPUT`。
 
 ### Auto mode
 
-当 `web.provider="auto"` 时，selection 会按 provider availability 构造候选列表。源码将 provider 分三层：
+当 `web.provider="auto"` 时，selection 会从已启用且技术上可用的 provider 构造候选列表。源码将 provider 分三层：
 
 1. commercial：`tavily`、`serper`、`brave`
 2. self-host-or-open：`openserp`、`searxng`
@@ -160,13 +161,13 @@ BRAVE_SEARCH_API_KEY=...
 tavily → serper → brave → openserp → searxng → ddgs
 ```
 
-availability 判断来自各 provider adapter：
+selection availability 由 config enabled gate 和各 provider adapter 的技术性 `isAvailable()` 检查共同决定：
 
-- `ddgs`：始终可用。
-- `brave`：需要 `BRAVE_SEARCH_API_KEY`。
-- `tavily` / `serper`：需要有效 baseUrl 和 API key。
-- `openserp`：需要 `enabled=true`、有效 baseUrl 和 API key。
+- `ddgs`：始终启用且技术上可用。
+- `brave` / `tavily` / `serper` / `openserp`：需要 `enabled=true`、有效 baseUrl 和 API key。
 - `searxng`：需要 `enabled=true` 和有效 HTTP/HTTPS baseUrl。
+
+Provider adapter 的 `isAvailable()` 实现有意不检查 `enabled`；enabled gate 统一由 `selectSearchProvider` 负责。
 
 Auto mode 下，某个 provider 失败时 `web_search` 会尝试下一个候选 provider；所有候选失败后返回最后一个错误，或返回 `WEB_SEARCH_FAILED`。
 

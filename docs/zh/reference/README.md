@@ -12,6 +12,12 @@ last_verified: 2026-05-12
 
 Reference 文档不是教程，也不记录 roadmap。若 proposal、ADR 或 archive 与 reference 不一致，以当前 `src/`、`tests/` 和本目录 reference 为准。
 
+## 架构一致性策略
+
+当前 public contracts 优先考虑结构一致性，而不是保留旧的内部布局。当模块、工具、提供者、命令或功能区域承担类似角色时，reference 文档应使用对齐的命名、配置、schema、错误、测试和文档模式，除非存在已记录的例外。
+
+这意味着 legacy flat configuration fields、旧目录布局或一次性 command/provider 结构不会仅为了兼容而保留；当它们与当前模块化架构冲突时，应以当前架构为准。
+
 ## 相关指南
 
 - [架构总览](../guides/architecture.md)：当前源码结构与模块职责。

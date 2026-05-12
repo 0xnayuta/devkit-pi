@@ -19,3 +19,4 @@ If an ADR differs from current behavior or current reference docs, use `docs/ref
 - [0003 Autonomous Subagent Triggering](./0003-autonomous-subagent-triggering.md)
 - [0004 Bundled Readonly Web Tools](./0004-bundled-readonly-web-tools.md)
 - [0005 Evolve Into devkit-pi](./0005-evolve-into-devkit-pi.md)
+- [0006 Architecture Consistency over Legacy Layout](./0006-architecture-consistency-over-legacy-layout.md)

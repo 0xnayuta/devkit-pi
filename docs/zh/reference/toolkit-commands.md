@@ -155,7 +155,7 @@ commands:  enabled
 - 会读取配置文件和 agent 定义目录。
 - 会在 results 目录创建并删除一个临时测试文件以检查写权限。
 - 不会启动子代理。
-- 不会调用 Web search tool 执行真实搜索；provider availability 取决于 provider adapter 的 `isAvailable()` 实现。
+- 不会调用 Web search tool 执行真实搜索；provider availability 由 config enabled gate 和 provider adapter 的 `isAvailable()` 技术检查共同决定。
 - 不直接启动 LSP tool action。
 
 什么时候使用：

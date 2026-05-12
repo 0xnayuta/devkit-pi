@@ -18,6 +18,22 @@ subagents + web tools + LSP tool + LSP diagnostics hook + developer commands
 
 The goal is not a full multi-agent framework, but to modularly integrate high-frequency coding assistance capabilities into a single pi extension.
 
+## Architecture consistency strategy
+
+`devkit-pi` prioritizes structural consistency over preserving legacy layouts.
+
+When multiple modules, tools, providers, commands, or feature areas serve similar roles, they must follow the same or highly similar design structure unless there is a strong written reason not to.
+
+When older design patterns, legacy directory layouts, or previous implementation structures conflict with the current architecture, the project is not required to retain them.
+
+Prefer:
+
+- Same responsibility → same structure
+- Same concept → same naming pattern
+- Same lifecycle → same execution pattern
+- Same provider type → same adapter interface
+- Same tool category → same schema/configuration/test/documentation pattern
+
 ## Currently included
 
 - `subagent` tool with 5 built-in readonly agents: `explorer`, `researcher`, `reviewer`, `implementer`, `tester`
@@ -53,6 +69,7 @@ The goal is not a full multi-agent framework, but to modularly integrate high-fr
 4. LSP readonly actions can serve as a progressive enhancement over read/grep/find.
 5. `rename`, `codeAction`, `restart` are disabled by default and always disabled in subagent processes.
 6. Each module must be independently enabled/disabled.
+7. Parallel modules with similar responsibilities should converge on shared structure, naming, configuration, tests, and documentation patterns instead of preserving legacy layouts.
 
 ## Custom agent example
 

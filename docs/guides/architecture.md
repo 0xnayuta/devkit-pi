@@ -10,6 +10,20 @@ This document describes devkit-pi's implemented module boundaries, registration 
 
 Public API, configuration, and command contracts are defined in [Reference index](../reference/README.md); core references include [Configuration](../reference/configuration.md), [Subagents](../reference/subagents.md), [Web tools](../reference/web-tools.md), [LSP tools](../reference/lsp-tools.md), and [Toolkit commands](../reference/toolkit-commands.md).
 
+## Architecture consistency policy
+
+`devkit-pi` prioritizes structural consistency over preserving legacy layouts. Old project structures, one-off directory names, or previous implementation patterns should not be retained when they conflict with the current modular architecture.
+
+When modules, tools, providers, commands, or feature areas serve similar roles, prefer aligned structure and conventions:
+
+- Same responsibility → same source/test/documentation structure
+- Same concept → same naming pattern
+- Same lifecycle → same registration/execution pattern
+- Same provider type → same adapter interface and registry pattern
+- Same tool category → same schema, configuration, error, test, and reference documentation pattern
+
+Exceptions should be documented near the implementation or in an ADR.
+
 ## Current source structure
 
 ```text
@@ -241,7 +255,7 @@ Hook is not registered in subagent processes.
 
 ## How test structure mirrors source
 
-Current tests are primarily unit tests, not depending on real pi child processes or real language servers. Test directory mirrors modules:
+Current tests are primarily unit tests, not depending on real pi child processes or real language servers. Test directory mirrors modules. This mirror structure is intentional architecture policy, not just current convention: new modules or comparable feature areas should add tests under matching paths unless a documented exception exists.
 
 ```text
 tests/

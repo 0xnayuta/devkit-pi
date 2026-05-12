@@ -190,7 +190,7 @@ describe("brave - search: happy path", () => {
     assert.ok(items.length <= 3);
   });
 
-  it("filters out items without url or title", async () => {
+  it("filters out items without url and falls back to url when title is missing", async () => {
     setApiKey("test-key");
     const mockResponse = {
       web: {
@@ -207,9 +207,10 @@ describe("brave - search: happy path", () => {
       Promise.resolve(new Response(JSON.stringify(mockResponse), { status: 200 }))) as typeof fetch;
 
     const results = await braveProvider.search({ query: "test", numResults: 10 }, braveConfig);
-    assert.equal(results.length, 2);
+    assert.equal(results.length, 3);
     assert.equal(results[0].title, "Valid");
-    assert.equal(results[1].title, "Good");
+    assert.equal(results[1].title, "https://example.com/no-title");
+    assert.equal(results[2].title, "Good");
   });
 
   it("uses description as snippet", async () => {

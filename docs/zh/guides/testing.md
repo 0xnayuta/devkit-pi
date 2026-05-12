@@ -17,7 +17,7 @@ last_verified: 2026-05-12
 
 ## 测试目录
 
-测试目录镜像 `src/modules/` 与 `src/shared/` 结构：
+测试目录镜像 `src/modules/` 与 `src/shared/` 结构。这是 devkit-pi 架构一致性策略的一部分：相似模块和功能区域应使用相似的源码 / 测试 / 文档布局，而不是保留 legacy 或一次性布局。
 
 ```text
 tests/subagents/          # subagents module
@@ -32,6 +32,8 @@ tests/package-manifest.test.ts
 ## 当前策略
 
 当前主要维护 unit tests，不依赖真实 pi 子进程或真实 language server。
+
+新增或重构相似模块、工具、提供者、命令或功能区域时，优先使用一致的测试模式：匹配的目录路径、可比的 fixtures、相似命名，以及对 config defaults、normalize 行为、schema validation、registration、permissions、errors 和文档更新的等价覆盖。
 
 文档契约通过 `pnpm docs:check` 检查，覆盖 frontmatter、相对链接、内置 agent 工具列表、subagent/web 错误码和关键 reference 导航。新增或修改 public API 时，应同步更新 `docs/reference/` 并确保相关测试覆盖当前行为。
 

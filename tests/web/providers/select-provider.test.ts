@@ -4,7 +4,7 @@
  */
 
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../../src/config/load-config.ts";
 import type { ResolvedWebConfig } from "../../../shared/types.ts";
 import { selectSearchProvider } from "../../../src/modules/web/providers/select-provider.ts";
@@ -13,6 +13,10 @@ import { selectSearchProvider } from "../../../src/modules/web/providers/select-
 function webConfig(overrides: Partial<ResolvedWebConfig> = {}): ResolvedWebConfig {
   return { ...mergeConfig({}).web, ...overrides };
 }
+
+afterEach(() => {
+  delete process.env.SELECT_PROVIDER_TEST_KEY;
+});
 
 // ---------------------------------------------------------------------------
 // Explicit mode — unsupported provider
@@ -105,10 +109,10 @@ describe("select-provider - explicit mode: ddgs", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Explicit mode — searxng with invalid baseUrl
+// Explicit mode — technical availability validation
 // ---------------------------------------------------------------------------
 
-describe("select-provider - explicit mode: searxng baseUrl validation", () => {
+describe("select-provider - explicit mode: technical availability validation", () => {
   it("rejects searxng when enabled but baseUrl is empty (isAvailable fails)", async () => {
     const config = webConfig({
       provider: "searxng",
@@ -119,6 +123,39 @@ describe("select-provider - explicit mode: searxng baseUrl validation", () => {
     if (!result.ok) {
       assert.equal(result.error.error.code, "INVALID_INPUT");
       assert.match(result.error.error.message, /searxng.*unavailable/);
+      assert.match(result.error.error.message, /baseUrl/);
+    }
+  });
+
+  it("rejects openserp when enabled but baseUrl is invalid", async () => {
+    process.env.SELECT_PROVIDER_TEST_KEY = "test-key";
+    const config = webConfig({
+      provider: "openserp",
+      openserp: { enabled: true, baseUrl: "not-a-url", apiKeyEnv: "SELECT_PROVIDER_TEST_KEY" },
+    });
+    const result = await selectSearchProvider(config);
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.error.error.code, "INVALID_INPUT");
+      assert.match(result.error.error.message, /openserp.*unavailable/);
+      assert.match(result.error.error.message, /baseUrl/);
+    }
+  });
+
+  it("rejects keyed providers with auth error when API key is missing", async () => {
+    const config = webConfig({
+      provider: "brave",
+      brave: {
+        enabled: true,
+        baseUrl: "https://api.search.brave.com/res/v1/web/search",
+        apiKeyEnv: "SELECT_PROVIDER_TEST_KEY",
+      },
+    });
+    const result = await selectSearchProvider(config);
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.error.error.code, "PROVIDER_AUTH_FAILED");
+      assert.match(result.error.error.message, /authentication/i);
     }
   });
 });
@@ -162,6 +199,23 @@ describe("select-provider - auto mode", () => {
       // At minimum ddgs should be available
       assert.ok(result.providers.length >= 1);
       assert.ok(result.providers.every((p) => typeof p.name === "string"));
+    }
+  });
+
+  it("skips disabled providers in auto mode even when technically available", async () => {
+    const config = webConfig({
+      provider: "auto",
+      providerPriority: ["searxng", "ddgs"],
+      searxng: { enabled: false, baseUrl: "http://localhost:8888", defaultEngine: "google" },
+    });
+    const result = await selectSearchProvider(config);
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.provider.name, "ddgs");
+      assert.deepEqual(
+        result.providers.map((provider) => provider.name),
+        ["ddgs"]
+      );
     }
   });
 });

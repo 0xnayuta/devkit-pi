@@ -155,7 +155,7 @@ File read/write behavior:
 - Reads config file and agent definition directories.
 - Creates and deletes a temporary test file in results directory to check write permissions.
 - Does not start subagents.
-- Does not call Web search tool for real searches; provider availability depends on provider adapter's `isAvailable()` implementation.
+- Does not call Web search tool for real searches; provider availability combines config enabled gates with provider adapter `isAvailable()` technical checks.
 - Does not directly start LSP tool actions.
 
 When to use:

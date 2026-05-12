@@ -36,12 +36,14 @@ describe("searxng - name", () => {
 // ---------------------------------------------------------------------------
 
 describe("searxng - isAvailable", () => {
-  it("returns false when disabled in config", () => {
+  // NOTE: searxng.isAvailable does NOT check config.searxng.enabled.
+  // The enabled gate is handled at the selectSearchProvider level.
+  it("returns true even when disabled, if baseUrl is valid", () => {
     assert.equal(
       searxngProvider.isAvailable!(
         cfg({ searxng: { enabled: false, baseUrl: "http://localhost:8888", defaultEngine: "google" } })
       ),
-      false
+      true
     );
   });
 

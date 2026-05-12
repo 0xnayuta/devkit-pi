@@ -18,6 +18,22 @@ subagents + web tools + LSP tool + LSP diagnostics hook + developer commands
 
 目标不是完整多代理框架，而是把高频 coding 辅助能力模块化地合入一个 pi extension。
 
+## 架构一致性策略
+
+devkit-pi 优先考虑结构一致性，而不是保留旧有布局。
+
+当多个模块、工具、提供者、命令或功能区域承担类似角色时，除非有强有力的书面理由，否则必须遵循相同或高度相似的设计结构。
+
+当旧的设计模式、遗留目录布局或先前实现结构与当前架构冲突时，本项目不要求保留它们。
+
+优先考虑：
+
+- 相同职责 → 相同结构
+- 相同概念 → 相同命名模式
+- 相同生命周期 → 相同执行模式
+- 相同提供者类型 → 相同适配器接口
+- 相同工具类别 → 相同 schema / 配置 / 测试 / 文档模式
+
 ## 当前包含
 
 - `subagent` 工具与 5 个内置 readonly agents：`explorer`、`researcher`、`reviewer`、`implementer`、`tester`
@@ -53,6 +69,7 @@ subagents + web tools + LSP tool + LSP diagnostics hook + developer commands
 4. LSP readonly actions 可作为 read/grep/find 的渐进增强。
 5. `rename`、`codeAction`、`restart` 默认禁用，且在子代理进程中始终禁用。
 6. 各模块必须可独立启停。
+7. 职责相近的平行模块应收敛到统一的结构、命名、配置、测试和文档模式，而不是保留旧有布局。
 
 ## 自定义 agent 示例
 

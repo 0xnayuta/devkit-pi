@@ -103,7 +103,6 @@ async function search(
 }
 
 function isAvailable(config: ResolvedWebConfig): boolean {
-  if (!config.openserp.enabled) return false;
   try {
     const baseUrl = new URL(config.openserp.baseUrl);
     if (baseUrl.protocol !== "http:" && baseUrl.protocol !== "https:") {

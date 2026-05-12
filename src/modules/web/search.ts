@@ -7,6 +7,7 @@ import { mapHttpStatusToError, mapNetworkErrorToWebError, WEB_ERROR_CODES } from
 import { truncateContent } from "./extract.ts";
 import { fetchUrlContent } from "./fetch.ts";
 import { recordSearchActivity, webDebugLog } from "./observability.ts";
+import { getProviderDisplayName } from "./providers/metadata.ts";
 import { selectSearchProvider } from "./providers/select-provider.ts";
 import { storeResult } from "./storage.ts";
 import type { QueryResultData, SearchResultItem, WebSearchInput, WebToolError } from "./types.ts";
@@ -109,18 +110,8 @@ async function attachContent(
   return output;
 }
 
-function providerDisplayName(providerName: string): string {
-  if (providerName === "brave") return "Brave Search";
-  if (providerName === "ddgs") return "DuckDuckGo Lite";
-  if (providerName === "openserp") return "OpenSERP";
-  if (providerName === "searxng") return "SearXNG";
-  if (providerName === "tavily") return "Tavily";
-  if (providerName === "serper") return "Serper";
-  return providerName;
-}
-
 function classifySearchError(err: unknown, providerName: string, startTs: number): WebToolError {
-  const displayName = providerDisplayName(providerName);
+  const displayName = getProviderDisplayName(providerName);
 
   if (isAbortLikeError(err)) {
     recordSearchActivity(providerName, "error", startTs, WEB_ERROR_CODES.WEB_SEARCH_TIMEOUT);
@@ -144,7 +135,6 @@ function classifySearchError(err: unknown, providerName: string, startTs: number
 
   // Check for auth errors
   if (
-    message.includes("BRAVE_SEARCH_API_KEY") ||
     message.includes("is required for web_search provider") ||
     errStatus === 401 ||
     errStatus === 403

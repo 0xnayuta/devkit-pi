@@ -12,6 +12,12 @@ last_verified: 2026-05-12
 
 Reference documents are not tutorials and do not record roadmaps. If proposals, ADRs, or archives conflict with reference documents, the canonical sources are the current `src/`, `tests/`, and this reference directory.
 
+## Architecture consistency policy
+
+Current public contracts favor structural consistency over legacy internal layouts. When modules, tools, providers, commands, or feature areas serve similar roles, reference docs should describe them with aligned naming, configuration, schema, error, test, and documentation patterns unless a documented exception exists.
+
+This means legacy flat configuration fields, old directory layouts, or one-off command/provider structures are not preserved merely for compatibility when they conflict with the current modular architecture.
+
 ## Related guides
 
 - [Architecture](../guides/architecture.md): Current source structure and module responsibilities.

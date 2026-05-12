@@ -20,16 +20,18 @@ ddgs, brave, tavily, serper, openserp, searxng
 
 Providers are only used for `web_search`. `fetch_content`'s Jina Reader fallback is not a regular search provider; see [Jina fallback](#jina-fallback) below.
 
+Provider implementations follow the architecture consistency policy: each search provider should use the shared provider adapter interface, provider registry, selection flow, configuration naming pattern, and provider-focused tests unless a documented exception exists.
+
 ## Provider matrix
 
-| Provider | API key | Config key | Environment variable | Default availability | Primary use | Limitations |
+| Provider | API key | Config key | Environment variable | Selection availability | Primary use | Limitations |
 |---|---|---|---|---|---|---|
-| `ddgs` | Not needed | No provider sub-config | None | Default provider; `isAvailable()` always returns true | Zero-config DuckDuckGo Lite fallback | Max 5 results per request; depends on DuckDuckGo Lite HTML structure |
-| `brave` | Required | No `web.brave` config | `BRAVE_SEARCH_API_KEY` | No config gate; availability depends on environment variable; not default provider | Brave Search API | API key env name is fixed, not configurable via config |
-| `tavily` | Required | `web.tavily.*` | Default `TAVILY_API_KEY`, customizable via `web.tavily.apiKeyEnv` | `web.tavily.enabled=false`; auto availability also requires valid baseUrl and key | Tavily Search API | Must be enabled before explicit use; third-party rate limit/API behavior may change |
-| `serper` | Required | `web.serper.*` | Default `SERPER_API_KEY`, customizable via `web.serper.apiKeyEnv` | `web.serper.enabled=false`; auto availability also requires valid baseUrl and key | Serper Google Search API | Must be enabled before explicit use; third-party rate limit/API behavior may change |
-| `openserp` | Required | `web.openserp.*` | Default `OPENSERP_API_KEY`, customizable via `web.openserp.apiKeyEnv` | `web.openserp.enabled=false`; auto availability also requires valid baseUrl and key | OpenSERP-compatible API | Must be enabled before explicit use; response fields support `organic_results` or `results` |
-| `searxng` | Not needed | `web.searxng.*` | None | `web.searxng.enabled=false`; availability requires baseUrl to be a valid HTTP/HTTPS URL | Self-hosted SearXNG JSON search | Requires accessible SearXNG instance; requests use fixed `format=json` |
+| `ddgs` | Not needed | No provider sub-config | None | Always enabled; adapter `isAvailable()` always returns true | Zero-config DuckDuckGo Lite fallback | Max 5 results per request; depends on DuckDuckGo Lite HTML structure |
+| `brave` | Required | `web.brave.*` | Default `BRAVE_SEARCH_API_KEY`, customizable via `web.brave.apiKeyEnv` | Requires `web.brave.enabled=true`, valid baseUrl, and key | Brave Search API | Third-party rate limit/API behavior may change |
+| `tavily` | Required | `web.tavily.*` | Default `TAVILY_API_KEY`, customizable via `web.tavily.apiKeyEnv` | Requires `web.tavily.enabled=true`, valid baseUrl, and key | Tavily Search API | Third-party rate limit/API behavior may change |
+| `serper` | Required | `web.serper.*` | Default `SERPER_API_KEY`, customizable via `web.serper.apiKeyEnv` | Requires `web.serper.enabled=true`, valid baseUrl, and key | Serper Google Search API | Third-party rate limit/API behavior may change |
+| `openserp` | Required | `web.openserp.*` | Default `OPENSERP_API_KEY`, customizable via `web.openserp.apiKeyEnv` | Requires `web.openserp.enabled=true`, valid baseUrl, and key | OpenSERP-compatible API | Response fields support `organic_results` or `results` |
+| `searxng` | Not needed | `web.searxng.*` | None | Requires `web.searxng.enabled=true` and valid HTTP/HTTPS baseUrl | Self-hosted SearXNG JSON search | Requires accessible SearXNG instance; requests use fixed `format=json` |
 
 ## Provider configuration summary
 
@@ -49,21 +51,20 @@ Implementation limit: `src/modules/web/providers/ddgs.ts` limits results to a ma
 
 ### `brave`
 
-Brave has no `web.brave.*` config namespace. Source code reads a fixed `BRAVE_SEARCH_API_KEY`.
-
-```bash
-BRAVE_SEARCH_API_KEY=...
-```
-
 ```json
 {
   "web": {
-    "provider": "brave"
+    "provider": "brave",
+    "brave": {
+      "enabled": true,
+      "baseUrl": "https://api.search.brave.com/res/v1/web/search",
+      "apiKeyEnv": "BRAVE_SEARCH_API_KEY"
+    }
   }
 }
 ```
 
-If `brave` is explicitly selected but the key is missing, search will return `PROVIDER_AUTH_FAILED`.
+When explicitly selecting `brave`, `web.brave.enabled` must be `true`; missing key will be classified as `PROVIDER_AUTH_FAILED` during the provider request phase.
 
 ### `tavily`
 
@@ -142,13 +143,13 @@ When `web.provider` is a specific provider name, selection enters explicit mode:
 - Only that provider is used.
 - Provider failure does not fall back to other providers.
 - Unsupported provider name returns `INVALID_INPUT`.
-- `openserp`, `searxng`, `tavily`, `serper` must be enabled in their corresponding config before explicit use.
-- `searxng` also checks baseUrl availability during selection.
-- `brave` has no enabled gate; missing `BRAVE_SEARCH_API_KEY` will be classified as `PROVIDER_AUTH_FAILED` during search.
+- `brave`, `openserp`, `searxng`, `tavily`, `serper` must be enabled in their corresponding config before explicit use.
+- All explicit providers run the same technical availability check during selection.
+- Missing API keys for keyed providers return `PROVIDER_AUTH_FAILED`; invalid endpoints return `INVALID_INPUT`.
 
 ### Auto mode
 
-When `web.provider="auto"`, selection constructs a candidate list based on provider availability. Source code divides providers into three tiers:
+When `web.provider="auto"`, selection constructs a candidate list from providers that are enabled and technically available. Source code divides providers into three tiers:
 
 1. commercial: `tavily`, `serper`, `brave`
 2. self-host-or-open: `openserp`, `searxng`
@@ -160,13 +161,13 @@ Within each tier, providers are sorted by `web.providerPriority`, then concatena
 tavily → serper → brave → openserp → searxng → ddgs
 ```
 
-Availability is determined by each provider adapter:
+Selection availability combines a config enabled gate with each provider adapter's technical `isAvailable()` check:
 
-- `ddgs`: always available.
-- `brave`: requires `BRAVE_SEARCH_API_KEY`.
-- `tavily` / `serper`: requires valid baseUrl and API key.
-- `openserp`: requires `enabled=true`, valid baseUrl, and API key.
+- `ddgs`: always enabled and technically available.
+- `brave` / `tavily` / `serper` / `openserp`: requires `enabled=true`, valid baseUrl, and API key.
 - `searxng`: requires `enabled=true` and valid HTTP/HTTPS baseUrl.
+
+Provider adapter `isAvailable()` implementations intentionally do not check `enabled`; `selectSearchProvider` owns the enabled gate.
 
 In auto mode, when one provider fails, `web_search` will try the next candidate provider; when all candidates fail, it returns the last error or `WEB_SEARCH_FAILED`.
 
