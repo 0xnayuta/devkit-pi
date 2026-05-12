@@ -2,7 +2,7 @@ import { defineConfig } from "vitepress";
 
 const nav = [
   { text: "Guide", link: "/" },
-  { text: "Development", link: "/maintain/" },
+  { text: "Development", link: "/maintain" },
   { text: "Reference", link: "/reference/" },
   { text: "ADRs", link: "/adr/" },
   { text: "GitHub", link: "https://github.com/0xnayuta/devkit-pi" },
@@ -10,7 +10,7 @@ const nav = [
 
 const zhNav = [
   { text: "指南", link: "/zh/" },
-  { text: "开发参考", link: "/zh/maintain/" },
+  { text: "开发参考", link: "/zh/maintain" },
   { text: "参考", link: "/zh/reference/" },
   { text: "ADRs", link: "/zh/adr/" },
   { text: "GitHub", link: "https://github.com/0xnayuta/devkit-pi" },
@@ -112,7 +112,7 @@ const maintainSidebar = [
   {
     text: "Development",
     items: [
-      { text: "Overview", link: "/maintain/" },
+      { text: "Overview", link: "/maintain" },
       { text: "Architecture", link: "/guides/architecture" },
       { text: "Extension API", link: "/guides/extension-api" },
       { text: "Testing", link: "/guides/testing" },
@@ -128,7 +128,7 @@ const zhMaintainSidebar = [
   {
     text: "开发参考",
     items: [
-      { text: "概览", link: "/zh/maintain/" },
+      { text: "概览", link: "/zh/maintain" },
       { text: "架构", link: "/zh/guides/architecture" },
       { text: "扩展 API", link: "/zh/guides/extension-api" },
       { text: "测试", link: "/zh/guides/testing" },

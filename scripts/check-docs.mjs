@@ -278,7 +278,7 @@ function checkVitePressSite() {
     }
     for (const nav of [
       '{ text: "Guide", link: "/" }',
-      '{ text: "Development", link: "/maintain/" }',
+      '{ text: "Development", link: "/maintain" }',
       '{ text: "Reference", link: "/reference/" }',
       '{ text: "ADRs", link: "/adr/" }',
     ]) {
