@@ -310,4 +310,4 @@ tests/
 - agent management actions（create/update/delete）。
 - repo map / project context / git workflow / run_check 等 roadmap 能力。
 
-这些内容应继续保留在 roadmap/proposal/historical 文档中，不应写入用户功能说明为当前能力。
+这些内容应继续保留在 roadmap/proposal/deprecated 文档中，不应写入用户功能说明为当前能力。

@@ -131,11 +131,12 @@ Proposed / roadmap docs do not represent current capabilities and are not part o
 
 ### `archive/`
 
-Archived historical plans.
+Archived deprecated plans.
 
+- [tests-simplification-plan](./archive/tests-simplification-plan.md)
 - [enhancement-of-fetch_content-tool-plan](./archive/enhancement-of-fetch_content-tool-plan.md)
 
-Archive content preserves historical context only and does not represent current implementation or commitments.
+Archive content preserves context only and does not represent current implementation or commitments.
 
 ## Current public reference
 
@@ -155,11 +156,10 @@ Current public reference docs are in `docs/reference/`:
 | [lsp-tools.md](./reference/lsp-tools.md) | `lsp` tool, diagnostics hook, and LSP action semantics |
 | [toolkit-commands.md](./reference/toolkit-commands.md) | `/toolkit` command surface and output/failure semantics |
 
-## Historical / proposed content policy
+## Deprecated / proposed content policy
 
 - `docs/planning/` contains proposed / roadmap docs and does not represent current behavior.
-- `docs/archive/` contains historical content and does not represent current behavior.
-- `docs/adr/` records historical decisions and is not equivalent to the current full API reference.
+- `docs/archive/` contains deprecated content and does not represent current behavior.
 - `proposed`, `roadmap`, and `plan` docs represent design discussions or future directions only and should not be treated as current feature documentation.
 - Current behavior is determined by `src/`, `tests/`, and `docs/reference/`.
 - Commands, fields, tools, or error codes from planning/archive/proposal/roadmap docs should not be written into current public reference unless the source and tests have already implemented and verified them.

@@ -1,31 +1,31 @@
 ---
 status: proposed
 audience: maintainer
-last_verified: 2026-05-11
-language: chinese
+last_verified: 2026-05-12
+language: english
 ---
 
-# 个人综合 pi coding toolkit 功能路线图
+# Personal pi Coding Toolkit Feature Roadmap
 
 > **⚠️ Status: Proposed / Roadmap — not current behavior.** This document records possible future directions. The features, tools, modules, and interfaces described here are **not part of the current public API** and may never be implemented as described. For the current public surface, see [Reference index](../reference/README.md), `src/`, and `tests/`.
 
-## 目的
+## Purpose
 
-本文记录在 `pi-subagents` 与 `pi-lsp` 基本完成后，继续演进为个人综合 pi coding toolkit 时，值得添加的常见 AI coding agent / developer tooling 功能。
+This document records the common AI coding agent / developer tooling features worth adding when evolving from `pi-subagents` and `pi-lsp` to a personal comprehensive pi coding toolkit.
 
-当前项目已经覆盖：
+Current project coverage:
 
 ```text
-subagents：任务委派、代码导航、审查、研究、实现规划、测试规划
-web tools：web_search、fetch_content、get_search_content
-lsp：definition、references、hover、symbols、diagnostics、自动诊断 hook
+subagents: task delegation, code navigation, review, research, implementation planning, test planning
+web tools: web_search, fetch_content, get_search_content
+lsp: definition, references, hover, symbols, diagnostics, auto-diagnostics hook
 ```
 
-下一阶段不应优先增加更多复杂 agent，而应补齐主流 AI coding tools 常见的工作流基础设施：项目记忆、上下文构建、Git 集成、检查命令封装、hooks、诊断聚合、任务追踪和会话压缩。
+The next stage should not prioritize adding more complex agents, but rather complete the workflow infrastructure common to mainstream AI coding tools: project memory, context building, Git integration, check command encapsulation, hooks, diagnostic aggregation, task tracking, and session compaction.
 
-## 参考工具与常见能力
+## Reference Tools and Common Capabilities
 
-社区和 GitHub 上常见 AI coding agent / developer tooling 包括：
+Common AI coding agent / developer tooling on GitHub and in the community includes:
 
 - Claude Code
 - Aider
@@ -35,45 +35,45 @@ lsp：definition、references、hover、symbols、diagnostics、自动诊断 hoo
 - OpenHands
 - SWE-agent / mini-swe-agent
 
-这些工具在功能上高度趋同，通常围绕以下链路展开：
+These tools are highly convergent in functionality, usually organized around:
 
 ```text
-项目规则 / 记忆
-→ 代码库理解 / 上下文选择
-→ 规划
-→ 文件编辑
+Project rules / memory
+→ Codebase understanding / context selection
+→ Planning
+→ File editing
 → lint / test / diagnostics
 → Git diff / commit / undo
-→ 会话压缩 / 继续任务
+→ Session compaction / continue task
 ```
 
-因此，本项目后续建议优先补齐这些 workflow primitives，而不是立即实现 MCP、向量数据库、IDE 自动补全或复杂多代理编排。
+Therefore, this project recommends prioritizing workflow primitives for the next stage, rather than immediately implementing MCP, vector databases, IDE auto-completion, or complex multi-agent orchestration.
 
-## 总体优先级
+## Overall Priority
 
-| 优先级 | 功能 | 价值 | 复杂度 | 推荐程度 |
-|---|---|---:|---:|---:|
-| P0 | 项目记忆 / 规则文件 | 极高 | 低 | 强烈推荐 |
-| P0 | project context / repo summary | 极高 | 中 | 强烈推荐 |
-| P1 | run_check：测试、lint、typecheck 封装 | 高 | 低-中 | 强烈推荐 |
-| P1 | Git 集成：status、diff、commit、undo | 极高 | 中 | 强烈推荐 |
-| P1 | Hooks：确定性自动化 | 高 | 中 | 推荐 |
-| P1 | diagnose：诊断聚合 | 高 | 中 | 推荐 |
-| P2 | Plan / Act workflow | 中高 | 低-中 | 推荐 |
-| P2 | Todo / task tracker | 中高 | 低 | 推荐 |
-| P2 | Context compaction / session summary | 高 | 中-高 | 推荐 |
-| P2 | Patch queue / apply preview | 中高 | 中 | 推荐 |
-| P2 | ADR / docs helper | 中高 | 低-中 | 推荐 |
-| P2 | 权限系统增强 | 中高 | 中 | 推荐 |
-| P2 | Changelog / release notes | 中 | 低-中 | 可选 |
-| P3 | GitHub issue / PR helper | 中 | 中 | 可选 |
-| P3 | Repo map advanced / embedding search | 中高 | 高 | 暂缓 |
-| P3 | MCP 集成 | 中 | 高 | 暂缓 |
-| P3 | IDE inline edit / autocomplete | 中 | 很高 | 不建议优先做 |
+| Priority | Feature | Value | Complexity | Recommendation |
+|----------|---------|------:|----------:|----------------|
+| P0 | Project memory / rules file | Very High | Low | Strongly recommended |
+| P0 | project context / repo summary | Very High | Medium | Strongly recommended |
+| P1 | run_check: test, lint, typecheck encapsulation | High | Low-Medium | Strongly recommended |
+| P1 | Git integration: status, diff, commit, undo | Very High | Medium | Strongly recommended |
+| P1 | Hooks: deterministic automation | High | Medium | Recommended |
+| P1 | diagnose: diagnostics aggregation | High | Medium | Recommended |
+| P2 | Plan / Act workflow | Medium-High | Low-Medium | Recommended |
+| P2 | Todo / task tracker | Medium-High | Low | Recommended |
+| P2 | Context compaction / session summary | High | Medium-High | Recommended |
+| P2 | Patch queue / apply preview | Medium-High | Medium | Recommended |
+| P2 | ADR / docs helper | Medium-High | Low-Medium | Recommended |
+| P2 | Permission system enhancement | Medium-High | Medium | Recommended |
+| P2 | Changelog / release notes | Medium | Low-Medium | Optional |
+| P3 | GitHub issue / PR helper | Medium | Medium | Optional |
+| P3 | Repo map advanced / embedding search | Medium-High | High | Defer |
+| P3 | MCP integration | Medium | High | Defer |
+| P3 | IDE inline edit / autocomplete | Medium | Very High | Not recommended as priority |
 
-## 推荐最终模块图
+## Recommended Final Module Diagram
 
-如果项目演进为综合 toolkit，可以按能力域组织：
+If the project evolves into a comprehensive toolkit, it can be organized by capability domain:
 
 ```text
 pi-coding-toolkit
@@ -117,20 +117,20 @@ pi-coding-toolkit
    └─ release_notes
 ```
 
-实际代码结构不一定立刻按上述目录重排，但该图可作为功能边界参考。
+The actual code structure doesn't need to immediately follow this directory reorganization, but the diagram serves as a reference for feature boundaries.
 
 ---
 
-# P0 功能
+# P0 Features
 
-## 1. 项目记忆 / 规则文件
+## 1. Project Memory / Rules File
 
-### 背景
+### Background
 
-主流工具几乎都有项目级规则机制：
+Mainstream tools almost all have project-level rules mechanisms:
 
-| 工具 | 类似能力 |
-|---|---|
+| Tool | Similar Capability |
+|------|---------------------|
 | Claude Code | `CLAUDE.md` |
 | Cursor | `.cursorrules` / project rules |
 | Cline | `.clinerules` |
@@ -138,27 +138,27 @@ pi-coding-toolkit
 | Aider | `.aider.conf.yml` / repo instructions |
 | Continue | rules / context providers |
 
-这是投入产出比最高的功能。它能让 agent 每次进入项目时自动获得项目规范、常用命令和维护者偏好。
+This is the highest ROI feature. It allows agents to automatically get project conventions, common commands, and maintainer preferences each time they enter the project.
 
-### 建议文件
+### Suggested Files
 
-可支持以下文件，按层级加载：
+Can support the following files, loaded by hierarchy:
 
 ```text
-~/.pi/toolkit/rules.md          # 全局个人规则
-PROJECT/AGENTS.md               # 项目已有 agent 规则
-PROJECT/.pi/rules.md            # 项目级规则
-PROJECT/.pi/memory.md           # 项目长期记忆
-PROJECT/.pi/instructions.md     # 可选额外指令
+~/.pi/toolkit/rules.md          # Global personal rules
+PROJECT/AGENTS.md               # Project existing agent rules
+PROJECT/.pi/rules.md            # Project-level rules
+PROJECT/.pi/memory.md           # Project long-term memory
+PROJECT/.pi/instructions.md     # Optional additional instructions
 ```
 
-也可以支持更短的根文件：
+Can also support a shorter root file:
 
 ```text
 PROJECT/PI.md
 ```
 
-### 示例
+### Example
 
 ```md
 # Project Rules
@@ -186,9 +186,9 @@ PROJECT/PI.md
 - For documentation changes, run docs check when available.
 ```
 
-### 注入策略
+### Injection Strategy
 
-建议注入顺序：
+Recommended injection order:
 
 ```text
 global rules
@@ -198,38 +198,38 @@ global rules
 → session summary
 ```
 
-如果内容过长，需要截断或总结。
+If content is too long, truncate or summarize.
 
-### 推荐工具/命令
+### Recommended Tool/Command
 
 ```ts
 project_rules({ action: "show" | "reload" | "paths" })
 ```
 
-或命令：
+Or command:
 
 ```text
 /toolkit rules
 /toolkit rules reload
 ```
 
-### 优先级
+### Priority
 
-P0。应作为下一阶段最先实现的功能之一。
+P0. Should be one of the first features implemented in the next stage.
 
-## 2. Project Context / 项目上下文包
+## 2. Project Context / Project Context Package
 
-### 背景
+### Background
 
-目前 toolkit 已有 subagents、web 和 LSP，但还缺少一个将“项目当前状态”整理成紧凑上下文的能力。
+Currently the toolkit has subagents, web, and LSP, but is missing an ability to consolidate "current project state" into a compact context.
 
-类似能力包括：
+Similar capabilities include:
 
-- Aider 的 repo map。
-- Cursor / Continue 的 codebase context。
-- Claude Code 的项目上下文与文件引用。
+- Aider's repo map.
+- Cursor / Continue's codebase context.
+- Claude Code's project context and file references.
 
-### 建议工具
+### Suggested Tool
 
 ```ts
 project_context({
@@ -241,16 +241,16 @@ project_context({
 })
 ```
 
-### 模式说明
+### Mode Description
 
-| mode | 说明 |
-|---|---|
-| `summary` | 返回项目结构、包信息、主要目录、常用命令 |
-| `files` | 汇总指定文件的摘要、symbols、导入关系 |
-| `health` | 汇总 git status、LSP diagnostics、check 命令结果 |
-| `task` | 根据任务描述自动寻找相关文件并生成任务上下文 |
+| mode | Description |
+|------|-------------|
+| `summary` | Returns project structure, package info, main directories, common commands |
+| `files` | Summarizes specified files' summaries, symbols, import relationships |
+| `health` | Summarizes git status, LSP diagnostics, check command results |
+| `task` | Automatically finds relevant files based on task description and generates task context |
 
-### 输出示例
+### Output Example
 
 ```text
 Project: pi-subagents
@@ -274,35 +274,35 @@ Git:
 - modified docs/adr/0005-evolve-into-devkit-pi.md
 ```
 
-### 实现建议
+### Implementation Suggestions
 
-第一版无需复杂索引，直接组合：
+Phase 1 doesn't need complex indexing, directly combine:
 
 - `package.json`
 - `AGENTS.md`
 - `.pi/rules.md`
 - `docs/guides/goals-and-scope.md`
-- `find` / `rg` / 文件树
+- `find` / `rg` / file tree
 - LSP `symbols`
 - `git status`
 
-后续再考虑 import graph、PageRank 或 embedding search。
+Consider import graph, PageRank, or embedding search later.
 
-### 优先级
+### Priority
 
-P0。
+P0.
 
 ---
 
-# P1 功能
+# P1 Features
 
-## 3. run_check：检查命令封装
+## 3. run_check: Check Command Encapsulation
 
-### 背景
+### Background
 
-agent 可以直接用 bash 跑命令，但封装为专门工具更稳定、更安全、更节省 token。
+Agents can directly run commands via bash, but encapsulating as a dedicated tool is more stable, secure, and token-efficient.
 
-### 建议工具
+### Suggested Tool
 
 ```ts
 run_check({
@@ -314,7 +314,7 @@ run_check({
 })
 ```
 
-### 配置
+### Configuration
 
 ```json
 {
@@ -329,9 +329,9 @@ run_check({
 }
 ```
 
-### 输出目标
+### Output Target
 
-不要直接返回完整 stdout/stderr，而应提取摘要：
+Don't directly return full stdout/stderr, but extract summary:
 
 ```text
 Typecheck failed: 3 errors
@@ -346,19 +346,19 @@ Suggested next step:
 - Update ToolkitConfig normalization and ResolvedToolkitConfig types.
 ```
 
-### 优先级
+### Priority
 
-P1。实现复杂度低，日常收益高。
+P1. Low implementation complexity, high daily benefit.
 
-## 4. Git 集成
+## 4. Git Integration
 
-### 背景
+### Background
 
-Git 集成是 Aider、Claude Code 等 coding agent 的核心体验之一。它能让 agent 的修改可追踪、可提交、可撤销。
+Git integration is one of the core experiences in Aider, Claude Code and other coding agents. It allows agent modifications to be trackable, committable, and undoable.
 
-### 建议工具
+### Suggested Tools
 
-可拆成多个小工具：
+Can be split into multiple small tools:
 
 ```ts
 git_status()
@@ -367,7 +367,7 @@ git_commit({ message?: string, autoMessage?: boolean })
 git_undo({ scope?: "last-ai-change" | "working-tree" })
 ```
 
-也可以统一为：
+Can also unify:
 
 ```ts
 git_tool({
@@ -378,11 +378,11 @@ git_tool({
 })
 ```
 
-### 推荐能力
+### Recommended Capabilities
 
-#### 修改前 snapshot
+#### Pre-modification snapshot
 
-在 agent 开始修改前记录：
+Before agent starts modifying, record:
 
 ```text
 HEAD commit
@@ -390,7 +390,7 @@ working tree status
 modified files
 ```
 
-#### 修改后 diff summary
+#### Post-modification diff summary
 
 ```text
 Changed files:
@@ -402,9 +402,9 @@ Summary:
 - Updated web provider configuration.
 ```
 
-#### 自动 commit message
+#### Auto commit message
 
-生成 conventional commit 风格：
+Generate conventional commit style:
 
 ```text
 feat: add namespace config for toolkit modules
@@ -412,31 +412,31 @@ feat: add namespace config for toolkit modules
 
 #### Undo
 
-可选实现：
+Optional implementation:
 
-- 基于 git restore。
-- 基于保存 patch。
-- 基于 AI change snapshot。
+- Based on git restore.
+- Based on saved patches.
+- Based on AI change snapshot.
 
-### 安全策略
+### Security Strategy
 
-默认不自动 commit，除非用户显式调用或配置开启。
+Don't auto-commit by default unless user explicitly calls or config enables.
 
-### 优先级
+### Priority
 
-P1。
+P1.
 
-## 5. Hooks：确定性自动化
+## 5. Hooks: Deterministic Automation
 
-### 背景
+### Background
 
-Prompt 是概率性的，模型可能忘记运行 format/test；hook 是确定性的，每次触发都会执行。
+Prompts are probabilistic; models may forget to run format/test. Hooks are deterministic and execute every time they're triggered.
 
-Claude Code 的 hooks 机制证明该能力很实用。
+Claude Code's hooks mechanism proves this capability is useful.
 
-### 建议事件
+### Suggested Events
 
-第一版只支持少量高价值事件：
+Phase 1 only supports a small number of high-value events:
 
 ```text
 after_edit
@@ -444,7 +444,7 @@ agent_end
 before_commit
 ```
 
-后续可扩展：
+Can be extended later:
 
 ```text
 session_start
@@ -454,7 +454,7 @@ after_write
 session_end
 ```
 
-### 配置示例
+### Configuration Example
 
 ```json
 {
@@ -482,21 +482,21 @@ session_end
 }
 ```
 
-### 安全策略
+### Security Strategy
 
-- hooks 默认关闭或仅允许白名单命令。
-- hook 输出需要截断。
-- hook 失败应返回明确错误，但不应导致 extension 崩溃。
+- Hooks are disabled by default or only allow whitelisted commands.
+- Hook output needs truncation.
+- Hook failures should return clear errors but not crash the extension.
 
-### 优先级
+### Priority
 
-P1。
+P1.
 
-## 6. diagnose：诊断聚合
+## 6. diagnose: Diagnostics Aggregation
 
-### 背景
+### Background
 
-合并 LSP 后，诊断来源会变多：
+After merging LSP, diagnostic sources increase:
 
 ```text
 LSP diagnostics
@@ -507,9 +507,9 @@ LSP diagnostics
 + package manifest checks
 ```
 
-agent 如果分别调用这些工具再拼接结果，容易浪费 token。应提供统一诊断聚合工具。
+If agents call these tools separately and concatenate results, it wastes tokens. Should provide a unified diagnostics aggregation tool.
 
-### 建议工具
+### Suggested Tool
 
 ```ts
 diagnose({
@@ -519,7 +519,7 @@ diagnose({
 })
 ```
 
-### 输出示例
+### Output Example
 
 ```text
 Workspace Health: failed
@@ -540,30 +540,30 @@ Suggested next step:
 - Fix config type definitions first, then rerun typecheck.
 ```
 
-### 优先级
+### Priority
 
-P1/P2。建议在 LSP tool 和 run_check 稳定后实现。
+P1/P2. Recommend implementing after LSP tool and run_check are stable.
 
 ---
 
-# P2 功能
+# P2 Features
 
-## 7. Plan / Act workflow
+## 7. Plan / Act Workflow
 
-### 背景
+### Background
 
-许多工具都区分规划和执行：
+Many tools distinguish planning and execution:
 
-| 工具 | 类似能力 |
-|---|---|
+| Tool | Similar Capability |
+|------|---------------------|
 | Cline | Plan / Act |
 | Roo Code | Architect / Code |
 | Aider | Architect mode |
 | Claude Code | plan mode / extended thinking |
 
-当前项目已有 `implementer` 子代理，可进一步产品化为 plan workflow。
+The current project already has an `implementer` subagent, which can be further productized as a plan workflow.
 
-### 建议工具
+### Suggested Tool
 
 ```ts
 create_plan({
@@ -574,7 +574,7 @@ create_plan({
 })
 ```
 
-### 输出结构
+### Output Structure
 
 ```json
 {
@@ -587,28 +587,28 @@ create_plan({
 }
 ```
 
-### 推荐工作流
+### Recommended Workflow
 
 ```text
-用户提出任务
+User proposes task
 → create_plan
-→ reviewer 审查 plan
-→ 用户确认
-→ 主代理执行
+→ reviewer reviews plan
+→ User confirms
+→ Main agent executes
 → run_check / diagnose
 ```
 
-### 优先级
+### Priority
 
-P2。
+P2.
 
-## 8. Todo / task tracker
+## 8. Todo / Task Tracker
 
-### 背景
+### Background
 
-长任务需要状态。Todo tracker 能让 agent 明确当前进行到哪一步。
+Long tasks need status. Todo tracker allows agents to clearly know which step they're at.
 
-### 建议工具
+### Suggested Tool
 
 ```ts
 todo({
@@ -619,21 +619,21 @@ todo({
 })
 ```
 
-### 存储
+### Storage
 
-简单存到：
+Simply store to:
 
 ```text
 .pi/todo.json
 ```
 
-或 markdown：
+Or markdown:
 
 ```text
 .pi/todo.md
 ```
 
-### 示例
+### Example
 
 ```text
 [done] Inspect current config structure
@@ -643,22 +643,22 @@ todo({
 [pending] Update README
 ```
 
-### 优先级
+### Priority
 
-P2。复杂度低，适合长任务。
+P2. Low complexity, good for long tasks.
 
-## 9. Context compaction / session summary
+## 9. Context Compaction / Session Summary
 
-### 背景
+### Background
 
-当会话变长时，agent 会忘记早期决策。主流工具常见能力包括：
+When sessions grow long, agents forget early decisions. Common capabilities in mainstream tools include:
 
-- 自动总结旧对话。
-- 手动 `/compact`。
-- session summary。
-- handoff summary。
+- Auto-summarize old conversations.
+- Manual `/compact`.
+- Session summary.
+- Handoff summary.
 
-### 建议工具
+### Suggested Tool
 
 ```ts
 compact_context({
@@ -667,7 +667,7 @@ compact_context({
 })
 ```
 
-### 输出示例
+### Output Example
 
 ```md
 # Session Summary
@@ -694,22 +694,22 @@ Merge pi-lsp into pi-subagents as personal pi coding toolkit.
 3. Modularize extension index.
 ```
 
-### 存储位置
+### Storage Location
 
 ```text
 .pi/session-summary.md
 .pi/memory/YYYY-MM-DD.md
 ```
 
-### 优先级
+### Priority
 
-P2。长期价值高。
+P2. High long-term value.
 
-## 10. Patch queue / apply preview
+## 10. Patch Queue / Apply Preview
 
-### 背景
+### Background
 
-许多 coding tools 的核心体验是：
+The core experience in many coding tools is:
 
 ```text
 propose patch
@@ -717,9 +717,9 @@ propose patch
 → accept/reject
 ```
 
-当前项目强调 readonly planning 和安全边界，因此 patch queue 很适合。
+The current project emphasizes readonly planning and secure boundaries, so patch queue is a good fit.
 
-### 建议工具
+### Suggested Tool
 
 ```ts
 patch_queue({
@@ -729,21 +729,21 @@ patch_queue({
 })
 ```
 
-### 用法
+### Usage
 
-`implementer` 子代理先输出 patch plan，不直接写文件。主代理或用户再决定是否 apply。
+`implementer` subagent first outputs patch plan without directly writing files. Main agent or user then decides whether to apply.
 
-### 优先级
+### Priority
 
-P2。
+P2.
 
-## 11. ADR / docs helper
+## 11. ADR / Docs Helper
 
-### 背景
+### Background
 
-当前项目已经使用 ADR，并且非常依赖文档同步。可以提供专用 docs tooling。
+The current project already uses ADR and heavily relies on documentation sync. Can provide dedicated docs tooling.
 
-### 建议工具
+### Suggested Tools
 
 ```ts
 adr({
@@ -759,13 +759,13 @@ docs_tool({
 })
 ```
 
-### ADR 示例
+### ADR Example
 
 ```text
 adr({ action: "new", title: "Evolve into personal pi coding toolkit" })
 ```
 
-生成：
+Generates:
 
 ```md
 ---
@@ -788,17 +788,17 @@ date: 2026-05-10
 ...
 ```
 
-### 优先级
+### Priority
 
-P2。与当前项目工作流高度匹配。
+P2. Highly matched with current project workflow.
 
-## 12. 权限系统增强
+## 12. Permission System Enhancement
 
-### 背景
+### Background
 
-当前项目已有 readonly subagents 和 `subagents.allowWrite`，但综合 toolkit 可能需要更细粒度的权限。
+The current project already has readonly subagents and `subagents.allowWrite`, but a comprehensive toolkit may need more granular permissions.
 
-### 简化配置
+### Simplified Configuration
 
 ```json
 {
@@ -830,13 +830,13 @@ P2。与当前项目工作流高度匹配。
 }
 ```
 
-### 优先级
+### Priority
 
-P2。建议在引入更多写操作或 bash-like hooks 前实现。
+P2. Recommend implementing before introducing more write operations or bash-like hooks.
 
-## 13. Changelog / release notes
+## 13. Changelog / Release Notes
 
-### 建议工具
+### Suggested Tool
 
 ```ts
 release_notes({
@@ -845,24 +845,24 @@ release_notes({
 })
 ```
 
-### 能力
+### Capabilities
 
-- 从 git commits 生成 release notes。
-- 从 changed files 生成 changelog entry。
-- 检查 package.json version。
-- 提醒 README / docs 是否需要更新。
+- Generate release notes from git commits.
+- Generate changelog entry from changed files.
+- Check package.json version.
+- Remind to update README / docs.
 
-### 优先级
+### Priority
 
-P2/P3。适合发布 npm 包时使用。
+P2/P3. Suitable for publishing npm packages.
 
 ---
 
-# P3 功能
+# P3 Features
 
-## 14. GitHub issue / PR helper
+## 14. GitHub Issue / PR Helper
 
-### 建议工具
+### Suggested Tools
 
 ```ts
 github_issue({
@@ -877,7 +877,7 @@ pr_description({
 })
 ```
 
-### 输出示例
+### Output Example
 
 ```md
 ## Summary
@@ -891,19 +891,19 @@ pr_description({
 - Documentation only.
 ```
 
-### 优先级
+### Priority
 
-P3。除非你高频使用 GitHub PR workflow，否则不是下一阶段重点。
+P3. Not a next-stage priority unless you frequently use GitHub PR workflow.
 
-## 15. Repo map advanced / embedding search
+## 15. Repo Map Advanced / Embedding Search
 
-### 背景
+### Background
 
-Aider 的 repo map 很强，使用 tree-sitter 和 PageRank。Continue 等工具使用向量检索。
+Aider's repo map is powerful, using tree-sitter and PageRank. Continue and other tools use vector retrieval.
 
-### 建议
+### Suggestion
 
-不要一开始做 embedding search。先做轻量版：
+Don't start with embedding search. First do a lightweight version:
 
 ```ts
 repo_map({
@@ -913,7 +913,7 @@ repo_map({
 })
 ```
 
-结合 LSP symbols 即可生成：
+Combined with LSP symbols can generate:
 
 ```text
 src/
@@ -928,94 +928,94 @@ src/
 │  │  - normalizeWebToolsConfig()
 ```
 
-高级功能包括：
+Advanced capabilities include:
 
-- import graph。
-- 引用热度。
-- task-based related file selection。
-- embedding search。
+- Import graph.
+- Reference热度.
+- Task-based related file selection.
+- Embedding search.
 
-### 优先级
+### Priority
 
-轻量 repo map：P2。
-高级 repo map / embedding：P3。
+Lightweight repo map: P2.
+Advanced repo map / embedding: P3.
 
-## 16. MCP 集成
+## 16. MCP Integration
 
-### 背景
+### Background
 
-MCP 是社区热门方向，Claude Code、Cline、Continue 等工具都支持或集成相关生态。
+MCP is a hot community direction; Claude Code, Cline, Continue and other tools all support or integrate related ecosystems.
 
-### 暂缓原因
+### Reason for Deferral
 
-- 实现复杂度高。
-- 安全边界复杂。
-- pi 已有 extension/tool 机制。
-- 当前项目更缺 workflow primitives，而不是外部生态协议。
+- High implementation complexity.
+- Complex security boundaries.
+- pi already has extension/tool mechanisms.
+- Current project needs workflow primitives more than external ecosystem protocols.
 
-### 何时考虑
+### When to Consider
 
-只有当明确需要接入以下服务时再考虑：
+Only consider when there's a clear need to integrate:
 
 - GitHub
 - Linear
 - Notion
 - browser / Playwright
 - database
-- 自定义 MCP servers
+- Custom MCP servers
 
-### 优先级
+### Priority
 
-P3。
+P3.
 
-## 17. IDE inline edit / autocomplete
+## 17. IDE Inline Edit / Autocomplete
 
-### 背景
+### Background
 
-Cursor、Continue 等工具的自动补全体验很强，但这属于 IDE 集成范畴。
+Cursor, Continue and other tools have strong auto-completion experiences, but this falls into IDE integration territory.
 
-### 不建议优先做的原因
+### Reasons Not Recommended as Priority
 
-- 需要编辑器插件或深度 UI 集成。
-- 与 pi CLI / TUI coding workflow 不完全匹配。
-- 实现复杂度很高。
+- Requires editor plugin or deep UI integration.
+- Doesn't fully match pi CLI / TUI coding workflow.
+- Very high implementation complexity.
 
-### 优先级
+### Priority
 
-P3，当前不建议。
+P3, currently not recommended.
 
 ---
 
-# 推荐实施路线
+# Recommended Implementation Roadmap
 
-## Phase A：个人工作流基础设施
+## Phase A: Personal Workflow Infrastructure
 
-优先实现：
+Prioritize implementing:
 
 ```text
-1. 项目规则 / memory
+1. Project rules / memory
 2. project_context
 3. run_check
 4. git_tool
 ```
 
-目标：让 agent 每次进入项目都知道规则、知道项目结构、能稳定运行检查、能查看和管理 diff。
+Goal: Make agents know project rules, project structure, can run checks reliably, and can view and manage diffs every time they enter the project.
 
-## Phase B：自动化与诊断
+## Phase B: Automation and Diagnostics
 
-实现：
+Implement:
 
 ```text
 5. hooks
 6. diagnose
-7. 权限系统增强
+7. Permission system enhancement
 ```
 
-目标：把“希望模型记得做的事”变成系统确定执行的事。
+Goal: Turn "things the model should remember to do" into system-determined executions.
 
-## Phase C：长任务支持
+## Phase C: Long Task Support
 
-实现：
+Implement:
 
 ```text
 8. todo tracker
@@ -1024,11 +1024,11 @@ P3，当前不建议。
 11. patch_queue
 ```
 
-目标：让 agent 更稳定地处理跨多轮、多文件、多阶段任务。
+Goal: Enable agents to handle cross-session, multi-file, multi-phase tasks more stably.
 
-## Phase D：文档与发布辅助
+## Phase D: Documentation and Release Assistance
 
-实现：
+Implement:
 
 ```text
 12. adr
@@ -1037,11 +1037,11 @@ P3，当前不建议。
 15. pr_description
 ```
 
-目标：降低维护文档、ADR、release notes 的成本。
+Goal: Reduce costs of maintaining documentation, ADR, and release notes.
 
-## Phase E：高级生态能力
+## Phase E: Advanced Ecosystem Capabilities
 
-仅在明确需要时实现：
+Implement only when there's clear need:
 
 ```text
 16. repo map advanced / embedding search
@@ -1051,36 +1051,36 @@ P3，当前不建议。
 
 ---
 
-# 最小推荐下一步
+# Minimal Recommended Next Steps
 
-如果只选 3 个功能，建议按此顺序：
+If only choosing 3 features, recommend in this order:
 
 ```text
-P0-1: .pi/rules.md / PI.md 项目规则自动注入
-P0-2: project_context 工具
-P1-1: run_check 工具
+P0-1: .pi/rules.md / PI.md Project rules auto-injection
+P0-2: project_context tool
+P1-1: run_check tool
 ```
 
-如果只选 5 个功能，建议：
+If choosing 5 features, recommend:
 
 ```text
-1. 项目规则 / memory
+1. Project rules / memory
 2. project_context
 3. run_check
 4. git_tool
 5. hooks
 ```
 
-这些功能能立即提升个人使用体验，并且不会破坏现有 subagent + web + LSP 架构。
+These features can immediately improve personal usage experience and won't break the existing subagent + web + LSP architecture.
 
 ---
 
-# 当前建议
+# Current Recommendations
 
-在 `pi-subagents` 和 `pi-lsp` 合并为个人综合 pi coding toolkit 后，下一阶段不要急于实现复杂生态功能。建议优先补齐：
+After merging `pi-subagents` and `pi-lsp` into a personal comprehensive pi coding toolkit, the next stage should not rush to implement complex ecosystem features. Recommend prioritizing:
 
 ```text
-规则 → 上下文 → 检查 → Git → hooks → 诊断
+Rules → Context → Check → Git → Hooks → Diagnose
 ```
 
-这条路线最符合个人 coding agent toolkit 的高频需求，也最容易与现有模块组合。
+This route best matches high-frequency needs of personal coding agent toolkit and is easiest to combine with existing modules.

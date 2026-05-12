@@ -1,5 +1,5 @@
 ---
-status: historical
+status: deprecated
 audience: maintainer
 last_verified: 2026-05-12
 language: english

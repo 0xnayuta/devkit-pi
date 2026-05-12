@@ -2,6 +2,7 @@ import { defineConfig } from "vitepress";
 
 const nav = [
   { text: "Guide", link: "/" },
+  { text: "Development", link: "/maintain/" },
   { text: "Reference", link: "/reference/" },
   { text: "ADRs", link: "/adr/" },
   { text: "GitHub", link: "https://github.com/0xnayuta/devkit-pi" },
@@ -9,6 +10,7 @@ const nav = [
 
 const zhNav = [
   { text: "指南", link: "/zh/" },
+  { text: "开发参考", link: "/zh/maintain/" },
   { text: "参考", link: "/zh/reference/" },
   { text: "ADRs", link: "/zh/adr/" },
   { text: "GitHub", link: "https://github.com/0xnayuta/devkit-pi" },
@@ -62,6 +64,7 @@ const adrSidebar = [
       { text: "ADR 0003 — Autonomous Subagent Triggering", link: "/adr/0003-autonomous-subagent-triggering" },
       { text: "ADR 0004 — Bundled Readonly Web Tools", link: "/adr/0004-bundled-readonly-web-tools" },
       { text: "ADR 0005 — Evolve into devkit-pi", link: "/adr/0005-evolve-into-devkit-pi" },
+      { text: "ADR 0006 — Architecture Consistency over Legacy Layout", link: "/adr/0006-architecture-consistency-over-legacy-layout" },
     ],
   },
 ];
@@ -76,6 +79,7 @@ const zhAdrSidebar = [
       { text: "ADR 0003 — 自主触发子代理的改进方案", link: "/zh/adr/0003-autonomous-subagent-triggering" },
       { text: "ADR 0004 — 内置极简 readonly web tools", link: "/zh/adr/0004-bundled-readonly-web-tools" },
       { text: "ADR 0005 — 从 pi-subagents 演进为 devkit-pi", link: "/zh/adr/0005-evolve-into-devkit-pi" },
+      { text: "ADR 0006 — 架构一致性优先于遗留布局", link: "/zh/adr/0006-architecture-consistency-over-legacy-layout" },
     ],
   },
 ];
@@ -86,11 +90,7 @@ const guideSidebar = [
     items: [
       { text: "Overview", link: "/" },
       { text: "Goals and Scope", link: "/guides/goals-and-scope" },
-      { text: "Architecture", link: "/guides/architecture" },
-      { text: "Extension API", link: "/guides/extension-api" },
       { text: "Security Model", link: "/guides/security-model" },
-      { text: "Testing", link: "/guides/testing" },
-      { text: "Release Checklist", link: "/guides/release-checklist" },
       { text: "fetch_content Enhancement", link: "/guides/fetch_content-enhancement" },
     ],
   },
@@ -102,12 +102,40 @@ const zhGuideSidebar = [
     items: [
       { text: "概览", link: "/zh/" },
       { text: "目标与范围", link: "/zh/guides/goals-and-scope" },
+      { text: "安全模型", link: "/zh/guides/security-model" },
+      { text: "fetch_content 增强", link: "/zh/guides/fetch_content-enhancement" },
+    ],
+  },
+];
+
+const maintainSidebar = [
+  {
+    text: "Development",
+    items: [
+      { text: "Overview", link: "/maintain/" },
+      { text: "Architecture", link: "/guides/architecture" },
+      { text: "Extension API", link: "/guides/extension-api" },
+      { text: "Testing", link: "/guides/testing" },
+      { text: "Release Checklist", link: "/guides/release-checklist" },
+      { text: "Issue Log", link: "/issues/" },
+      { text: "Planning", link: "/planning/" },
+      { text: "Archive", link: "/archive/" },
+    ],
+  },
+];
+
+const zhMaintainSidebar = [
+  {
+    text: "开发参考",
+    items: [
+      { text: "概览", link: "/zh/maintain/" },
       { text: "架构", link: "/zh/guides/architecture" },
       { text: "扩展 API", link: "/zh/guides/extension-api" },
-      { text: "安全模型", link: "/zh/guides/security-model" },
       { text: "测试", link: "/zh/guides/testing" },
       { text: "发布清单", link: "/zh/guides/release-checklist" },
-      { text: "fetch_content 增强", link: "/zh/guides/fetch_content-enhancement" },
+      { text: "问题日志", link: "/zh/issues/" },
+      { text: "规划文档", link: "/zh/planning/" },
+      { text: "归档文档", link: "/zh/archive/" },
     ],
   },
 ];
@@ -148,6 +176,7 @@ export default defineConfig({
         sidebar: {
           "/reference/": referenceSidebar,
           "/adr/": adrSidebar,
+          "/maintain/": maintainSidebar,
           "/": guideSidebar,
         },
       },
@@ -162,6 +191,7 @@ export default defineConfig({
         sidebar: {
           "/zh/reference/": zhReferenceSidebar,
           "/zh/adr/": zhAdrSidebar,
+          "/zh/maintain/": zhMaintainSidebar,
           "/zh/": zhGuideSidebar,
         },
       },

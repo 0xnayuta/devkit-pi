@@ -1,92 +1,92 @@
 ---
 status: proposed
 audience: maintainer
-last_verified: 2026-05-11
-language: chinese
+last_verified: 2026-05-12
+language: english
 ---
 
-# 二、新增 `convert_content` 工具计划
+# Plan: Add `convert_content` Tool
 
 > **⚠️ Status: Proposed — not current behavior.** This document describes a future tool plan. devkit-pi has **not** implemented or publicly registered a `convert_content` tool. The features, interfaces, and behavior described here are **not part of the current public API**. For the current public contract, see [Reference index](../reference/README.md), `src/`, and `tests/`.
 
-## 目标定位
+## Positioning
 
-`convert_content` 是一个新的 agent 工具，负责：
-
-```text
-复杂文件 / 本地文件 / 下载后的远程文件 → Markdown
-```
-
-它的定位不是 web fetch，而是 **document conversion**。
-
-建议工具体系变成：
+`convert_content` is a new agent tool responsible for:
 
 ```text
-web_search       搜索网页
-fetch_content    读取 URL 的轻量内容
-convert_content  复杂文件转 Markdown
+Complex files / local files / downloaded remote files → Markdown
 ```
 
-`convert_content` 第一版建议只接入 **MarkItDown CLI provider**。
+Its positioning is not web fetch, but **document conversion**.
+
+The suggested tool system becomes:
+
+```text
+web_search       — search the web
+fetch_content    — lightweight URL content fetching
+convert_content  — complex file to Markdown conversion
+```
+
+Phase 1 of `convert_content` recommends only integrating the **MarkItDown CLI provider**.
 
 ---
 
-## 第一版最小可行方案
+## Phase 1 Minimum Viable Scope
 
-第一版目标：
+Phase 1 goal:
 
 ```text
-通过 MarkItDown CLI，把本地文件或远程 URL 转换成 Markdown
+Convert local files or remote URLs to Markdown via MarkItDown CLI
 ```
 
-支持输入：
+Supported inputs:
 
 ```text
 file_path
 url
 ```
 
-输出：
+Outputs:
 
 ```text
 Markdown content
-provider 信息
-source 信息
-truncated 标记
+provider information
+source information
+truncated flag
 metadata
 ```
 
-不直接支持：
+Not directly supported:
 
 ```text
 OCR
-音频转写
-LLM 图片描述
-ZIP 递归解包
-多 provider
-复杂 chunking
-结构化元素模型
+Audio transcription
+LLM image description
+ZIP recursive extraction
+Multiple providers
+Complex chunking
+Structured element models
 ```
 
 ---
 
-## 推荐阶段拆分
+## Recommended Phase Breakdown
 
-## Phase 1：定义工具边界与 Schema
+## Phase 1: Define Tool Boundary and Schema
 
-### 目标
+### Goal
 
-新增独立工具：
+Add an independent tool:
 
 ```text
 convert_content
 ```
 
-不要命名成 `markitdown`，避免绑定具体实现。
+Do not name it `markitdown` to avoid binding to a specific implementation.
 
-### 输入设计
+### Input Design
 
-第一版建议支持：
+Phase 1 recommends supporting:
 
 ```ts
 {
@@ -100,7 +100,7 @@ convert_content
 }
 ```
 
-也可以更简单：
+Can also be simpler:
 
 ```ts
 {
@@ -111,9 +111,9 @@ convert_content
 }
 ```
 
-但从长期看，`source.type` 更清楚。
+But `source.type` is clearer from a long-term perspective.
 
-### 输出设计
+### Output Design
 
 ```ts
 {
@@ -131,88 +131,88 @@ convert_content
 }
 ```
 
-### 执行边界
+### Execution Boundary
 
-第一版只输出 Markdown，不做 JSON/chunks/assets。
+Phase 1 only outputs Markdown, not JSON/chunks/assets.
 
 ---
 
-## Phase 2：实现 MarkItDown CLI Provider
+## Phase 2: Implement MarkItDown CLI Provider
 
-### 目标
+### Goal
 
-通过外部命令调用 MarkItDown，不把 Python 依赖强塞进 devkit-pi。
+Invoke MarkItDown via external command, without forcing Python dependencies into devkit-pi's Node dependency chain.
 
-### 主要内容
+### Main Content
 
-实现：
+Implement:
 
 ```text
 MarkItDownProvider
 ```
 
-职责：
+Responsibilities:
 
 ```text
-检查 markitdown 命令是否存在
-调用 markitdown input-file
-捕获 stdout/stderr
-处理 exit code
-处理 timeout
-处理输出截断
-返回 Markdown
+Check if markitdown command exists
+Call markitdown input-file
+Capture stdout/stderr
+Handle exit code
+Handle timeout
+Handle output truncation
+Return Markdown
 ```
 
-### 为什么用 CLI
+### Why CLI?
 
-因为 devkit-pi 是 pi coding 扩展包，不应该强制所有用户安装 Python 包到 Node 依赖链里。
+Because devkit-pi is a pi coding extension package, it should not force all users to install Python packages into the Node dependency chain.
 
-CLI 方式更适合：
+CLI approach is more suitable for:
 
 ```text
-可选能力
-本地工具链
-用户自行安装
-跨 provider 扩展
+Optional capability
+Local toolchain
+User self-installs
+Cross-provider extension
 ```
 
-### 执行边界
+### Execution Boundary
 
-不自动安装 MarkItDown。只在错误中提示用户如何安装。
+Do not auto-install MarkItDown. Only prompt users on how to install in error messages.
 
 ---
 
-## Phase 3：支持本地 file_path 输入
+## Phase 3: Support Local file_path Input
 
-### 目标
+### Goal
 
-先把最稳定的输入路径跑通。
+First get the most stable input path working.
 
-### 主要内容
+### Main Content
 
-对本地文件：
-
-```text
-检查文件是否存在
-检查是否为文件
-检查文件大小
-检查路径是否允许访问
-调用 markitdown
-限制输出长度
-```
-
-### 安全边界
-
-如果 devkit-pi 有 workspace root 概念，建议默认只允许访问：
+For local files:
 
 ```text
-当前 workspace
-显式允许的路径
+Check if file exists
+Check if it is a file
+Check file size
+Check if path is allowed to access
+Call markitdown
+Limit output length
 ```
 
-避免 agent 任意读取用户系统文件。
+### Security Boundary
 
-可以提供配置：
+If devkit-pi has a workspace root concept, recommend default allowing only access to:
+
+```text
+Current workspace
+Explicitly allowed paths
+```
+
+Avoid agents arbitrarily reading user system files.
+
+Can provide config:
 
 ```json
 {
@@ -222,60 +222,60 @@ CLI 方式更适合：
 }
 ```
 
-### 验收标准
+### Acceptance Criteria
 
-本地 PDF、DOCX、PPTX、XLSX、HTML、Markdown 等文件可以通过 MarkItDown 转成 Markdown。
+Local PDF, DOCX, PPTX, XLSX, HTML, Markdown and other files can be converted to Markdown via MarkItDown.
 
 ---
 
-## Phase 4：支持 URL 输入，但必须先安全下载
+## Phase 4: Support URL Input, but Must First Download Safely
 
-### 目标
+### Goal
 
-允许 agent 对远程文件调用：
+Allow agents to call:
 
 ```text
 convert_content({ url })
 ```
 
-但不要直接把 URL 丢给 MarkItDown。
+for remote files, but don't directly pass URLs to MarkItDown.
 
-### 推荐流程
+### Recommended Flow
 
 ```text
-1. 校验 URL
-2. 使用 devkit-pi 自己的安全下载逻辑下载到 temp file
-3. 应用 maxDownloadBytes
-4. 应用 timeout
-5. 记录 contentType / fileName / fileSize
-6. 调用 MarkItDown 转换 temp file
-7. 删除 temp file
-8. 返回 Markdown
+1. Validate URL
+2. Use devkit-pi's own secure download logic to download to temp file
+3. Apply maxDownloadBytes
+4. Apply timeout
+5. Record contentType / fileName / fileSize
+6. Call MarkItDown to convert temp file
+7. Delete temp file
+8. Return Markdown
 ```
 
-### 为什么不直接给 MarkItDown URL
+### Why Not Directly Give MarkItDown URL?
 
-因为直接交给外部工具会削弱你对这些东西的控制：
+Because directly handing to external tools weakens control over:
 
 ```text
-下载大小
-下载超时
-SSRF 防护
-私网访问限制
-临时文件清理
-错误格式
+Download size
+Download timeout
+SSRF protection
+Private network access restriction
+Temp file cleanup
+Error format
 metadata
 ```
 
-### 执行边界
+### Execution Boundary
 
-第一版 URL 下载不需要支持复杂 cookie、登录、浏览器渲染。
+Phase 1 URL download does not need to support complex cookies, login, or browser rendering.
 
 ---
 
-## Phase 5：配置系统
+## Phase 5: Configuration System
 
-### 建议配置
+### Suggested Configuration
 
 ```json
 {
@@ -292,38 +292,38 @@ metadata
 }
 ```
 
-### 执行边界
+### Execution Boundary
 
-默认启用还是默认关闭，需要看你的 devkit-pi 产品策略。
+Whether to enable by default or disable by default depends on your devkit-pi product strategy.
 
-我的建议：
+My recommendation:
 
 ```text
-工具注册可以默认存在
-实际执行时如果 markitdown 不存在，返回友好错误
-不强制用户安装
+Tool registration can exist by default
+If markitdown doesn't exist at actual execution, return friendly error
+Don't force users to install
 ```
 
-这样最符合“个人工作流综合扩展包”的定位。
+This best fits the positioning of "personal workflow comprehensive extension package".
 
 ---
 
-## Phase 6：与 `fetch_content` 联动
+## Phase 6: Integration with `fetch_content`
 
-### 目标
+### Goal
 
-让两个工具协作，但不要互相耦合太深。
+Let the two tools collaborate, but don't couple them too deeply.
 
-### 推荐方式
+### Recommended Approach
 
-当 `fetch_content` 遇到复杂类型时，返回错误或结构化提示：
+When `fetch_content` encounters complex types, return error or structured hint:
 
 ```text
 Unsupported content type: application/pdf.
 This content type is better handled by convert_content.
 ```
 
-如果 tool schema 支持结构化错误，可以加：
+If tool schema supports structured errors, can add:
 
 ```json
 {
@@ -333,11 +333,11 @@ This content type is better handled by convert_content.
 }
 ```
 
-### 是否支持 `fetch_content.autoConvert`
+### Whether to Support `fetch_content.autoConvert`
 
-第一版不建议默认支持自动转换。
+Phase 1 does not recommend supporting auto-conversion by default.
 
-可以后续再做：
+Can do later:
 
 ```json
 {
@@ -346,85 +346,85 @@ This content type is better handled by convert_content.
 }
 ```
 
-但第一版最好保持明确：
+But Phase 1 is better to keep explicit:
 
 ```text
-fetch_content 失败并建议 convert_content
-agent 再显式调用 convert_content
+fetch_content fails and suggests convert_content
+Agent explicitly calls convert_content
 ```
 
-这样更可控，也方便调试。
+This is more controllable and easier to debug.
 
 ---
 
-## Phase 7：测试与文档
+## Phase 7: Testing and Documentation
 
-### 测试范围
+### Testing Scope
 
-至少覆盖：
+At minimum cover:
 
 ```text
 markitdown command missing
-本地 file_path 成功转换，使用 mock command
-url 下载到 temp file 后转换
-转换 timeout
-输出截断
-下载大小限制
-临时文件清理
-stderr 摘要
-file_path 不存在
-不允许访问 workspace 外路径
-unsupported fetch_content 提示 convert_content
+Local file_path successful conversion, using mock command
+URL download to temp file then convert
+Conversion timeout
+Output truncation
+Download size limit
+Temp file cleanup
+stderr summary
+file_path does not exist
+Workspace-external path access not allowed
+Unsupported fetch_content suggesting convert_content
 ```
 
-### 文档内容
+### Documentation Content
 
-文档应说明：
+Documentation should explain:
 
 ```text
-convert_content 是可选工具
-需要用户自行安装 MarkItDown CLI
-它和 fetch_content 的区别
-支持哪些输入
-第一版不支持哪些高级能力
-如何配置 command / timeout / maxOutputChars
-如何处理远程 URL
+convert_content is an optional tool
+Requires users to self-install MarkItDown CLI
+Difference from fetch_content
+What inputs are supported
+What advanced capabilities Phase 1 does not support
+How to configure command / timeout / maxOutputChars
+How to handle remote URLs
 ```
 
 ---
 
-## `convert_content` 第一版边界总结
+## `convert_content` Phase 1 Boundary Summary
 
-### 做
+### Do
 
 ```text
-新增独立 agent 工具 convert_content
-接入 MarkItDown CLI
-支持本地 file_path
-支持远程 url，但先安全下载到临时文件
-输出 Markdown
-支持 timeout
-支持 maxDownloadBytes
-支持 maxOutputChars
-支持 command missing 友好错误
-支持配置项
-支持基础测试和文档
+Add new independent agent tool convert_content
+Integrate MarkItDown CLI
+Support local file_path
+Support remote url, but first download securely to temp file
+Output Markdown
+Support timeout
+Support maxDownloadBytes
+Support maxOutputChars
+Support command missing friendly error
+Support config items
+Support basic tests and documentation
 ```
 
-### 不做
+### Don't Do
 
 ```text
-不把 MarkItDown 放进 fetch_content
-不自动安装 MarkItDown
-不直接调用 Python API
-不做 OCR 配置
-不做音频转写
-不做图片理解
-不做 ZIP 递归解析
-不做多 provider
-不做复杂 chunking
-不做结构化元素模型
-不引入 Docling / Marker / Tika / Pandoc
+Don't put MarkItDown into fetch_content
+Don't auto-install MarkItDown
+Don't directly call Python API
+Don't do OCR config
+Don't do audio transcription
+Don't do image understanding
+Don't do ZIP recursive parsing
+Don't do multiple providers
+Don't do complex chunking
+Don't do structured element models
+Don't introduce Docling / Marker / Tika / Pandoc
 ```
 
 ---

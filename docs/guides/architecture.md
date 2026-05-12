@@ -7,7 +7,7 @@ language: english
 
 # Architecture Overview
 
-This document describes devkit-pi's implemented module boundaries, registration flow, and test mapping based on the current `src/` directory structure. Old directory names or old project names appearing in historical ADRs are decision background only, not current implementation references.
+This document describes devkit-pi's implemented module boundaries, registration flow, and test mapping based on the current `src/` directory structure. Old directory names or old project names appearing in deprecated ADRs are decision background only, not current implementation references.
 
 Public API, configuration, and command contracts are defined in [Reference index](../reference/README.md); core references include [Configuration](../reference/configuration.md), [Subagents](../reference/subagents.md), [Web tools](../reference/web-tools.md), [LSP tools](../reference/lsp-tools.md), and [Toolkit commands](../reference/toolkit-commands.md).
 

@@ -3,9 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const allowedDocStatus = new Set(["current", "historical", "proposed"]);
+const allowedDocStatus = new Set(["current", "deprecated", "proposed"]);
 const allowedAdrStatus = new Set(["proposed", "accepted", "rejected", "deprecated", "superseded"]);
 const allowedAudience = new Set(["user", "maintainer", "all"]);
+const allowedLanguage = new Set(["english", "chinese"]);
 const errors = [];
 
 const keyReferenceFiles = [
@@ -59,14 +60,31 @@ function checkDocFrontmatter() {
       errors.push(`${file}: missing frontmatter`);
       continue;
     }
-    if (!allowedStatusFor(file).has(fm.status)) {
+    // Mandatory frontmatter fields
+    if (!fm.status) {
+      errors.push(`${file}: missing required field 'status'`);
+    }
+    if (!fm.audience) {
+      errors.push(`${file}: missing required field 'audience'`);
+    }
+    if (!fm.last_verified) {
+      errors.push(`${file}: missing required field 'last_verified'`);
+    }
+    if (!fm.language) {
+      errors.push(`${file}: missing required field 'language'`);
+    }
+    // Value validation
+    if (fm.status && !allowedStatusFor(file).has(fm.status)) {
       errors.push(`${file}: invalid status '${fm.status}'`);
     }
-    if (!allowedAudience.has(fm.audience)) {
+    if (fm.audience && !allowedAudience.has(fm.audience)) {
       errors.push(`${file}: invalid audience '${fm.audience}'`);
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fm.last_verified ?? "")) {
+    if (fm.last_verified && !/^\d{4}-\d{2}-\d{2}$/.test(fm.last_verified)) {
       errors.push(`${file}: invalid last_verified '${fm.last_verified}'`);
+    }
+    if (fm.language && !allowedLanguage.has(fm.language)) {
+      errors.push(`${file}: invalid language '${fm.language}'`);
     }
   }
 }
@@ -260,6 +278,7 @@ function checkVitePressSite() {
     }
     for (const nav of [
       '{ text: "Guide", link: "/" }',
+      '{ text: "Development", link: "/maintain/" }',
       '{ text: "Reference", link: "/reference/" }',
       '{ text: "ADRs", link: "/adr/" }',
     ]) {
