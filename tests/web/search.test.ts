@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/load-config.ts";
+import {
+  createWebError,
+  ERROR_RECOVERY_MAP,
+  formatWebError,
+  getErrorSummary,
+  mapHttpStatusToError,
+  mapNetworkErrorToWebError,
+  WEB_ERROR_CODES,
+  type WebError,
+} from "../../src/modules/web/errors.ts";
 import { webSearch } from "../../src/modules/web/search.ts";
 import type { QueryResultData } from "../../src/modules/web/types.ts";
 import { clearResults, getSearchContent } from "../../src/modules/web/storage.ts";
@@ -527,5 +537,72 @@ describe("web_search", () => {
     if ("responseId" in result) {
       assert.equal(result.queries[0].results.length, 3);
     }
+  });
+});
+
+describe("web structured errors", () => {
+  it("keeps the public web error code inventory stable", () => {
+    assert.deepEqual(Object.values(WEB_ERROR_CODES).sort(), [
+      "CACHE_ERROR",
+      "CONTENT_FETCH_FAILED",
+      "CONTENT_FETCH_INVALID_URL",
+      "CONTENT_FETCH_TIMEOUT",
+      "CONTENT_FETCH_TOO_LARGE",
+      "INVALID_INPUT",
+      "NETWORK_ERROR",
+      "NOT_FOUND",
+      "PARSE_ERROR",
+      "PROVIDER_AUTH_FAILED",
+      "PROVIDER_RATE_LIMITED",
+      "PROVIDER_UNAVAILABLE",
+      "WEB_SEARCH_FAILED",
+      "WEB_SEARCH_INVALID_QUERY",
+      "WEB_SEARCH_NO_RESULTS",
+      "WEB_SEARCH_TIMEOUT",
+    ]);
+  });
+
+  it("maps recovery and retryability for common web failures", () => {
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.WEB_SEARCH_FAILED].action, "fallback");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.WEB_SEARCH_FAILED].nextProvider, "auto");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.PROVIDER_RATE_LIMITED].action, "retry");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.PROVIDER_AUTH_FAILED].action, "abort");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.CONTENT_FETCH_TIMEOUT].action, "fallback");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.CONTENT_FETCH_TIMEOUT].nextProvider, "jina");
+
+    assert.equal(createWebError(WEB_ERROR_CODES.NETWORK_ERROR, "Network").retryable, true);
+    assert.equal(createWebError(WEB_ERROR_CODES.PROVIDER_AUTH_FAILED, "Auth").retryable, false);
+    assert.equal(createWebError(WEB_ERROR_CODES.PROVIDER_AUTH_FAILED, "Auth", { retryable: true }).retryable, true);
+  });
+
+  it("maps HTTP and network errors to structured web errors", () => {
+    assert.equal(mapHttpStatusToError(401, "tavily").code, WEB_ERROR_CODES.PROVIDER_AUTH_FAILED);
+    assert.equal(mapHttpStatusToError(429).code, WEB_ERROR_CODES.PROVIDER_RATE_LIMITED);
+    assert.equal(mapHttpStatusToError(503).code, WEB_ERROR_CODES.PROVIDER_UNAVAILABLE);
+    assert.equal(mapHttpStatusToError(418).code, WEB_ERROR_CODES.WEB_SEARCH_FAILED);
+
+    assert.equal(mapNetworkErrorToWebError(new Error("fetch failed: connection refused")).code, WEB_ERROR_CODES.NETWORK_ERROR);
+    assert.equal(mapNetworkErrorToWebError(new Error("getaddrinfo ENOTFOUND example.com")).code, WEB_ERROR_CODES.NETWORK_ERROR);
+    assert.equal(mapNetworkErrorToWebError(new Error("Request timeout")).code, WEB_ERROR_CODES.WEB_SEARCH_TIMEOUT);
+    assert.equal(mapNetworkErrorToWebError(new Error("Some unknown error")).code, WEB_ERROR_CODES.WEB_SEARCH_FAILED);
+  });
+
+  it("formats errors and summarizes retryable failures", () => {
+    const formatted = formatWebError(createWebError(WEB_ERROR_CODES.NETWORK_ERROR, "Network error", { provider: "ddgs" }));
+    assert.match(formatted, /NETWORK_ERROR/);
+    assert.match(formatted, /Network error/);
+    assert.match(formatted, /provider: ddgs/);
+    assert.match(formatted, /Suggestion:/);
+
+    const errors: WebError[] = [
+      createWebError(WEB_ERROR_CODES.NETWORK_ERROR, "Error 1"),
+      createWebError(WEB_ERROR_CODES.NETWORK_ERROR, "Error 2"),
+      createWebError(WEB_ERROR_CODES.PROVIDER_AUTH_FAILED, "Error 3"),
+    ];
+    const summary = getErrorSummary(errors);
+    assert.equal(summary.total, 3);
+    assert.equal(summary.byCode.NETWORK_ERROR, 2);
+    assert.equal(summary.byCode.PROVIDER_AUTH_FAILED, 1);
+    assert.equal(summary.retryableCount, 2);
   });
 });

@@ -13,19 +13,17 @@ This document describes devkit-pi's current test organization. Public API and co
 - subagents: tool registration, schema, agent loading, recursion guard, output collection, prompt runtime
 - web: provider selection, fetch security limits, caching, concurrency, observability, storage, renderers
 - lsp: module registration, `servers` action, privileged action gating, hook registration/disabling/child process isolation
-- shared/config: namespace config merge, path handling, error codes, package manifest
+- config: namespace config merge, error codes, package manifest
 
 ## Test directory
 
-Test directory mirrors `src/modules/` and `src/shared/` structure. This is part of devkit-pi's architecture consistency policy: similar modules and feature areas should use similar source/test/documentation layouts instead of preserving legacy or one-off layouts.
+Test directory mirrors `src/modules/` structure. This is part of devkit-pi's architecture consistency policy: similar modules and feature areas should use similar source/test/documentation layouts instead of preserving legacy or one-off layouts.
 
 ```text
-tests/subagents/          # subagents module
-tests/subagents/commands/ # doctor/list/logs formatters & checks
+tests/subagents/          # subagents module: agents, runtime, config, registration, commands
 tests/commands/           # unified toolkit command registration
 tests/web/                # web module
 tests/lsp/                # lsp module
-tests/shared/             # shared utilities
 tests/package-manifest.test.ts
 ```
 

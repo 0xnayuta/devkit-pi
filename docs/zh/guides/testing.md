@@ -13,19 +13,17 @@ last_verified: 2026-05-12
 - subagents：工具注册、schema、agent 加载、递归保护、输出收集、prompt runtime
 - web：provider 选择、fetch 安全限制、缓存、并发、observability、storage、renderers
 - lsp：模块注册、`servers` action、privileged action gating、hook 注册/禁用/子进程隔离
-- shared/config：namespace 配置 merge、路径处理、错误码、package manifest
+- config：namespace 配置 merge、错误码、package manifest
 
 ## 测试目录
 
-测试目录镜像 `src/modules/` 与 `src/shared/` 结构。这是 devkit-pi 架构一致性策略的一部分：相似模块和功能区域应使用相似的源码 / 测试 / 文档布局，而不是保留 legacy 或一次性布局。
+测试目录镜像 `src/modules/` 结构。这是 devkit-pi 架构一致性策略的一部分：相似模块和功能区域应使用相似的源码 / 测试 / 文档布局，而不是保留 legacy 或一次性布局。
 
 ```text
-tests/subagents/          # subagents module
-tests/subagents/commands/ # doctor/list/logs formatters & checks
+tests/subagents/          # subagents module: agents, runtime, config, registration, commands
 tests/commands/           # unified toolkit command registration
 tests/web/                # web module
 tests/lsp/                # lsp module
-tests/shared/             # shared utilities
 tests/package-manifest.test.ts
 ```
 
