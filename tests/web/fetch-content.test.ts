@@ -12,7 +12,7 @@ afterEach(() => {
 	globalThis.fetch = originalFetch;
 });
 
-function mockFetch(body: BodyInit, contentType: string, status = 200) {
+function mockFetch(body: string | Uint8Array, contentType: string, status = 200) {
 	globalThis.fetch = (() => Promise.resolve(new Response(body, { status, headers: { "content-type": contentType } }))) as typeof fetch;
 }
 
@@ -161,7 +161,7 @@ describe("fetch_content supported and unsupported content types", () => {
 	});
 
 	it("rejects unsupported or binary content with structured errors", async () => {
-		const cases: Array<[string, BodyInit, string, RegExp?]> = [
+		const cases: Array<[string, string | Uint8Array, string, RegExp?]> = [
 			["https://93.184.216.34/image.png", "\x89PNG\r\n\x1a\n", "image/png"],
 			["https://93.184.216.34/document.pdf", "%PDF-1.4 fake content", "application/octet-stream", /\.pdf|not supported/i],
 			["https://93.184.216.34/report.docx", "PK\x03\x04 fake docx", "application/octet-stream", /\.docx/i],
@@ -224,7 +224,7 @@ describe("fetch_content extraction helpers", () => {
 
 describe("fetch_content handlers", () => {
 	it("resolves handlers for supported and unsupported content families", () => {
-		for (const type of ["html", "text", "markdown", "json", "csv", "xml", "yaml", "unsupported"]) {
+		for (const type of ["html", "text", "markdown", "json", "csv", "xml", "yaml", "unsupported"] as const) {
 			assert.equal(typeof getHandler(type).process, "function", `${type} should resolve to a handler`);
 		}
 	});

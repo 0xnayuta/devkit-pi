@@ -563,12 +563,12 @@ describe("web structured errors", () => {
   });
 
   it("maps recovery and retryability for common web failures", () => {
-    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.WEB_SEARCH_FAILED].action, "fallback");
-    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.WEB_SEARCH_FAILED].nextProvider, "auto");
-    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.PROVIDER_RATE_LIMITED].action, "retry");
-    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.PROVIDER_AUTH_FAILED].action, "abort");
-    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.CONTENT_FETCH_TIMEOUT].action, "fallback");
-    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.CONTENT_FETCH_TIMEOUT].nextProvider, "jina");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.WEB_SEARCH_FAILED]!.action, "fallback");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.WEB_SEARCH_FAILED]!.nextProvider, "auto");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.PROVIDER_RATE_LIMITED]!.action, "retry");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.PROVIDER_AUTH_FAILED]!.action, "abort");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.CONTENT_FETCH_TIMEOUT]!.action, "fallback");
+    assert.equal(ERROR_RECOVERY_MAP[WEB_ERROR_CODES.CONTENT_FETCH_TIMEOUT]!.nextProvider, "jina");
 
     assert.equal(createWebError(WEB_ERROR_CODES.NETWORK_ERROR, "Network").retryable, true);
     assert.equal(createWebError(WEB_ERROR_CODES.PROVIDER_AUTH_FAILED, "Auth").retryable, false);

@@ -16,7 +16,7 @@ import {
 	truncateText,
 } from "../../src/modules/web/renderers.ts";
 import { FetchContentParams, GetSearchContentParams, WebSearchParams } from "../../src/modules/web/schemas.ts";
-import type { ResolvedWebConfig } from "../../shared/types.ts";
+import type { ResolvedWebConfig } from "../../src/shared/types.ts";
 
 const webConfig = mergeConfig({}).web;
 const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };

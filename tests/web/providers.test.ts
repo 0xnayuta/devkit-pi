@@ -18,7 +18,7 @@ import { searxngProvider } from "../../src/modules/web/providers/searxng.ts";
 import { selectSearchProvider } from "../../src/modules/web/providers/select-provider.ts";
 import { serperProvider } from "../../src/modules/web/providers/serper.ts";
 import { tavilyProvider } from "../../src/modules/web/providers/tavily.ts";
-import type { WebSearchProvider, WebSearchProviderName } from "../../src/modules/web/providers/types.ts";
+import type { SearchProviderAdapter, WebSearchProviderName } from "../../src/modules/web/providers/types.ts";
 import type { ResolvedWebConfig } from "../../src/shared/types.ts";
 
 const originalFetch = globalThis.fetch;
@@ -52,7 +52,7 @@ function mockDdgHtml(results: { title: string; url: string }[]): string {
 		.join("\n");
 }
 
-async function assertProviderHttpError(provider: WebSearchProvider, config: ResolvedWebConfig) {
+async function assertProviderHttpError(provider: SearchProviderAdapter, config: ResolvedWebConfig) {
 	globalThis.fetch = (() => Promise.resolve(new Response("Rate limited", { status: 429, statusText: "Too Many Requests" }))) as typeof fetch;
 	await assert.rejects(
 		() => provider.search({ query: "test", numResults: 1 }, config),
@@ -63,7 +63,7 @@ async function assertProviderHttpError(provider: WebSearchProvider, config: Reso
 	);
 }
 
-async function assertProviderNetworkError(provider: WebSearchProvider, config: ResolvedWebConfig) {
+async function assertProviderNetworkError(provider: SearchProviderAdapter, config: ResolvedWebConfig) {
 	globalThis.fetch = (() => Promise.reject(new Error("ECONNREFUSED"))) as typeof fetch;
 	await assert.rejects(() => provider.search({ query: "test", numResults: 1 }, config), /ECONNREFUSED/);
 }
