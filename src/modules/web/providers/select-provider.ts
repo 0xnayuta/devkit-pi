@@ -99,6 +99,7 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     };
   }
 
+  // Check each provider's enabled flag
   if (configuredProvider === "openserp" && !config.openserp.enabled) {
     return {
       ok: false,
@@ -119,19 +120,6 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
     };
   }
 
-  if (
-    configuredProvider === "searxng" &&
-    !(await isAvailable(getSearchProvider("searxng"), config))
-  ) {
-    return {
-      ok: false,
-      error: error(
-        WEB_ERROR_CODES.INVALID_INPUT,
-        "Configured web_search provider 'searxng' is unavailable. Configure a valid web.searxng.baseUrl endpoint."
-      ),
-    };
-  }
-
   if (configuredProvider === "tavily" && !config.tavily.enabled) {
     return {
       ok: false,
@@ -148,6 +136,30 @@ export async function selectSearchProvider(config: ResolvedWebConfig): Promise<P
       error: error(
         WEB_ERROR_CODES.INVALID_INPUT,
         "Configured web_search provider 'serper' is unavailable. Enable web.serper.enabled and check provider settings."
+      ),
+    };
+  }
+
+  if (configuredProvider === "brave" && !config.brave.enabled) {
+    return {
+      ok: false,
+      error: error(
+        WEB_ERROR_CODES.INVALID_INPUT,
+        "Configured web_search provider 'brave' is unavailable. Enable web.brave.enabled and check provider settings."
+      ),
+    };
+  }
+
+  // Additional availability checks for providers that need more than just enabled flag
+  if (
+    configuredProvider === "searxng" &&
+    !(await isAvailable(getSearchProvider("searxng"), config))
+  ) {
+    return {
+      ok: false,
+      error: error(
+        WEB_ERROR_CODES.INVALID_INPUT,
+        "Configured web_search provider 'searxng' is unavailable. Configure a valid web.searxng.baseUrl endpoint."
       ),
     };
   }

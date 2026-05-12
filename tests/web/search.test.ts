@@ -105,7 +105,7 @@ describe("web_search", () => {
     delete process.env.BRAVE_SEARCH_API_KEY;
     const result = await webSearch(
       { query: "typescript" },
-      mergeWebConfig({ web: { provider: "brave" } })
+      mergeWebConfig({ web: { provider: "brave", brave: { enabled: true } } })
     );
     assert.equal("error" in result, true);
     if ("error" in result) {
@@ -256,7 +256,7 @@ describe("web_search", () => {
 
     const result = await webSearch(
       { query: "typescript", queries: ["typescript", "node"], numResults: 2 },
-      mergeWebConfig({ web: { provider: "brave" } })
+      mergeWebConfig({ web: { provider: "brave", brave: { enabled: true } } })
     );
 
     assert.equal("responseId" in result, true);
@@ -291,7 +291,7 @@ describe("web_search", () => {
 
     const result = await webSearch(
       { query: "typescript", numResults: 1, includeContent: true },
-      mergeWebConfig({ web: { provider: "brave", maxContentChars: 7 } })
+      mergeWebConfig({ web: { provider: "brave", brave: { enabled: true }, maxContentChars: 7 } })
     );
 
     assert.equal("responseId" in result, true);
@@ -308,7 +308,7 @@ describe("web_search", () => {
 
     const result = await webSearch(
       { query: "typescript" },
-      mergeWebConfig({ web: { provider: "brave" } })
+      mergeWebConfig({ web: { provider: "brave", brave: { enabled: true } } })
     );
     assert.equal("error" in result, true);
     if ("error" in result) {
@@ -325,7 +325,7 @@ describe("web_search", () => {
 
     const result = await webSearch(
       { query: "typescript" },
-      mergeWebConfig({ web: { provider: "brave", timeoutMs: 1 } })
+      mergeWebConfig({ web: { provider: "brave", brave: { enabled: true }, timeoutMs: 1 } })
     );
     assert.equal("error" in result, true);
     if ("error" in result) {
@@ -369,7 +369,7 @@ describe("web_search", () => {
 
     const result = await webSearch(
       { query: "typescript", numResults: 5, includeContent: true },
-      mergeWebConfig({ web: { provider: "brave" } })
+      mergeWebConfig({ web: { provider: "brave", brave: { enabled: true } } })
     );
 
     assert.equal("responseId" in result, true);

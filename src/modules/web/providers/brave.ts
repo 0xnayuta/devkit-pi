@@ -1,10 +1,13 @@
 import type { ResolvedWebConfig } from "../../../shared/types.ts";
-import { isAbortLikeError, withTimeoutSignal } from "../abort.ts";
+import { withTimeoutSignal } from "../abort.ts";
 import { pooledFetch } from "../http-pool.ts";
 import type { SearchResultItem } from "../types.ts";
 import type { ProviderSearchParams, SearchProviderAdapter } from "./types.ts";
 
-const BRAVE_SEARCH_ENDPOINT = "https://api.search.brave.com/res/v1/web/search";
+interface SearchHttpError extends Error {
+  status: number;
+  responseText?: string;
+}
 
 interface BraveSearchResult {
   title?: string;
@@ -21,46 +24,51 @@ interface BraveSearchResponse {
   };
 }
 
-interface SearchHttpError extends Error {
-  status: number;
-  responseText?: string;
-}
-
 function createSearchHttpError(
   status: number,
   statusText: string,
   responseText?: string
 ): SearchHttpError {
-  const err = new Error(
-    `Brave Search API returned HTTP ${status} ${statusText}`
-  ) as SearchHttpError;
+  const err = new Error(`Brave returned HTTP ${status} ${statusText}`) as SearchHttpError;
   err.status = status;
   err.responseText = responseText;
   return err;
 }
 
-export function getBraveApiKey(): string | undefined {
-  const value = process.env.BRAVE_SEARCH_API_KEY;
+function getApiKey(config: ResolvedWebConfig): string | undefined {
+  const value = process.env[config.brave.apiKeyEnv];
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizeResults(items: BraveSearchResult[], count: number): SearchResultItem[] {
+  return items
+    .filter((item) => typeof item.url === "string" && typeof item.title === "string")
+    .slice(0, count)
+    .map((item) => ({
+      title: item.title ?? item.url ?? "Untitled",
+      url: item.url ?? "",
+      snippet: item.description,
+      source: "brave",
+    }));
 }
 
 async function search(
   params: ProviderSearchParams,
   config: ResolvedWebConfig
 ): Promise<SearchResultItem[]> {
-  const apiKey = getBraveApiKey();
+  const apiKey = getApiKey(config);
   if (!apiKey) {
-    throw new Error("BRAVE_SEARCH_API_KEY is required for web_search provider 'brave'");
+    throw new Error(`${config.brave.apiKeyEnv} is required for web_search provider 'brave'`);
   }
 
-  const url = new URL(BRAVE_SEARCH_ENDPOINT);
-  url.searchParams.set("q", params.query);
-  url.searchParams.set("count", String(params.numResults));
+  const endpoint = new URL(config.brave.baseUrl);
+  endpoint.searchParams.set("q", params.query);
+  endpoint.searchParams.set("count", String(params.numResults));
 
   try {
-    const response = await pooledFetch(url, {
+    const response = await pooledFetch(endpoint, {
       method: "GET",
       signal: withTimeoutSignal(config.timeoutMs, params.signal),
       headers: {
@@ -76,20 +84,8 @@ async function search(
     }
 
     const data = (await response.json()) as BraveSearchResponse;
-
-    return (data.web?.results ?? [])
-      .filter((item) => typeof item.url === "string" && typeof item.title === "string")
-      .slice(0, params.numResults)
-      .map((item) => ({
-        title: item.title ?? item.url ?? "Untitled",
-        url: item.url ?? "",
-        snippet: item.description,
-        source: "brave",
-      }));
+    return normalizeResults(data.web?.results ?? [], params.numResults);
   } catch (error) {
-    if (isAbortLikeError(error)) {
-      throw error;
-    }
     if (
       typeof error === "object" &&
       error !== null &&
@@ -102,10 +98,18 @@ async function search(
   }
 }
 
+function isAvailable(config: ResolvedWebConfig): boolean {
+  try {
+    const baseUrl = new URL(config.brave.baseUrl);
+    if (baseUrl.protocol !== "http:" && baseUrl.protocol !== "https:") return false;
+  } catch {
+    return false;
+  }
+  return Boolean(getApiKey(config));
+}
+
 export const braveProvider: SearchProviderAdapter = {
   name: "brave",
-  isAvailable() {
-    return Boolean(getBraveApiKey());
-  },
+  isAvailable,
   search,
 };

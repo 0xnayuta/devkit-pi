@@ -54,6 +54,11 @@ export const DEFAULT_WEB_CONFIG: ResolvedWebConfig = {
     baseUrl: "",
     defaultEngine: "google",
   },
+  brave: {
+    enabled: false,
+    baseUrl: "https://api.search.brave.com/res/v1/web/search",
+    apiKeyEnv: "BRAVE_SEARCH_API_KEY",
+  },
   tavily: {
     enabled: false,
     baseUrl: "https://api.tavily.com/search",
@@ -275,6 +280,11 @@ function normalizeWebConfig(base: WebConfig | undefined): ResolvedWebConfig {
         base?.searxng?.defaultEngine,
         DEFAULT_WEB_CONFIG.searxng.defaultEngine
       ),
+    },
+    brave: {
+      enabled: booleanValue(base?.brave?.enabled, DEFAULT_WEB_CONFIG.brave.enabled),
+      baseUrl: nonEmptyString(base?.brave?.baseUrl, DEFAULT_WEB_CONFIG.brave.baseUrl),
+      apiKeyEnv: nonEmptyString(base?.brave?.apiKeyEnv, DEFAULT_WEB_CONFIG.brave.apiKeyEnv),
     },
     tavily: {
       enabled: booleanValue(base?.tavily?.enabled, DEFAULT_WEB_CONFIG.tavily.enabled),

@@ -6,15 +6,16 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../../src/config/load-config.ts";
-import {
-  braveProvider,
-  getBraveApiKey,
-} from "../../../src/modules/web/providers/brave.ts";
+import type { ResolvedWebConfig } from "../../../shared/types.ts";
+import { braveProvider } from "../../../src/modules/web/providers/brave.ts";
 import { resetConnectionPool } from "../../../src/modules/web/http-pool.ts";
 
 const originalFetch = globalThis.fetch;
-const webConfig = mergeConfig({}).web;
 const ENV_KEY = "BRAVE_SEARCH_API_KEY";
+
+function config(overrides: Partial<ResolvedWebConfig> = {}): ResolvedWebConfig {
+  return { ...mergeConfig({}).web, ...overrides };
+}
 
 function setApiKey(value: string | undefined) {
   if (value === undefined) delete process.env[ENV_KEY];
@@ -38,49 +39,70 @@ describe("brave - name", () => {
 });
 
 // ---------------------------------------------------------------------------
-// getBraveApiKey
-// ---------------------------------------------------------------------------
-
-describe("brave - getBraveApiKey", () => {
-  it("returns undefined when env var is not set", () => {
-    delete process.env[ENV_KEY];
-    assert.equal(getBraveApiKey(), undefined);
-  });
-
-  it("returns undefined when env var is empty string", () => {
-    process.env[ENV_KEY] = "";
-    assert.equal(getBraveApiKey(), undefined);
-  });
-
-  it("returns undefined when env var is whitespace only", () => {
-    process.env[ENV_KEY] = "   ";
-    assert.equal(getBraveApiKey(), undefined);
-  });
-
-  it("returns trimmed key when env var is set", () => {
-    process.env[ENV_KEY] = "  my-api-key  ";
-    assert.equal(getBraveApiKey(), "my-api-key");
-  });
-});
-
-// ---------------------------------------------------------------------------
 // isAvailable
 // ---------------------------------------------------------------------------
 
 describe("brave - isAvailable", () => {
-  it("returns false when API key is not set", () => {
+  // NOTE: brave.isAvailable does NOT check config.brave.enabled.
+  // The enabled gate is handled at the selectSearchProvider level.
+  it("returns true even when disabled, if baseUrl and key are valid", () => {
+    setApiKey("test-key");
+    assert.equal(
+      braveProvider.isAvailable!(
+        config({ brave: { enabled: false, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV_KEY } })
+      ),
+      true
+    );
+  });
+
+  it("returns false when API key is missing", () => {
     delete process.env[ENV_KEY];
-    assert.equal(braveProvider.isAvailable!(webConfig), false);
+    assert.equal(
+      braveProvider.isAvailable!(
+        config({ brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV_KEY } })
+      ),
+      false
+    );
   });
 
-  it("returns true when API key is set", () => {
-    process.env[ENV_KEY] = "test-key";
-    assert.equal(braveProvider.isAvailable!(webConfig), true);
+  it("returns false when baseUrl is invalid", () => {
+    setApiKey("test-key");
+    assert.equal(
+      braveProvider.isAvailable!(
+        config({ brave: { enabled: true, baseUrl: "not-a-url", apiKeyEnv: ENV_KEY } })
+      ),
+      false
+    );
   });
 
-  it("returns false when API key is whitespace only", () => {
-    process.env[ENV_KEY] = "   ";
-    assert.equal(braveProvider.isAvailable!(webConfig), false);
+  it("returns false when baseUrl has non-http protocol", () => {
+    setApiKey("test-key");
+    assert.equal(
+      braveProvider.isAvailable!(
+        config({ brave: { enabled: true, baseUrl: "ftp://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV_KEY } })
+      ),
+      false
+    );
+  });
+
+  it("returns true when enabled, valid baseUrl, and API key set", () => {
+    setApiKey("test-key");
+    assert.equal(
+      braveProvider.isAvailable!(
+        config({ brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV_KEY } })
+      ),
+      true
+    );
+  });
+
+  it("returns true with http:// baseUrl", () => {
+    setApiKey("test-key");
+    assert.equal(
+      braveProvider.isAvailable!(
+        config({ brave: { enabled: true, baseUrl: "http://localhost:8080/search", apiKeyEnv: ENV_KEY } })
+      ),
+      true
+    );
   });
 });
 
@@ -89,6 +111,10 @@ describe("brave - isAvailable", () => {
 // ---------------------------------------------------------------------------
 
 describe("brave - search: happy path", () => {
+  const braveConfig = config({
+    brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV_KEY },
+  });
+
   it("returns parsed results from Brave API response", async () => {
     setApiKey("test-key");
 
@@ -103,18 +129,33 @@ describe("brave - search: happy path", () => {
 
     globalThis.fetch = (() =>
       Promise.resolve(
-        new Response(JSON.stringify(mockResponse), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        })
+        new Response(JSON.stringify(mockResponse), { status: 200, headers: { "content-type": "application/json" } })
       )) as typeof fetch;
 
-    const results = await braveProvider.search({ query: "test", numResults: 5 }, webConfig);
+    const results = await braveProvider.search({ query: "test", numResults: 5 }, braveConfig);
     assert.equal(results.length, 2);
     assert.equal(results[0].title, "Result 1");
     assert.equal(results[0].url, "https://example.com/1");
     assert.equal(results[0].snippet, "Snippet 1");
     assert.equal(results[0].source, "brave");
+  });
+
+  it("sends GET request with correct query params", async () => {
+    setApiKey("my-key");
+    let capturedUrl = "";
+
+    globalThis.fetch = ((url: string, _opts?: any) => {
+      capturedUrl = String(url);
+      return Promise.resolve(
+        new Response(JSON.stringify({ web: { results: [] } }), { status: 200 })
+      );
+    }) as typeof fetch;
+
+    await braveProvider.search({ query: "hello", numResults: 3 }, braveConfig);
+
+    const parsed = new URL(capturedUrl);
+    assert.equal(parsed.searchParams.get("q"), "hello");
+    assert.equal(parsed.searchParams.get("count"), "3");
   });
 
   it("sends correct request headers", async () => {
@@ -128,28 +169,10 @@ describe("brave - search: happy path", () => {
       );
     }) as typeof fetch;
 
-    await braveProvider.search({ query: "hello", numResults: 3 }, webConfig);
+    await braveProvider.search({ query: "hello", numResults: 3 }, braveConfig);
 
     assert.equal(capturedHeaders["x-subscription-token"], "my-secret-key");
     assert.ok(capturedHeaders["accept"]?.includes("application/json"));
-  });
-
-  it("includes query and count in URL params", async () => {
-    setApiKey("test-key");
-    let capturedUrl = "";
-
-    globalThis.fetch = ((url: string, _opts?: any) => {
-      capturedUrl = url;
-      return Promise.resolve(
-        new Response(JSON.stringify({ web: { results: [] } }), { status: 200 })
-      );
-    }) as typeof fetch;
-
-    await braveProvider.search({ query: "brave search", numResults: 7 }, webConfig);
-
-    const parsed = new URL(capturedUrl);
-    assert.equal(parsed.searchParams.get("q"), "brave search");
-    assert.equal(parsed.searchParams.get("count"), "7");
   });
 
   it("respects numResults limit", async () => {
@@ -161,11 +184,9 @@ describe("brave - search: happy path", () => {
     }));
 
     globalThis.fetch = (() =>
-      Promise.resolve(
-        new Response(JSON.stringify({ web: { results } }), { status: 200 })
-      )) as typeof fetch;
+      Promise.resolve(new Response(JSON.stringify({ web: { results } }), { status: 200 }))) as typeof fetch;
 
-    const items = await braveProvider.search({ query: "test", numResults: 3 }, webConfig);
+    const items = await braveProvider.search({ query: "test", numResults: 3 }, braveConfig);
     assert.ok(items.length <= 3);
   });
 
@@ -175,19 +196,17 @@ describe("brave - search: happy path", () => {
       web: {
         results: [
           { title: "Valid", url: "https://example.com/valid" },
-          { url: "https://example.com/no-title" },  // no title
-          { title: "No URL" },  // no url
+          { url: "https://example.com/no-title" },
+          { title: "No URL" },
           { title: "Good", url: "https://example.com/good" },
         ],
       },
     };
 
     globalThis.fetch = (() =>
-      Promise.resolve(
-        new Response(JSON.stringify(mockResponse), { status: 200 })
-      )) as typeof fetch;
+      Promise.resolve(new Response(JSON.stringify(mockResponse), { status: 200 }))) as typeof fetch;
 
-    const results = await braveProvider.search({ query: "test", numResults: 10 }, webConfig);
+    const results = await braveProvider.search({ query: "test", numResults: 10 }, braveConfig);
     assert.equal(results.length, 2);
     assert.equal(results[0].title, "Valid");
     assert.equal(results[1].title, "Good");
@@ -202,7 +221,7 @@ describe("brave - search: happy path", () => {
     globalThis.fetch = (() =>
       Promise.resolve(new Response(JSON.stringify(mockResponse), { status: 200 }))) as typeof fetch;
 
-    const results = await braveProvider.search({ query: "test", numResults: 1 }, webConfig);
+    const results = await braveProvider.search({ query: "test", numResults: 1 }, braveConfig);
     assert.equal(results[0].snippet, "Desc text");
   });
 
@@ -212,7 +231,7 @@ describe("brave - search: happy path", () => {
     globalThis.fetch = (() =>
       Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))) as typeof fetch;
 
-    const results = await braveProvider.search({ query: "test", numResults: 5 }, webConfig);
+    const results = await braveProvider.search({ query: "test", numResults: 5 }, braveConfig);
     assert.equal(results.length, 0);
   });
 });
@@ -222,6 +241,10 @@ describe("brave - search: happy path", () => {
 // ---------------------------------------------------------------------------
 
 describe("brave - search: error handling", () => {
+  const braveConfig = config({
+    brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV_KEY },
+  });
+
   it("throws on HTTP 429 rate limit", async () => {
     setApiKey("test-key");
 
@@ -229,7 +252,7 @@ describe("brave - search: error handling", () => {
       Promise.resolve(new Response("Rate limited", { status: 429, statusText: "Too Many Requests" }))) as typeof fetch;
 
     await assert.rejects(
-      () => braveProvider.search({ query: "test", numResults: 1 }, webConfig),
+      () => braveProvider.search({ query: "test", numResults: 1 }, braveConfig),
       (error: any) => {
         assert.ok(error.message.includes("429") || error.status === 429);
         return true;
@@ -244,7 +267,7 @@ describe("brave - search: error handling", () => {
       Promise.resolve(new Response("Unauthorized", { status: 401, statusText: "Unauthorized" }))) as typeof fetch;
 
     await assert.rejects(
-      () => braveProvider.search({ query: "test", numResults: 1 }, webConfig),
+      () => braveProvider.search({ query: "test", numResults: 1 }, braveConfig),
       (error: any) => {
         assert.ok(error.message.includes("401") || error.status === 401);
         return true;
@@ -257,7 +280,7 @@ describe("brave - search: error handling", () => {
     globalThis.fetch = (() => Promise.reject(new Error("ECONNREFUSED"))) as typeof fetch;
 
     await assert.rejects(
-      () => braveProvider.search({ query: "test", numResults: 1 }, webConfig),
+      () => braveProvider.search({ query: "test", numResults: 1 }, braveConfig),
       /ECONNREFUSED/
     );
   });

@@ -174,6 +174,12 @@ export interface SearxngProviderConfig {
   defaultEngine?: string;
 }
 
+export interface BraveProviderConfig {
+  enabled?: boolean;
+  baseUrl?: string;
+  apiKeyEnv?: string;
+}
+
 export interface ApiKeyProviderConfig {
   enabled?: boolean;
   baseUrl?: string;
@@ -219,6 +225,7 @@ export interface WebConfig {
   connectionPool?: ConnectionPoolConfig;
   openserp?: OpenSerpProviderConfig;
   searxng?: SearxngProviderConfig;
+  brave?: BraveProviderConfig;
   tavily?: ApiKeyProviderConfig;
   serper?: ApiKeyProviderConfig;
 }
@@ -293,11 +300,19 @@ export type ResolvedSubagentsConfig = Required<Omit<SubagentsConfig, "retry">> &
 export type ResolvedWebConfig = Required<
   Omit<
     WebConfig,
-    "openserp" | "searxng" | "tavily" | "serper" | "cache" | "concurrency" | "connectionPool"
+    | "openserp"
+    | "searxng"
+    | "brave"
+    | "tavily"
+    | "serper"
+    | "cache"
+    | "concurrency"
+    | "connectionPool"
   >
 > & {
   openserp: Required<OpenSerpProviderConfig>;
   searxng: Required<SearxngProviderConfig>;
+  brave: Required<BraveProviderConfig>;
   tavily: Required<ApiKeyProviderConfig>;
   serper: Required<ApiKeyProviderConfig>;
   cache: Required<CacheConfig>;
