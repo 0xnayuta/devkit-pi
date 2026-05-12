@@ -7,6 +7,7 @@
 ```text
 subagents（任务委派）
 + web research（搜索、网页获取、轻量内容提取）
++ convert content（`convert_content` 本地/远程文件转 Markdown，依赖 MarkItDown CLI）
 + LSP code intelligence（代码智能与自动 diagnostics hook）
 + toolkit commands（统一 `/toolkit` 开发者命令）
 ```
@@ -74,7 +75,7 @@ backward compatible + inconsistent + special-cased
 ```text
 src/
 ├─ index.ts        # extension main entry：加载配置并组合注册模块
-├─ modules/        # subagents / web / lsp / commands 等功能模块
+├─ modules/        # subagents / web / convert / lsp / commands 等功能模块
 ├─ config/         # 配置路径、默认值、merge / normalize
 └─ shared/         # 跨模块共享类型、错误、委派策略、session/stdio 小型工具
 
@@ -88,6 +89,7 @@ docs/              # guides / reference / ADR / planning / archive
 
 - `subagents`：agent 定义、发现、路由、执行、结果处理。
 - `web`：`web_search`、`fetch_content`、`get_search_content`、搜索 provider、内容 handler、缓存、并发、HTTP pool、Jina fallback、活动记录。
+- `convert`：`convert_content` tool、本地文件转换、安全 URL 下载、MarkItDown CLI provider、转换结果截断、活动记录。
 - `lsp`：`lsp` tool、language server manager、代码智能、diagnostics hook。
 - `commands`：统一 `/toolkit` slash command 注册和帮助文本。
 - `config`：配置加载、校验、默认值和归一化。

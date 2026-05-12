@@ -16,7 +16,7 @@ Subagents 模块让主代理把一个聚焦任务委派给一个专职 child pi 
 适合使用的场景：
 
 - 代码探索：查找文件、符号、调用链和架构位置
-- 文档/外部资料研究：交给带 Web tools 的 researcher
+- 文档/外部资料研究：交给带 Web/convert tools 的 researcher
 - 实现建议：生成 implementation plan，而不是直接写代码
 - Review：隔离代码审查输出和证据收集
 - Testing：生成测试策略、边界用例和覆盖建议
@@ -26,7 +26,7 @@ Subagents 模块让主代理把一个聚焦任务委派给一个专职 child pi 
 和其他能力的区别：
 
 - 普通 prompt：仍在主代理上下文中完成；subagent 会启动独立 child session。
-- Web tools：`web_search` / `fetch_content` 是工具；researcher subagent 会使用它们做研究。
+- Web/convert tools：`web_search` / `fetch_content` / `convert_content` 是工具；researcher subagent 会使用它们做研究和文档转换。
 - LSP tools：`lsp` 是代码智能工具；部分内置 subagents 可使用 readonly LSP actions。
 - `/toolkit` commands：用户手动诊断/查看状态；不会替代 `subagent` tool。
 
@@ -50,7 +50,7 @@ Subagents 模块让主代理把一个聚焦任务委派给一个专职 child pi 
 | Agent | 角色/用途 | 预期用例 | 声明的 Tools | 源码 |
 |---|---|---|---|---|
 | `explorer` | Read-only codebase navigator | 查找文件、模式、定义、引用、架构位置 | `read, grep, find, ls, lsp` | `agents/explorer.md` |
-| `researcher` | Read-only web researcher | 外部文档/API/资料搜索、来源综合 | `web_search, fetch_content, get_search_content` | `agents/researcher.md` |
+| `researcher` | Read-only web researcher | 外部文档/API/资料搜索、来源综合、文档转换 | `web_search, fetch_content, get_search_content, convert_content` | `agents/researcher.md` |
 | `reviewer` | Read-only code reviewer | 审查代码、diff、方案、测试和文档 | `read, grep, find, ls, lsp` | `agents/reviewer.md` |
 | `implementer` | Read-only implementation planner | 分析需求和代码结构，产出实现计划 | `read, grep, find, ls, lsp` | `agents/implementer.md` |
 | `tester` | Read-only test planner | 设计测试策略、场景、边界和覆盖 | `read, grep, find, ls, lsp` | `agents/tester.md` |
@@ -117,7 +117,7 @@ Prompt 正文作为 `systemPrompt`。若正文为空，使用 description；再�
 name: docs-researcher
 description: Project documentation researcher
 readonly: true
-tools: web_search, fetch_content, get_search_content
+tools: web_search, fetch_content, get_search_content, convert_content
 ---
 
 You research external documentation and return concise findings.
@@ -181,7 +181,7 @@ Focus only on the delegated task. Do not call other subagents.
 - 5 个内置 agents 都声明 `readonly: true`，且 prompt 明确要求不编辑、不写文件。
 - `filterToolsForReadonly()` 会对 readonly agents 过滤工具，只保留只读工具集合：
   - `read`, `grep`, `find`, `ls`
-  - `web_search`, `fetch_content`, `get_search_content`
+  - `web_search`, `fetch_content`, `get_search_content`, `convert_content`
   - `lsp`（仅当 `subagents.allowLspTools=true` 且 `allowedLspActions` 非空）
 - 对于 `readonly: false` 的自定义 agent：
   - 如果 `subagents.allowWrite=false`，仍会过滤到只读工具。
@@ -194,7 +194,7 @@ Focus only on the delegated task. Do not call other subagents.
 - 子代理的实际工具可用性取决于 child pi runtime、当前工具注册、执行环境和配置；不要假设未来所有工具都会自动继承给子代理。
 - 主代理进程注册 `subagent` 和 `/toolkit`；子代理进程不注册 `subagent`，也不注册 `/toolkit`。
 - LSP privileged actions 在子代理中始终禁用。
-- Web tools 可用于研究和读取信息。
+- Web 和 convert tools 可用于研究、读取信息，以及将受支持文档转换为 Markdown。
 - 文件写入、命令执行、修改项目等 write-like 行为不应被视为默认安全能力。
 - prompt/policy 是行为引导；真正的强约束主要来自工具过滤、子代理不注册 `subagent`、LSP privileged actions 在子代理中始终禁用等实现。
 
@@ -261,12 +261,12 @@ Focus only on the delegated task. Do not call other subagents.
 
 ## 与 Web / LSP / toolkit 的关系
 
-### Web tools
+### Web / convert tools
 
-- Web tools 在主代理和子代理进程中都可注册。
-- 内置 `researcher` 默认声明 `web_search`、`fetch_content`、`get_search_content`。
+- Web 和 convert tools 在主代理和子代理进程中都可注册。
+- 内置 `researcher` 默认声明 `web_search`、`fetch_content`、`get_search_content`、`convert_content`。
 - 自定义 agent 也可以在 `tools` 中声明这些工具。
-- Web tools 详情见 [`web-tools.md`](./web-tools.md)。
+- Web tools 详情见 [`web-tools.md`](./web-tools.md)。convert tool 详情见 [`convert-tools.md`](./convert-tools.md)。
 
 ### LSP tools
 
@@ -294,7 +294,7 @@ Focus only on the delegated task. Do not call other subagents.
   "subagents": {
     "enabled": true,
     "maxDepth": 1,
-    "timeoutMs": 120000,
+    "timeoutMs": 300000,
     "allowWrite": false,
     "allowLspTools": true,
     "allowedLspActions": [

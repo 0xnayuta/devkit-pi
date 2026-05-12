@@ -348,7 +348,7 @@ export interface ResolvedToolkitConfig {
 // ============================================================================
 
 export const DEFAULT_SUBAGENT_MAX_DEPTH = 1;
-export const DEFAULT_TIMEOUT_MS = 120000;
+export const DEFAULT_TIMEOUT_MS = 300000;
 
 export const TEMP_ROOT_DIR = path.join(os.tmpdir(), `devkit-pi-${resolveTempScopeId()}`);
 export const RESULTS_DIR = path.join(TEMP_ROOT_DIR, "results");

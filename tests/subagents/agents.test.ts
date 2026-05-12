@@ -59,7 +59,9 @@ describe("subagent builtin agents", () => {
 
 		const researcher = builtin.find((a) => a.name === "researcher");
 		assert.ok(researcher);
-		assert.ok(researcher.tools?.includes("web_search"));
+		for (const tool of ["web_search", "fetch_content", "get_search_content", "convert_content"]) {
+			assert.ok(researcher.tools?.includes(tool), `researcher should include ${tool}`);
+		}
 
 		const reviewer = builtin.find((a) => a.name === "reviewer");
 		assert.ok(reviewer);

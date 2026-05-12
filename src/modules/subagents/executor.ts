@@ -92,6 +92,7 @@ export function filterToolsForReadonly(
     "web_search",
     "fetch_content",
     "get_search_content",
+    "convert_content",
   ]);
   if (config.allowLspTools && config.allowedLspActions.length > 0) {
     readonlyTools.add("lsp");
@@ -333,15 +334,10 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
         env: childEnv,
       });
 
-      const abortController = new AbortController();
-      const timeoutHandle = setTimeout(() => {
-        abortController.abort();
-      }, timeoutMs);
-      const combinedSignal = AbortSignal.any([signal, abortController.signal]);
-
       try {
         const result: RunSyncResult = await runSync(cwd, piArgs.args, {
-          signal: combinedSignal,
+          signal,
+          timeoutMs,
           env: piArgs.env,
           onStreamingUpdate: (state: StreamingState) => {
             if (!onUpdate) return;
@@ -371,6 +367,13 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
         providerError = result.error;
         partialOutput = result.partialOutput;
         finalDisplayItems = result.displayItems;
+        if (result.timedOut) {
+          output = `Subagent timed out after ${timeoutMs}ms.`;
+          providerError = output;
+        } else if (result.cancelled && signal.aborted) {
+          output = "Subagent execution was cancelled by user.";
+          providerError = output;
+        }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           if (signal.aborted) {
@@ -386,7 +389,6 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
           providerError = output;
         }
       } finally {
-        clearTimeout(timeoutHandle);
         cleanupTempDir(piArgs.tempDir);
       }
 

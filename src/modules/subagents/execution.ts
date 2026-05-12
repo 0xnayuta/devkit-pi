@@ -14,6 +14,8 @@ import type { Usage } from "../../shared/types.ts";
 import { collectOutput } from "./collect-output.ts";
 import { getPiSpawnCommand } from "./pi-spawn.ts";
 
+const DEFAULT_TERMINATION_GRACE_MS = 5000;
+
 // ---------------------------------------------------------------------------
 // Streaming types
 // ---------------------------------------------------------------------------
@@ -48,6 +50,9 @@ export interface RunSyncResult {
   partialOutput?: string;
   final: boolean;
   lastEventType?: string;
+  timedOut?: boolean;
+  cancelled?: boolean;
+  terminationSignal?: NodeJS.Signals;
   /**
    * Display items accumulated during execution. Useful for rich rendering
    * of the final result (showing tool calls the subagent made).
@@ -62,6 +67,7 @@ export type DisplayItem =
 
 interface RunSyncOptions {
   signal?: AbortSignal;
+  timeoutMs?: number;
   env?: Record<string, string | undefined>;
   /** Called each time a new message is received from the subprocess. */
   onStreamingUpdate?: (state: StreamingState) => void;
@@ -72,13 +78,17 @@ export async function runSync(
   args: string[],
   options: RunSyncOptions = {}
 ): Promise<RunSyncResult> {
-  const { signal, env, onStreamingUpdate } = options;
+  const { signal, timeoutMs, env, onStreamingUpdate } = options;
   const { command, args: spawnArgs } = getPiSpawnCommand(args);
 
   return new Promise((resolve) => {
     let output = "";
     let stderr = "";
     let exitCode = 0;
+    let timedOut = false;
+    let cancelled = false;
+    let timeoutHandle: NodeJS.Timeout | undefined;
+    let forceKillHandle: NodeJS.Timeout | undefined;
 
     const child = spawn(command, spawnArgs, {
       cwd,
@@ -90,12 +100,29 @@ export async function runSync(
     // Set up post-exit guard for Windows
     const cleanup = attachPostExitStdioGuard(child);
 
-    // Handle signal
-    const handleAbort = () => {
+    const terminateChild = () => {
       trySignalChild(child, "SIGTERM");
+      if (forceKillHandle) return;
+      forceKillHandle = setTimeout(() => {
+        trySignalChild(child, "SIGKILL");
+      }, DEFAULT_TERMINATION_GRACE_MS);
+      forceKillHandle.unref?.();
     };
 
-    signal?.addEventListener("abort", handleAbort);
+    const handleAbort = () => {
+      if (!timedOut) cancelled = true;
+      terminateChild();
+    };
+
+    signal?.addEventListener("abort", handleAbort, { once: true });
+
+    if (timeoutMs !== undefined) {
+      timeoutHandle = setTimeout(() => {
+        timedOut = true;
+        terminateChild();
+      }, timeoutMs);
+      timeoutHandle.unref?.();
+    }
 
     // Streaming state accumulation
     const streamMessages: unknown[] = [];
@@ -200,8 +227,10 @@ export async function runSync(
       stderr += data.toString("utf-8");
     });
 
-    child.on("close", (code) => {
+    child.on("close", (code, closeSignal) => {
       signal?.removeEventListener("abort", handleAbort);
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      if (forceKillHandle) clearTimeout(forceKillHandle);
       cleanup();
 
       // Flush remaining line buffer
@@ -210,7 +239,7 @@ export async function runSync(
         lineBuffer = "";
       }
 
-      exitCode = code ?? (stderr.includes("error") ? 1 : 0);
+      exitCode = timedOut ? 124 : (code ?? (cancelled ? 130 : stderr.includes("error") ? 1 : 0));
 
       const collected = collectOutput(output);
       let finalOutput = collected.output;
@@ -236,11 +265,16 @@ export async function runSync(
         final: collected.final,
         lastEventType: collected.lastEventType,
         displayItems,
+        timedOut,
+        cancelled,
+        terminationSignal: closeSignal ?? undefined,
       });
     });
 
     child.on("error", (error) => {
       signal?.removeEventListener("abort", handleAbort);
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      if (forceKillHandle) clearTimeout(forceKillHandle);
       cleanup();
 
       resolve({

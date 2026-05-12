@@ -463,19 +463,19 @@ session_end
       {
         "match": "**/*.{ts,tsx,js,json,md}",
         "run": "pnpm format",
-        "timeoutMs": 120000
+        "timeoutMs": 300000
       }
     ],
     "agentEnd": [
       {
         "run": "pnpm typecheck",
-        "timeoutMs": 120000
+        "timeoutMs": 300000
       }
     ],
     "beforeCommit": [
       {
         "run": "pnpm test",
-        "timeoutMs": 120000
+        "timeoutMs": 300000
       }
     ]
   }

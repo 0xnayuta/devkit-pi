@@ -31,7 +31,7 @@ Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG`, `DEF
   "subagents": {
     "enabled": true,
     "maxDepth": 1,
-    "timeoutMs": 120000,
+    "timeoutMs": 300000,
     "allowWrite": false,
     "allowLspTools": true,
     "allowedLspActions": [
@@ -181,7 +181,7 @@ Source: `DEFAULT_SUBAGENTS_CONFIG`, `normalizeSubagentsConfig()`, `src/modules/s
 |---|---|---:|---|---|---|
 | `subagents.enabled` | boolean | `true` | No | Whether to register `subagent` tool | `src/modules/subagents/register.ts` |
 | `subagents.maxDepth` | number | `1` | No | Maximum subagent depth; default prohibits nested subagents. Accepts non-negative integer | `src/shared/types.ts`, `src/modules/subagents/register.ts` |
-| `subagents.timeoutMs` | number | `120000` | No | Single subagent execution timeout in ms | `src/modules/subagents/executor.ts` |
+| `subagents.timeoutMs` | number | `300000` | No | Single subagent execution timeout in ms | `src/modules/subagents/executor.ts` |
 | `subagents.allowWrite` | boolean | `false` | No | Experimental/advanced/unsafe switch. Relaxes non-readonly custom agent tool filtering policy; does not imply complete permission sandbox, audit log, automatic rollback, or stable write-capability contract | `src/config/load-config.ts`, `src/modules/subagents/*` |
 | `subagents.allowLspTools` | boolean | `true` | No | Whether to allow subagents to use readonly LSP tool; also constrained by `lsp.enabled` and `lsp.tool.enabled` | `src/index.ts`, `src/modules/subagents/*` |
 | `subagents.allowedLspActions` | string[] | See below | No | Subagent LSP action allowlist; invalid values are discarded | `src/config/load-config.ts` |

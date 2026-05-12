@@ -97,7 +97,7 @@ export const DEFAULT_CONVERT_CONTENT_CONFIG: ResolvedConvertContentConfig = {
 export const DEFAULT_SUBAGENTS_CONFIG: ResolvedSubagentsConfig = {
   enabled: true,
   maxDepth: 1,
-  timeoutMs: 120000,
+  timeoutMs: 300000,
   allowWrite: false,
   allowLspTools: true,
   allowedLspActions: DEFAULT_SUBAGENT_LSP_ACTIONS,

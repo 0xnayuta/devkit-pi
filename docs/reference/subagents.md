@@ -16,7 +16,7 @@ The Subagents module lets the main agent delegate a focused task to a dedicated 
 Suitable use cases:
 
 - Code exploration: find files, symbols, call chains, and architecture locations
-- Documentation/external research: hand off to researcher with Web tools
+- Documentation/external research: hand off to researcher with Web/convert tools
 - Implementation suggestions: generate implementation plans, not write code directly
 - Review: isolate code review output and evidence collection
 - Testing: generate test strategies, edge cases, and coverage suggestions
@@ -26,7 +26,7 @@ Suitable use cases:
 Differences from other capabilities:
 
 - Regular prompt: still completed in main agent context; subagent starts an independent child session.
-- Web tools: `web_search` / `fetch_content` are tools; researcher subagent uses them for research.
+- Web/convert tools: `web_search` / `fetch_content` / `convert_content` are tools; researcher subagent uses them for research and document conversion.
 - LSP tools: `lsp` is a code intelligence tool; some built-in subagents can use readonly LSP actions.
 - `/toolkit` commands: user manual diagnostics/status viewing; does not replace `subagent` tool.
 
@@ -50,7 +50,7 @@ Built-in agents come from the repository's `agents/` directory. They all declare
 | Agent | Role / purpose | Expected use cases | Tools declared | Source |
 |---|---|---|---|---|
 | `explorer` | Read-only codebase navigator | Find files, patterns, definitions, references, architecture locations | `read, grep, find, ls, lsp` | `agents/explorer.md` |
-| `researcher` | Read-only web researcher | External documentation/API/resource search, source synthesis | `web_search, fetch_content, get_search_content` | `agents/researcher.md` |
+| `researcher` | Read-only web researcher | External documentation/API/resource search, source synthesis, document conversion | `web_search, fetch_content, get_search_content, convert_content` | `agents/researcher.md` |
 | `reviewer` | Read-only code reviewer | Review code, diffs, plans, tests, and documentation | `read, grep, find, ls, lsp` | `agents/reviewer.md` |
 | `implementer` | Read-only implementation planner | Analyze requirements and code structure, produce implementation plans | `read, grep, find, ls, lsp` | `agents/implementer.md` |
 | `tester` | Read-only test planner | Design test strategies, scenarios, edge cases, and coverage | `read, grep, find, ls, lsp` | `agents/tester.md` |
@@ -117,7 +117,7 @@ Fields with no special behavior currently:
 name: docs-researcher
 description: Project documentation researcher
 readonly: true
-tools: web_search, fetch_content, get_search_content
+tools: web_search, fetch_content, get_search_content, convert_content
 ---
 
 You research external documentation and return concise findings.
@@ -181,7 +181,7 @@ Current boundary based on source code:
 - All 5 built-in agents declare `readonly: true`, and prompts explicitly require no editing or file writing.
 - `filterToolsForReadonly()` filters tools for readonly agents, retaining only readonly tool sets:
   - `read`, `grep`, `find`, `ls`
-  - `web_search`, `fetch_content`, `get_search_content`
+  - `web_search`, `fetch_content`, `get_search_content`, `convert_content`
   - `lsp` (only when `subagents.allowLspTools=true` and `allowedLspActions` is non-empty)
 - For custom agents with `readonly: false`:
   - If `subagents.allowWrite=false`, still filters to readonly tools.
@@ -194,7 +194,7 @@ Important notes:
 - Subagent's actual tool availability depends on child pi runtime, current tool registration, execution environment, and configuration; do not assume all tools will automatically be inherited by subagents in the future.
 - Main agent process registers `subagent` and `/toolkit`; subagent process does not register `subagent` or `/toolkit`.
 - LSP privileged actions are always disabled in subagents.
-- Web tools can be used for research and reading information.
+- Web and convert tools can be used for research, reading information, and converting supported documents to Markdown.
 - File writing, command execution, project modification, and other write-like behaviors should not be understood as default-safe capabilities.
 - Prompt/policy is behavioral guidance; real strong constraints mainly come from tool filtering, subagent not registering `subagent`, LSP privileged actions always disabled in subagents, etc.
 
@@ -261,12 +261,12 @@ Machine parsing:
 
 ## Relationship with Web / LSP / toolkit
 
-### Web tools
+### Web / convert tools
 
-- Web tools can be registered in both main agent and subagent processes.
-- Built-in `researcher` declares `web_search`, `fetch_content`, `get_search_content`.
+- Web and convert tools can be registered in both main agent and subagent processes.
+- Built-in `researcher` declares `web_search`, `fetch_content`, `get_search_content`, `convert_content`.
 - Custom agents can also declare these tools in `tools`.
-- Web tools details: [`web-tools.md`](./web-tools.md).
+- Web tools details: [`web-tools.md`](./web-tools.md). Convert tool details: [`convert-tools.md`](./convert-tools.md).
 
 ### LSP tools
 
@@ -294,7 +294,7 @@ Default configuration summary:
   "subagents": {
     "enabled": true,
     "maxDepth": 1,
-    "timeoutMs": 120000,
+    "timeoutMs": 300000,
     "allowWrite": false,
     "allowLspTools": true,
     "allowedLspActions": [

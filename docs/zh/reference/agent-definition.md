@@ -66,7 +66,7 @@ permissions, temperature, maxTokens, provider, tools as YAML list
 | Agent | 描述 | Readonly | Tools | 源码 |
 |---|---|---:|---|---|
 | `explorer` | Read-only codebase navigator — finds files, patterns, and architecture | true | `read, grep, find, ls, lsp` | `agents/explorer.md` |
-| `researcher` | Read-only web researcher — searches and synthesizes information | true | `web_search, fetch_content, get_search_content` | `agents/researcher.md` |
+| `researcher` | Read-only web researcher — searches and synthesizes information | true | `web_search, fetch_content, get_search_content, convert_content` | `agents/researcher.md` |
 | `reviewer` | Read-only code reviewer — inspects diffs, plans, and codebase health | true | `read, grep, find, ls, lsp` | `agents/reviewer.md` |
 | `implementer` | Read-only implementation planner — creates detailed, actionable implementation plans | true | `read, grep, find, ls, lsp` | `agents/implementer.md` |
 | `tester` | Read-only test planner — analyzes requirements and designs comprehensive test strategies | true | `read, grep, find, ls, lsp` | `agents/tester.md` |
@@ -95,7 +95,7 @@ Web researcher 示例：
 name: docs-researcher
 description: External documentation researcher
 readonly: true
-tools: web_search, fetch_content, get_search_content
+tools: web_search, fetch_content, get_search_content, convert_content
 ---
 
 You research external documentation and return concise findings with source URLs.
@@ -121,7 +121,7 @@ Do not write files. Do not call other subagents.
 Readonly tools 当前包括：
 
 ```text
-read, grep, find, ls, web_search, fetch_content, get_search_content
+read, grep, find, ls, web_search, fetch_content, get_search_content, convert_content
 ```
 
 `lsp` 只有在 `subagents.allowLspTools=true` 且 `subagents.allowedLspActions` 非空时保留。子代理中 LSP privileged actions 始终禁用。

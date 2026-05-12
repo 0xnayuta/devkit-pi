@@ -66,7 +66,7 @@ Among these, `disabled` is currently not parsed; there is no per-agent disable p
 | Agent | Description | Readonly | Tools | Source |
 |---|---|---:|---|---|
 | `explorer` | Read-only codebase navigator — finds files, patterns, and architecture | true | `read, grep, find, ls, lsp` | `agents/explorer.md` |
-| `researcher` | Read-only web researcher — searches and synthesizes information | true | `web_search, fetch_content, get_search_content` | `agents/researcher.md` |
+| `researcher` | Read-only web researcher — searches and synthesizes information | true | `web_search, fetch_content, get_search_content, convert_content` | `agents/researcher.md` |
 | `reviewer` | Read-only code reviewer — inspects diffs, plans, and codebase health | true | `read, grep, find, ls, lsp` | `agents/reviewer.md` |
 | `implementer` | Read-only implementation planner — creates detailed, actionable implementation plans | true | `read, grep, find, ls, lsp` | `agents/implementer.md` |
 | `tester` | Read-only test planner — analyzes requirements and designs comprehensive test strategies | true | `read, grep, find, ls, lsp` | `agents/tester.md` |
@@ -95,7 +95,7 @@ Web researcher example:
 name: docs-researcher
 description: External documentation researcher
 readonly: true
-tools: web_search, fetch_content, get_search_content
+tools: web_search, fetch_content, get_search_content, convert_content
 ---
 
 You research external documentation and return concise findings with source URLs.
@@ -121,7 +121,7 @@ During execution, `filterToolsForReadonly()` filters tools based on the agent's 
 Readonly tools currently include:
 
 ```text
-read, grep, find, ls, web_search, fetch_content, get_search_content
+read, grep, find, ls, web_search, fetch_content, get_search_content, convert_content
 ```
 
 `lsp` is only retained when `subagents.allowLspTools=true` and `subagents.allowedLspActions` is non-empty. LSP privileged actions are always disabled in subagent processes.

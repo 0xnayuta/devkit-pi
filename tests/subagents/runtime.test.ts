@@ -299,7 +299,19 @@ describe("subagent readonly tool policy", () => {
 		name: "explorer",
 		description: "test",
 		readonly: true,
-		tools: ["read", "grep", "find", "ls", "lsp", "edit", "write"],
+		tools: [
+			"read",
+			"grep",
+			"find",
+			"ls",
+			"lsp",
+			"web_search",
+			"fetch_content",
+			"get_search_content",
+			"convert_content",
+			"edit",
+			"write",
+		],
 		systemPrompt: "test",
 		source: "builtin",
 		filePath: "agents/explorer.md",
@@ -308,6 +320,7 @@ describe("subagent readonly tool policy", () => {
 	it("allows lsp for readonly agents by default while removing write tools", () => {
 		const tools = filterToolsForReadonly(agent, mergeConfig({}).subagents);
 		assert.ok(tools.includes("lsp"));
+		assert.ok(tools.includes("convert_content"));
 		assert.equal(tools.includes("edit"), false);
 		assert.equal(tools.includes("write"), false);
 	});

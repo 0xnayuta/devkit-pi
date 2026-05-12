@@ -19,6 +19,7 @@ language: chinese
 - [Agent 定义](./agent-definition.md)
 - [Result schema](./result-schema.md)
 - [Web 工具](./web-tools.md)
+- [Convert content 工具](./convert-tools.md)
 - [Web providers](./web-providers.md)
 - [Web 工具错误码](./web-tools-error-codes.md)
 - [LSP 工具](./lsp-tools.md)
