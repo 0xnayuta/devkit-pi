@@ -2,6 +2,7 @@
 status: accepted
 audience: maintainer
 last_verified: 2026-05-12
+language: chinese
 ---
 
 # ADR 0002：MVP 边界决策

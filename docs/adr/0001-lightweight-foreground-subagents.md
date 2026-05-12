@@ -2,6 +2,7 @@
 status: accepted
 audience: maintainer
 last_verified: 2026-05-12
+language: english
 ---
 
 # ADR 0001: Lightweight Foreground Subagent Design

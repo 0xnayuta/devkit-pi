@@ -2,6 +2,7 @@
 status: accepted
 audience: maintainer
 last_verified: 2026-05-12
+language: chinese
 ---
 
 # ADR 0001：采用轻量 foreground subagent 设计

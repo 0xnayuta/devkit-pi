@@ -2,6 +2,7 @@
 status: current
 audience: user
 last_verified: 2026-05-12
+language: chinese
 ---
 
 # Subagent 工具参考

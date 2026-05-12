@@ -2,6 +2,7 @@
 status: proposed
 audience: maintainer
 last_verified: 2026-05-11
+language: chinese
 ---
 
 # 二、新增 `convert_content` 工具计划

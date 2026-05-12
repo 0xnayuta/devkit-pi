@@ -2,6 +2,7 @@
 status: proposed
 audience: maintainer
 last_verified: 2026-05-11
+language: chinese
 ---
 
 # 个人综合 pi coding toolkit 功能路线图

@@ -2,6 +2,7 @@
 status: accepted
 audience: maintainer
 last_verified: 2026-05-12
+language: chinese
 ---
 
 # ADR 0005: 从 pi-subagents 演进为 devkit-pi

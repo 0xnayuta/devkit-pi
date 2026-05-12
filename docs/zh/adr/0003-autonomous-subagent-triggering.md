@@ -2,6 +2,7 @@
 status: accepted
 audience: maintainer
 last_verified: 2026-05-12
+language: chinese
 ---
 
 # ADR 0003：自主触发子代理的改进方案

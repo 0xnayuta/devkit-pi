@@ -2,6 +2,7 @@
 status: historical
 audience: maintainer
 last_verified: 2026-05-12
+language: english
 ---
 
 # Tests Simplification Plan

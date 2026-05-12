@@ -2,6 +2,7 @@
 status: current
 audience: maintainer
 last_verified: 2026-05-12
+language: chinese
 ---
 
 # Pi Extension API 用法参考

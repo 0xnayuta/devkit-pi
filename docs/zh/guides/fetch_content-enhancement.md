@@ -2,6 +2,7 @@
 status: current
 audience: all
 last_verified: 2026-05-12
+language: chinese
 ---
 
 # `fetch_content` 内容类型增强
