@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Personal all-in-one pi coding toolkit for agentic coding workflows.
 
-Combines subagents, web research, LSP code intelligence, automatic diagnostics hooks, and developer commands into a single modular pi extension.
+Combines subagents, web research, document conversion, LSP code intelligence, automatic diagnostics hooks, and developer commands into a single modular pi extension.
 
 ## Modules
 
@@ -12,6 +12,7 @@ Combines subagents, web research, LSP code intelligence, automatic diagnostics h
 |--------|-------------|---------|
 | **subagents** | Delegate tasks to 5 specialized readonly agents; supports user/project custom agents via markdown frontmatter | enabled |
 | **web** | `web_search`, `fetch_content`, `get_search_content` — multi-provider search, URL content extraction, result caching | enabled |
+| **convertContent** | `convert_content` — convert local files or safely downloaded remote files to Markdown through MarkItDown CLI | enabled |
 | **lsp** | LSP tool (definitions, references, hover, symbols, diagnostics) + auto diagnostics hook on `agent_end` | enabled |
 | **commands** | Unified `/toolkit` command center: doctor, modules, logs, agents, lsp, activity | enabled |
 
@@ -89,6 +90,15 @@ Delegates a focused task to a specialized agent. Results are sanitized and retur
 | `fetch_content` | Fetch and extract readable text from URLs. Supports Jina reader fallback for JS-heavy pages |
 | `get_search_content` | Retrieve stored search/fetch results by responseId |
 
+### Convert content tool
+
+```ts
+convert_content({ path: "docs/spec.pdf" })
+convert_content({ url: "https://example.com/report.docx" })
+```
+
+Converts a local file or a safely downloaded remote HTTP(S) file to Markdown. The first provider is the optional external MarkItDown CLI (`markitdown`); install and configure it separately when needed. Local paths are restricted to the active workspace, remote downloads enforce private-network protection by default, and output is truncated according to `convertContent.maxContentChars`.
+
 ### LSP tool
 
 Exposes language server capabilities: `definition`, `references`, `hover`, `signature`, `symbols`, `diagnostics`, `workspace-diagnostics`, `servers`.
@@ -107,7 +117,7 @@ The `/toolkit` command provides diagnostic and inspection subcommands:
 |------------|-------------|
 | `/toolkit doctor` | Run unified diagnostics checks |
 | `/toolkit modules` | Show module enablement status |
-| `/toolkit logs` | Show recent web activity logs |
+| `/toolkit logs` | Show recent toolkit activity logs (search, fetch, convert) |
 | `/toolkit agents` | List all discovered agents |
 | `/toolkit lsp` | Show LSP tool/hook configuration |
 | `/toolkit activity` | Open interactive activity panel |
@@ -131,6 +141,12 @@ Web tools return structured errors with `error.code` and `error.message`. Common
 
 See the canonical list in [Web tools error codes](docs/reference/web-tools-error-codes.md).
 
+### Convert content errors
+
+`convert_content` returns structured errors with `error.code` and `error.message`. Common codes include `INVALID_INPUT`, `FILE_NOT_FOUND`, `FILE_TOO_LARGE`, `UNSUPPORTED_PROTOCOL`, `COMMAND_NOT_FOUND`, `CONVERT_TIMEOUT`, `CONVERT_FAILED`, `NETWORK_ERROR`, and `PRIVATE_NETWORK_BLOCKED`.
+
+See [Convert content tool reference](docs/reference/convert-tools.md).
+
 ## Project Structure
 
 ```text
@@ -141,6 +157,7 @@ src/
 │  │  └─ commands/          # doctor, list, logs formatting
 │  ├─ web/                  # Search, fetch, content extraction, caching
 │  │  └─ providers/         # ddgs, brave, tavily, serper, openserp, searxng
+│  ├─ convert/              # convert_content tool, MarkItDown provider, safe downloads
 │  ├─ lsp/                  # LSP tool, diagnostics hook, server management
 │  └─ commands/             # Unified /toolkit command registration
 ├─ config/                  # Configuration loading and defaults
@@ -156,7 +173,8 @@ docs/                       # Documentation, guides, ADRs
 2. Subagents cannot spawn other subagents (`maxDepth = 1`)
 3. Default readonly — write capability requires explicit configuration and remains experimental for custom subagents
 4. LSP mutating actions (`rename`, `codeAction`, `restart`) are disabled by default and always blocked in subagent processes
-5. Each module can be independently enabled or disabled
+5. `convert_content` uses an optional external MarkItDown CLI provider; heavy document conversion dependencies are not bundled into the core package
+6. Each module can be independently enabled or disabled
 
 ## Development
 
@@ -197,6 +215,7 @@ pnpm docs:preview
 - [Toolkit commands reference](docs/reference/toolkit-commands.md)
 - [LSP tools reference](docs/reference/lsp-tools.md)
 - [Web tools reference](docs/reference/web-tools.md)
+- [Convert content tool reference](docs/reference/convert-tools.md)
 - [Web providers reference](docs/reference/web-providers.md)
 - [Web tools error codes](docs/reference/web-tools-error-codes.md)
 - [Security model](docs/guides/security-model.md)
