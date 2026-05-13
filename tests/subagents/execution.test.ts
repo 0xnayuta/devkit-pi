@@ -162,9 +162,9 @@ describe("subagent execution timeout normalization", () => {
 			[
 				"#!/usr/bin/env bash",
 				"# Emit valid message_end JSONL events to reset the idle timer",
-				"for i in $(seq 1 25); do",
-				"  echo '{\"type\":\"message_end\",\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"step $i\"}]}}'",
-				"  sleep 0.04",
+				"for i in $(seq 1 100); do",
+				"  echo \"{\\\"type\\\":\\\"message_end\\\",\\\"message\\\":{\\\"role\\\":\\\"assistant\\\",\\\"content\\\":[{\\\"type\\\":\\\"text\\\",\\\"text\\\":\\\"step $i\\\"}]}}\"",
+				"  sleep 0.02",
 				"done",
 				"",
 			].join("\n"),
@@ -174,8 +174,8 @@ describe("subagent execution timeout normalization", () => {
 
 		const started = performance.now();
 		const result = await runSync(path.dirname(dir), [], {
-			timeoutMs: 2000,  // hard cap (reached after ~1s total)
-			idleTimeoutMs: 50, // would fire after 50ms without activity
+			timeoutMs: 1000, // hard cap reached before the script completes (~2s total)
+			idleTimeoutMs: 200, // would fire after 200ms without activity
 			env: {
 				PATH: `${dir}${path.delimiter}${process.env.PATH ?? ""}`,
 			},
@@ -187,7 +187,8 @@ describe("subagent execution timeout normalization", () => {
 		assert.equal(result.timedOut, true);
 		assert.equal(result.timeoutReason, "runtime");
 		assert.equal(result.exitCode, 124);
-		assert.ok(elapsed >= 1900, `expected hard timeout to fire, took ${elapsed}ms`);
+		assert.ok(elapsed >= 900, `expected hard timeout to fire, took ${elapsed}ms`);
+		assert.ok(elapsed < 2000, `expected hard timeout to finish promptly, took ${elapsed}ms`);
 	});
 
 	itPosix("executor maps idle timeout to SUBAGENT_TIMEOUT with 'without activity' message", async () => {
