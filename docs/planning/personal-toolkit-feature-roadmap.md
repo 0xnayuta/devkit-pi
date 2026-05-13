@@ -1,29 +1,73 @@
 ---
 status: proposed
 audience: maintainer
-last_verified: 2026-05-12
+last_verified: 2026-05-13
 language: english
 ---
 
-# Personal pi Coding Toolkit Feature Roadmap
+# Personal Comprehensive pi Coding Toolkit Feature Roadmap
 
 ## Purpose
 
-This document records the common AI coding agent / developer tooling features worth adding when evolving from `pi-subagents` and `pi-lsp` to a personal comprehensive pi coding toolkit.
+This document records common AI coding agent / developer tooling features worth adding to `devkit-pi`.
 
-Current project coverage:
+## Current Project State
+
+**The project has evolved into `devkit-pi`** since v0.1.0. Current coverage:
 
 ```text
-subagents: task delegation, code navigation, review, research, implementation planning, test planning
-web tools: web_search, fetch_content, get_search_content
-lsp: definition, references, hover, symbols, diagnostics, auto-diagnostics hook
+✅ subagents: task delegation, code navigation, review, research, implementation planning, test planning
+✅ web: web_search, fetch_content, get_search_content
+✅ lsp: definition, references, hover, symbols, diagnostics, automatic diagnostics hook
+✅ convert: convert_content tool (MarkItDown CLI provider)
+✅ commands: unified /toolkit command center
 ```
 
-The next stage should not prioritize adding more complex agents, but rather complete the workflow infrastructure common to mainstream AI coding tools: project memory, context building, Git integration, check command encapsulation, hooks, diagnostic aggregation, task tracking, and session compaction.
+**Current implemented module structure:**
+
+```text
+devkit-pi/
+├─ src/
+│  ├─ index.ts              # entry point
+│  ├─ modules/
+│  │  ├─ subagents/         # subagent delegation system
+│  │  ├─ web/               # web search and content fetching (6 providers)
+│  │  ├─ lsp/               # LSP code intelligence + diagnostics hook
+│  │  ├─ convert/           # file-to-Markdown conversion (MarkItDown CLI)
+│  │  └─ commands/          # /toolkit commands
+│  ├─ config/
+│  │  └─ load-config.ts     # config loading and normalization
+│  └─ shared/
+│     ├─ types.ts           # core types
+│     ├─ errors.ts          # error code definitions
+│     ├─ activity.ts        # activity records
+│     └─ external-command.ts # external command runner
+├─ agents/                   # 5 builtin agent definitions
+│  ├─ explorer.md
+│  ├─ researcher.md
+│  ├─ reviewer.md
+│  ├─ implementer.md
+│  └─ tester.md
+└─ tests/                    # unit tests mirroring src/modules
+```
+
+**Implemented /toolkit subcommands:**
+
+| Command | Function |
+|---------|----------|
+| `/toolkit doctor` | Run toolkit configuration/dependency health checks |
+| `/toolkit modules` | Show module enablement status |
+| `/toolkit logs` | Show recent toolkit activity (web search/fetch/get_content and convert) |
+| `/toolkit agents` | List builtin/user/project agents |
+| `/toolkit lsp` | Show LSP tool/hook configuration |
+| `/toolkit activity` | Open the activity panel |
+| `/toolkit help` | Show help |
+
+The next stage should not prioritize adding more complex agents. Instead, it should complete workflow infrastructure common to mainstream AI coding tools: project status/context building, Git integration, check command encapsulation, hooks, diagnostics aggregation, task tracking, and safe undo. Project rules and session compaction should rely on pi platform capabilities and should not be duplicated in devkit-pi.
 
 ## Reference Tools and Common Capabilities
 
-Common AI coding agent / developer tooling on GitHub and in the community includes:
+Common AI coding agent / developer tooling in the community and on GitHub includes:
 
 - Claude Code
 - Aider
@@ -33,7 +77,7 @@ Common AI coding agent / developer tooling on GitHub and in the community includ
 - OpenHands
 - SWE-agent / mini-swe-agent
 
-These tools are highly convergent in functionality, usually organized around:
+These tools converge around this workflow:
 
 ```text
 Project rules / memory
@@ -45,77 +89,71 @@ Project rules / memory
 → Session compaction / continue task
 ```
 
-Therefore, this project recommends prioritizing workflow primitives for the next stage, rather than immediately implementing MCP, vector databases, IDE auto-completion, or complex multi-agent orchestration.
+Therefore, this project should prioritize workflow primitives instead of immediately implementing MCP, vector databases, IDE autocomplete, or complex multi-agent orchestration.
 
 ## Overall Priority
 
+> **Note**: this table lists features that are not yet implemented. Implemented features are shown above.
+
 | Priority | Feature | Value | Complexity | Recommendation |
-|----------|---------|------:|----------:|----------------|
-| P0 | Project memory / rules file | Very High | Low | Strongly recommended |
-| P0 | project context / repo summary | Very High | Medium | Strongly recommended |
-| P1 | run_check: test, lint, typecheck encapsulation | High | Low-Medium | Strongly recommended |
-| P1 | Git integration: status, diff, commit, undo | Very High | Medium | Strongly recommended |
-| P1 | Hooks: deterministic automation | High | Medium | Recommended |
-| P1 | diagnose: diagnostics aggregation | High | Medium | Recommended |
-| P2 | Plan / Act workflow | Medium-High | Low-Medium | Recommended |
-| P2 | Todo / task tracker | Medium-High | Low | Recommended |
-| P2 | Context compaction / session summary | High | Medium-High | Recommended |
-| P2 | Patch queue / apply preview | Medium-High | Medium | Recommended |
-| P2 | ADR / docs helper | Medium-High | Low-Medium | Recommended |
-| P2 | Permission system enhancement | Medium-High | Medium | Recommended |
-| P2 | Changelog / release notes | Medium | Low-Medium | Optional |
-| P3 | GitHub issue / PR helper | Medium | Medium | Optional |
-| P3 | Repo map advanced / embedding search | Medium-High | High | Defer |
-| P3 | MCP integration | Medium | High | Defer |
-| P3 | IDE inline edit / autocomplete | Medium | Very High | Not recommended as priority |
+|---|---|---:|---:|---:|
+| P0 | project_status / project status aggregation | Very high | Medium | ⭐⭐⭐ Strongly recommended |
+| P0 | ~~Project memory / rules file~~ | Very high | Low | ❌ Do not implement |
+| P1 | run_check: check command wrapper | High | Low-Medium | ⭐⭐⭐ Strongly recommended |
+| P1 | Git integration: status, diff, commit, undo | Very high | Medium | ⭐⭐⭐ Strongly recommended |
+| P1 | Hooks: deterministic automation | High | Medium | ⭐⭐ Recommended |
+| P1 | diagnose: diagnostics aggregation | High | Medium | ⭐⭐ Recommended |
+| P2 | Plan / Act workflow | Medium-high | Low-Medium | ⭐⭐ Recommended |
+| P2 | Todo / task tracker | Medium-high | Low | ⭐⭐ Recommended |
+| P2 | ~~Context compaction / session summary~~ | High | Medium-high | ❌ Do not implement |
+| P2 | Per-turn undo / Undo | Medium-high | Medium | ⭐⭐ Recommended |
+| P2 | ~~ADR / docs helper~~ | Medium-high | Low-Medium | ❌ Do not implement |
+| P2 | Permission system enhancement | Medium-high | Medium | ⭐⭐ Recommended |
+| P2 | ~~Changelog / release notes~~ | Medium | Low-Medium | ❌ Do not implement |
+| P3 | GitHub issue / PR helper | Medium | Medium | ⭐ Optional |
+| P3 | Repo map advanced / embedding search | Medium-high | High | ⏸️ Defer |
+| P3 | ~~MCP integration~~ | Medium | High | ❌ Do not implement |
+| P3 | ~~IDE inline edit / autocomplete~~ | Medium | Very high | ❌ Do not implement |
 
-## Recommended Final Module Diagram
+## Current Module Diagram
 
-If the project evolves into a comprehensive toolkit, it can be organized by capability domain:
+Implemented features are organized by capability domain:
 
 ```text
-pi-coding-toolkit
+devkit-pi
 ├─ agents
-│  ├─ subagent
-│  ├─ explorer
-│  ├─ reviewer
-│  ├─ implementer
-│  └─ tester
-│
+│  ├─ subagent                ✅ Implemented (5 builtin agents)
+│  ├─ explorer                ✅ Implemented
+│  ├─ reviewer                ✅ Implemented
+│  ├─ researcher              ✅ Implemented
+│  ├─ implementer             ✅ Implemented
+│  └─ tester                  ✅ Implemented
 ├─ intelligence
-│  ├─ lsp
-│  ├─ repo_map
-│  └─ project_context
-│
+│  ├─ lsp                     ✅ Implemented (tool + diagnostics hook)
+│  └─ (project_status)        🔄 To implement (P0)
 ├─ research
-│  ├─ web_search
-│  ├─ fetch_content
-│  └─ get_search_content
-│
-├─ workflow
+│  ├─ web_search              ✅ Implemented (6 providers)
+│  ├─ fetch_content           ✅ Implemented
+│  └─ get_search_content      ✅ Implemented
+├─ (workflow)                 🔄 To implement (P2)
 │  ├─ todo
 │  ├─ plan
-│  ├─ compact
-│  └─ patch_queue
-│
-├─ validation
+│  └─ (undo)                  🔄 To implement (P2)
+├─ (validation)               🔄 To implement (P1)
 │  ├─ run_check
 │  ├─ diagnose
 │  └─ hooks
-│
-├─ vcs
+├─ (vcs)                      🔄 To implement (P1)
 │  ├─ git_status
 │  ├─ git_diff
 │  ├─ git_commit
 │  └─ git_undo
-│
-└─ docs
-   ├─ adr
-   ├─ changelog
-   └─ release_notes
+├─ convert                    ✅ Implemented (MarkItDown CLI provider)
+├─ commands                   ✅ Implemented (/toolkit command center)
+├─ docs
+│  └─ adr                     ✅ Present (manually maintained)
+└─ CHANGELOG.md               ✅ Present (manually maintained)
 ```
-
-The actual code structure doesn't need to immediately follow this directory reorganization, but the diagram serves as a reference for feature boundaries.
 
 ---
 
@@ -125,10 +163,10 @@ The actual code structure doesn't need to immediately follow this directory reor
 
 ### Background
 
-Mainstream tools almost all have project-level rules mechanisms:
+Most mainstream tools have project-level rules mechanisms:
 
-| Tool | Similar Capability |
-|------|---------------------|
+| Tool | Similar capability |
+|---|---|
 | Claude Code | `CLAUDE.md` |
 | Cursor | `.cursorrules` / project rules |
 | Cline | `.clinerules` |
@@ -136,178 +174,207 @@ Mainstream tools almost all have project-level rules mechanisms:
 | Aider | `.aider.conf.yml` / repo instructions |
 | Continue | rules / context providers |
 
-This is the highest ROI feature. It allows agents to automatically get project conventions, common commands, and maintainer preferences each time they enter the project.
+This has very high ROI because it lets agents automatically receive project conventions, common commands, and maintainer preferences.
 
-### Suggested Files
+### Current Status
 
-Can support the following files, loaded by hierarchy:
+**❌ Do not implement** — the pi platform already has built-in `AGENTS.md` automatic injection, so this project should not duplicate it.
 
-```text
-~/.pi/toolkit/rules.md          # Global personal rules
-PROJECT/AGENTS.md               # Project existing agent rules
-PROJECT/.pi/rules.md            # Project-level rules
-PROJECT/.pi/memory.md           # Project long-term memory
-PROJECT/.pi/instructions.md     # Optional additional instructions
-```
+### Analysis
 
-Can also support a shorter root file:
+The pi platform resource discovery pipeline already provides:
 
-```text
-PROJECT/PI.md
-```
+1. **Automatic AGENTS.md injection**: pi loads the project-root `AGENTS.md` into agent context.
+2. **Project-level priority**: resources under `.pi/` override global resources (`~/.pi/agent/`).
+3. **Prompt templates**: project templates under `.pi/prompts/*.md` are supported.
+4. **Extensions**: lifecycle hooks can inject custom context.
 
-### Example
+Therefore, `AGENTS.md` already covers project rule injection. devkit-pi does not need an additional rules-file loader.
 
-```md
-# Project Rules
+### Related Files
 
-## Commands
-
-- Typecheck: `pnpm typecheck`
-- Test: `pnpm test`
-- Lint: `pnpm lint`
-- Format: `pnpm format`
-- Docs check: `pnpm docs:check`
-
-## Coding Style
-
-- Use TypeScript ESM.
-- Prefer small modules.
-- Avoid new runtime dependencies unless necessary.
-- Keep extension entry files thin.
-
-## Agent Behavior
-
-- Inspect related files before editing.
-- Prefer LSP for symbol lookup.
-- After editing code, run typecheck and relevant tests.
-- For documentation changes, run docs check when available.
-```
-
-### Injection Strategy
-
-Recommended injection order:
-
-```text
-global rules
-→ project rules
-→ AGENTS.md
-→ project memory
-→ session summary
-```
-
-If content is too long, truncate or summarize.
-
-### Recommended Tool/Command
-
-```ts
-project_rules({ action: "show" | "reload" | "paths" })
-```
-
-Or command:
-
-```text
-/toolkit rules
-/toolkit rules reload
-```
+- `AGENTS.md` — current architecture and development guidelines.
+- `.pi/prompts/` — optional project-level prompt templates.
 
 ### Priority
 
-P0. Should be one of the first features implemented in the next stage.
+**Do not implement** — rely on pi platform built-ins.
 
-## 2. Project Context / Project Context Package
+---
+
+## 2. project_status / Project Status Aggregation
 
 ### Background
 
-Currently the toolkit has subagents, web, and LSP, but is missing an ability to consolidate "current project state" into a compact context.
+The toolkit already has subagents, web tools, and LSP, but lacks a compact way to summarize the current project state.
+
+This complements AGENTS.md: AGENTS.md tells the agent how to work; project_status tells the agent what the project currently looks like.
 
 Similar capabilities include:
 
-- Aider's repo map.
-- Cursor / Continue's codebase context.
-- Claude Code's project context and file references.
+- Aider repo map (lightweight version)
+- Cursor / Continue codebase context
+- Claude Code project status summary
+
+### Current Status
+
+**🔄 To implement** — the project does not yet implement a `project_status` tool.
+
+### Relationship with Existing Commands
+
+| Command | Purpose | Audience |
+|------|------|------|
+| `/toolkit modules` | Human-readable module status | Developer |
+| `/toolkit doctor` | Human-readable diagnostics report | Developer |
+| `project_status` | Compact context for the agent | Agent |
 
 ### Suggested Tool
 
 ```ts
-project_context({
-  mode: "summary" | "files" | "health" | "task",
-  task?: string,
+project_status({
+  mode: "overview" | "focused" | "health",
   paths?: string[],
   includeGit?: boolean,
   includeLsp?: boolean
 })
 ```
 
-### Mode Description
+### Modes
 
 | mode | Description |
-|------|-------------|
-| `summary` | Returns project structure, package info, main directories, common commands |
-| `files` | Summarizes specified files' summaries, symbols, import relationships |
-| `health` | Summarizes git status, LSP diagnostics, check command results |
-| `task` | Automatically finds relevant files based on task description and generates task context |
+|---|---|
+| `overview` | Project overview: package manager, language, directory structure, modules |
+| `focused` | Context for specified files/directories: summary, key symbols |
+| `health` | Project health: git status, LSP diagnostics, important file changes |
 
-### Output Example
+### Output Examples
+
+**overview mode:**
 
 ```text
-Project: pi-subagents
-Package manager: pnpm
+Project: devkit-pi
+Package manager: pnpm (v11.1.1)
 Language: TypeScript ESM
-Main extension entry: src/extension/index.ts
+Main entry: src/index.ts
 
-Key modules:
-- src/extension/: extension registration and commands
-- src/runtime/: subagent foreground execution
-- src/web/: web tools and providers
-- src/agents/: agent discovery and frontmatter parsing
-- src/config/: config loading
-
-Validation:
-- pnpm typecheck
-- pnpm test
-- pnpm docs:check
-
-Git:
-- modified docs/adr/0005-evolve-into-devkit-pi.md
+Modules: subagents, web (6 providers), lsp, convert, commands
+Agent count: 5 (explorer, researcher, reviewer, implementer, tester)
+Validation: pnpm typecheck | pnpm test | pnpm lint | pnpm docs:check
 ```
 
-### Implementation Suggestions
+**focused mode targeting `src/config/`:**
 
-Phase 1 doesn't need complex indexing, directly combine:
+```text
+src/config/
+├─ load-config.ts (primary)
+│  - loadConfig(), mergeConfig(), normalize*()
+│  - Config namespaces: web, subagents, lsp, convertContent, commands
 
-- `package.json`
-- `AGENTS.md`
-- `.pi/rules.md`
-- `docs/guides/goals-and-scope.md`
-- `find` / `rg` / file tree
-- LSP `symbols`
-- `git status`
+Related files: src/shared/types.ts (ToolkitConfig types)
+```
 
-Consider import graph, PageRank, or embedding search later.
+**health mode:**
+
+```text
+Health: mixed
+
+Git: 2 files changed (1 tracked, 1 untracked)
+- modified: docs/zh/planning/personal-toolkit-feature-roadmap.md
+- new: src/modules/xxx/temp.ts
+
+LSP: 0 errors, 2 warnings
+- src/config/load-config.ts: unused variable 'debugMode'
+
+Key files: AGENTS.md exists, package.json valid
+```
+
+### Implementation Suggestion
+
+First version should focus on `overview` and `health`:
+
+1. Parse `package.json` for project information.
+2. Confirm `AGENTS.md` exists and record line count.
+3. List `src/modules/` and `agents/` structure.
+4. Run `git status --porcelain` for change state.
+5. Reuse the LSP manager in `src/modules/lsp/core.ts`, or extract a public helper, to summarize errors/warnings. Avoid coupling through tool-to-tool calls.
+
+`focused` can be added later using LSP `symbols` and file trees.
+
+### Difference from AGENTS.md
+
+| Dimension | AGENTS.md | project_status |
+|------|-----------|----------------|
+| Content | Rules, decisions, process | Files, state, metrics |
+| Update frequency | Manual | Real-time query |
+| Purpose | Guide agent behavior | Provide current context |
 
 ### Priority
 
-P0.
+**P0** — project status awareness is fundamental for efficient agent work.
 
 ---
 
 # P1 Features
 
-## 3. run_check: Check Command Encapsulation
+## 3. run_check: Check Command Wrapper
 
 ### Background
 
-Agents can directly run commands via bash, but encapsulating as a dedicated tool is more stable, secure, and token-efficient.
+The agent can run shell commands directly, but a dedicated tool would be more stable, safer, and more token-efficient.
+
+### Current Status
+
+**🔄 To implement** — the project does not yet implement `run_check`. `/toolkit doctor` provides some toolkit health checks, but does not wrap or run project typecheck/lint/test/docs commands.
+
+### Design Principles
+
+**Hybrid approach**: project auto-detection + config override + default commands.
+
+- Prefer user-configured custom commands.
+- For Node/TypeScript projects, prefer existing `package.json` scripts and the current package manager, such as `pnpm typecheck`.
+- Then auto-detect project type and use default commands.
+- Make common multi-language projects work out of the box.
+- Write-like checks such as `format` or `lint --fix` must require explicit `fix=true` or safety config approval.
+
+### Project Type Detection
+
+Detect by root markers:
+
+| Project type | Marker files | Notes |
+|----------|----------|------|
+| TypeScript / Node.js | `package.json` | Current project |
+| Rust | `Cargo.toml` | |
+| Go | `go.mod` | |
+| Python | `pyproject.toml` / `requirements.txt` | |
+| Generic | `Makefile` | Custom checks |
+| Unknown | — | No default command |
+
+### Default Command Mapping
+
+| Type | typecheck | test | lint | format |
+|------|-----------|------|------|--------|
+| **node** | Prefer `<pm> typecheck`, else `tsc --noEmit` | Prefer `<pm> test` | Prefer `<pm> lint` | Prefer check-style `<pm> format`; write mode requires `fix=true` |
+| **rust** | `cargo check` | `cargo test` | `cargo clippy` | `cargo fmt` |
+| **go** | `go vet ./...` | `go test ./...` | `golangci-lint run` | `gofmt -w .` |
+| **python** | `mypy .` | `pytest` | `ruff check .` | `ruff format .` |
+| **generic** | none | none | none | none |
 
 ### Suggested Tool
 
 ```ts
 run_check({
   kind: "typecheck" | "lint" | "test" | "format" | "docs" | "custom",
-  target?: string,
-  fix?: boolean,
+
+  // Optional: language override. Default: auto.
+  language?: "auto" | "typescript" | "rust" | "go" | "python" | "generic",
+
+  // Optional: custom command. Overrides default and config.
   command?: string,
+
+  // Optional: fix mode, only for lint/format.
+  fix?: boolean,
+
+  // Optional timeout in milliseconds.
   timeoutMs?: number
 })
 ```
@@ -327,12 +394,33 @@ run_check({
 }
 ```
 
-### Output Target
-
-Don't directly return full stdout/stderr, but extract summary:
+Command source priority:
 
 ```text
-Typecheck failed: 3 errors
+1. Explicit command parameter (highest priority)
+2. Configured command for the selected kind
+3. Project-type default command
+4. If no default exists, return a structured skipped/error result
+```
+
+### Output Format
+
+**Success:**
+
+```text
+check: typecheck
+status: passed
+duration: 1.234s
+language: typescript
+```
+
+**Failure:**
+
+```text
+check: typecheck
+status: failed (3 errors)
+duration: 2.456s
+language: typescript
 
 1. src/config/load-config.ts:142:17
    Invalid hook mode: expected "agent_end", "edit_write", or "disabled".
@@ -340,23 +428,55 @@ Typecheck failed: 3 errors
 2. src/shared/types.ts:231:5
    Type 'undefined' is not assignable to type 'ResolvedLspConfig'.
 
-Suggested next step:
-- Update ToolkitConfig normalization and ResolvedToolkitConfig types.
+3. src/modules/web/handlers.ts:89:3
+   Parameter 'url' implicitly has 'any' type.
+
+suggested_next_step: Fix type errors in config and types modules.
 ```
+
+**No default command:**
+
+```text
+check: typecheck
+status: skipped
+reason: No default command for generic project type.
+        Configure checks.typecheck in settings or pass command parameter.
+```
+
+### Implementation Suggestion
+
+**First version (config-driven):**
+
+1. Parse `checks` command mapping from user config.
+2. Use configured command if present.
+3. If absent and `language=auto`, detect project type.
+4. Use project-type defaults.
+
+**Later extensions:**
+
+1. Add `list_defaults` mode.
+2. Add `validate_config` mode.
+3. Support `.toolkitignore` for excluding checks.
 
 ### Priority
 
-P1. Low implementation complexity, high daily benefit.
+**P1** — low implementation cost and high daily value.
+
+---
 
 ## 4. Git Integration
 
 ### Background
 
-Git integration is one of the core experiences in Aider, Claude Code and other coding agents. It allows agent modifications to be trackable, committable, and undoable.
+Git integration is central to Aider, Claude Code, and similar coding agents. It makes agent changes traceable, committable, and reversible.
+
+### Current Status
+
+**🔄 To implement** — the project does not yet implement Git integration tools.
 
 ### Suggested Tools
 
-Can be split into multiple small tools:
+Split into small tools:
 
 ```ts
 git_status()
@@ -365,7 +485,7 @@ git_commit({ message?: string, autoMessage?: boolean })
 git_undo({ scope?: "last-ai-change" | "working-tree" })
 ```
 
-Can also unify:
+Or unify as:
 
 ```ts
 git_tool({
@@ -378,9 +498,9 @@ git_tool({
 
 ### Recommended Capabilities
 
-#### Pre-modification snapshot
+#### Pre-change snapshot
 
-Before agent starts modifying, record:
+Record before the agent starts modifying files:
 
 ```text
 HEAD commit
@@ -388,7 +508,7 @@ working tree status
 modified files
 ```
 
-#### Post-modification diff summary
+#### Post-change diff summary
 
 ```text
 Changed files:
@@ -400,9 +520,9 @@ Summary:
 - Updated web provider configuration.
 ```
 
-#### Auto commit message
+#### Automatic commit message
 
-Generate conventional commit style:
+Generate conventional commit style messages:
 
 ```text
 feat: add namespace config for toolkit modules
@@ -410,39 +530,45 @@ feat: add namespace config for toolkit modules
 
 #### Undo
 
-Optional implementation:
+Possible implementations:
 
-- Based on git restore.
+- Based on `git restore`.
 - Based on saved patches.
-- Based on AI change snapshot.
+- Based on AI change snapshots.
 
-### Security Strategy
+### Safety Strategy
 
-Don't auto-commit by default unless user explicitly calls or config enables.
+Never auto-commit by default. Commit only when the user explicitly calls the tool or enables a config option.
 
 ### Priority
 
-P1.
+**P1**.
+
+---
 
 ## 5. Hooks: Deterministic Automation
 
 ### Background
 
-Prompts are probabilistic; models may forget to run format/test. Hooks are deterministic and execute every time they're triggered.
+Prompts are probabilistic; the model may forget to run format/test. Hooks are deterministic and execute every time a trigger occurs.
 
-Claude Code's hooks mechanism proves this capability is useful.
+Claude Code hooks demonstrate that this is useful.
+
+### Current Status
+
+**🔄 To implement** — the project does not yet implement a generic workflow hooks mechanism. It only implements the LSP diagnostics hook (`lsp.hook.mode = "agent_end" | "edit_write" | "disabled"`).
 
 ### Suggested Events
 
-Phase 1 only supports a small number of high-value events:
+First version should support a small number of high-value events:
 
 ```text
-after_edit
-agent_end
-before_commit
+after_edit    # can be captured from pi write/edit tool_result events
+agent_end     # pi already has an agent_end event
+before_commit # not a pi built-in event; should be triggered by the future git tool
 ```
 
-Can be extended later:
+Future extensions:
 
 ```text
 session_start
@@ -480,21 +606,23 @@ session_end
 }
 ```
 
-### Security Strategy
+### Safety Strategy
 
-- Hooks are disabled by default or only allow whitelisted commands.
-- Hook output needs truncation.
-- Hook failures should return clear errors but not crash the extension.
+- Hooks should be disabled by default or limited to allowlisted commands.
+- Hook output must be truncated.
+- Hook failures should return clear errors but must not crash the extension.
 
 ### Priority
 
-P1.
+**P1**.
+
+---
 
 ## 6. diagnose: Diagnostics Aggregation
 
 ### Background
 
-After merging LSP, diagnostic sources increase:
+After adding LSP, diagnostics sources multiply:
 
 ```text
 LSP diagnostics
@@ -505,7 +633,11 @@ LSP diagnostics
 + package manifest checks
 ```
 
-If agents call these tools separately and concatenate results, it wastes tokens. Should provide a unified diagnostics aggregation tool.
+If the agent calls and merges these separately, it wastes tokens. A unified diagnostics aggregation tool should exist.
+
+### Current Status
+
+**🔄 To implement** — the project does not yet implement `diagnose`. `/toolkit doctor` provides toolkit configuration/dependency health checks (config, agents, providers, permissions, Web/LSP enablement), but it is not code diagnostics aggregation. It does not run typecheck/lint/test/docs and does not summarize workspace LSP diagnostics.
 
 ### Suggested Tool
 
@@ -540,7 +672,7 @@ Suggested next step:
 
 ### Priority
 
-P1/P2. Recommend implementing after LSP tool and run_check are stable.
+**P1/P2**. Implement after the LSP tool and run_check are stable.
 
 ---
 
@@ -552,14 +684,18 @@ P1/P2. Recommend implementing after LSP tool and run_check are stable.
 
 Many tools distinguish planning and execution:
 
-| Tool | Similar Capability |
-|------|---------------------|
+| Tool | Similar capability |
+|---|---|
 | Cline | Plan / Act |
 | Roo Code | Architect / Code |
 | Aider | Architect mode |
 | Claude Code | plan mode / extended thinking |
 
-The current project already has an `implementer` subagent, which can be further productized as a plan workflow.
+The project already has an `implementer` subagent; it can be productized into a plan workflow.
+
+### Current Status
+
+**🔄 To implement** — the `implementer` agent can already be used indirectly through the `subagent` tool for implementation planning, but it is not productized as a standalone `create_plan` tool or Plan/Act workflow.
 
 ### Suggested Tool
 
@@ -572,7 +708,7 @@ create_plan({
 })
 ```
 
-### Output Structure
+### Output Shape
 
 ```json
 {
@@ -588,23 +724,29 @@ create_plan({
 ### Recommended Workflow
 
 ```text
-User proposes task
+User asks for a task
 → create_plan
-→ reviewer reviews plan
-→ User confirms
-→ Main agent executes
+→ reviewer reviews the plan
+→ user confirms
+→ main agent executes
 → run_check / diagnose
 ```
 
 ### Priority
 
-P2.
+**P2**.
+
+---
 
 ## 8. Todo / Task Tracker
 
 ### Background
 
-Long tasks need status. Todo tracker allows agents to clearly know which step they're at.
+Long tasks need state. A todo tracker helps the agent know the current step.
+
+### Current Status
+
+**🔄 To implement** — the project does not yet implement a todo tracker.
 
 ### Suggested Tool
 
@@ -619,13 +761,13 @@ todo({
 
 ### Storage
 
-Simply store to:
+Simple storage options:
 
 ```text
 .pi/todo.json
 ```
 
-Or markdown:
+or Markdown:
 
 ```text
 .pi/todo.md
@@ -643,158 +785,238 @@ Or markdown:
 
 ### Priority
 
-P2. Low complexity, good for long tasks.
+**P2**. Low complexity and useful for long tasks.
+
+---
 
 ## 9. Context Compaction / Session Summary
 
 ### Background
 
-When sessions grow long, agents forget early decisions. Common capabilities in mainstream tools include:
+When conversations become long, agents may forget earlier decisions. Mainstream tools commonly provide:
 
-- Auto-summarize old conversations.
-- Manual `/compact`.
-- Session summary.
-- Handoff summary.
+- automatic conversation summaries
+- manual `/compact`
+- session summary / handoff summary
 
-### Suggested Tool
+### Current Status
 
-```ts
-compact_context({
-  mode: "session" | "task" | "handoff",
-  save?: boolean
-})
-```
+**❌ Do not implement** — the pi platform already has full session compaction and session management.
 
-### Output Example
+### Analysis
 
-```md
-# Session Summary
+pi already implements:
 
-## Goal
+| Capability | Description | Trigger |
+|------|------|----------|
+| Auto compaction | Triggered when context approaches the limit | Automatic |
+| Manual compaction | `/compact [instructions]` | User-triggered |
+| Branch summary | Summary when switching branches | `/tree` navigation |
+| Structured format | Goal, Progress, Key Decisions, Next Steps | Automatic |
+| Persistence | JSONL session files include complete history | Automatic |
 
-Merge pi-lsp into pi-subagents as personal pi coding toolkit.
+The original proposed subfeatures overlap with pi mechanisms:
 
-## Decisions
+| Proposed feature | Problem |
+|----------|------|
+| **Persistent summaries** | Session JSONL already contains `CompactionEntry`; no duplicate storage needed |
+| **Task-level summaries** | pi `/fork` isolates tasks more reliably |
+| **Date archives** | Edge feature; filesystem search is sufficient |
 
-- Rename optional, but docs should describe toolkit direction.
-- LSP tool before LSP hook.
-- Child subagents may use readonly LSP actions.
-- Mutating LSP actions disabled in child processes.
+**Root reason**: pi treats sessions as isolated reasoning units. Carrying old summaries across sessions can pollute context.
 
-## Changed Files
+### Related pi Mechanisms
 
-- docs/adr/0005-evolve-into-devkit-pi.md
-
-## Next Steps
-
-1. Add ADR 0005.
-2. Update AGENTS.md.
-3. Modularize extension index.
-```
-
-### Storage Location
-
-```text
-.pi/session-summary.md
-.pi/memory/YYYY-MM-DD.md
-```
+- `/compact` — session compaction
+- `/tree` — branch navigation + summary
+- Session JSONL — persistent storage
+- `session_before_compact` — custom compaction logic via extensions
 
 ### Priority
 
-P2. High long-term value.
+**Do not implement** — rely on pi platform built-ins.
 
-## 10. Patch Queue / Apply Preview
+---
+
+## 10. Per-turn Undo / Undo
 
 ### Background
 
-The core experience in many coding tools is:
+After the agent edits files, the user may dislike the result. Current options:
+
+| Option | Problem |
+|------|------|
+| Ask the agent to edit again | Adds conversation turns and may be slower |
+| Manually run `git restore` | Requires user action and is less convenient |
+
+An agent-controllable undo mechanism is useful.
+
+### Current Status
+
+**🔄 To implement** — pi's built-in fork/branch capabilities are session-level and do not affect files.
+
+### Design Principle
+
+**Per-turn mode**: record file snapshots at the end of each turn and allow reverting all file changes from a turn.
+
+### Key Difference from `/tree`
+
+| Operation | Session leaf | LLM context | File state |
+|------|------------------|------------|----------|
+| `/tree` | Moves to a selected entry. Selecting a user entry moves to its parent and puts the prompt back in the editor; selecting assistant/tool/etc. moves to that entry | Only messages on the selected tree path | ❌ Unchanged |
+| **`/undo`** | ❌ Unchanged | ✅ Keeps full context | ✅ Rolls files back to previous turn |
+
+**Example:**
 
 ```text
-propose patch
-→ preview diff
-→ accept/reject
+Turn 3: user says "fix this bug" and the agent edits files incorrectly.
+
+User: /undo
+→ Session remains at Turn 3
+→ LLM context still includes the "fix this bug" conversation
+→ Files roll back to the Turn 2 state
+
+User: use formatDate instead of formatTime
+→ Agent understands the context and edits again
 ```
 
-The current project emphasizes readonly planning and secure boundaries, so patch queue is a good fit.
+**Compared with `/tree`:**
+
+```text
+Turn 3: user says "fix this bug" and the agent edits files incorrectly.
+
+User: /tree Turn 2
+→ Session leaf is adjusted according to the selected entry
+→ LLM context only includes messages on the new tree path
+→ Files remain in the post-Turn-3 state
+
+User: needs to describe the task again
+```
 
 ### Suggested Tool
 
 ```ts
-patch_queue({
-  action: "create" | "list" | "show" | "apply" | "discard",
-  patch?: string,
-  id?: string
+undo({
+  action: "list" | "preview" | "undo",
+  // Optional: number of turns to undo. Default: last.
+  target?: "last" | number
 })
 ```
 
-### Usage
+### Related Commands
 
-`implementer` subagent first outputs patch plan without directly writing files. Main agent or user then decides whether to apply.
+```text
+/undo             — undo last turn's file changes
+/undo 3           — undo turn 3
+/undo --preview   — preview without applying
+/undo --list      — list available checkpoints
+```
+
+### Implementation Notes
+
+| Point | Description |
+|------|------|
+| Snapshot scope | Only save changed files; ignore `.git/`, `node_modules/` |
+| Turn marker | Associate with session turn number |
+| Retention | Keep last N checkpoints, configurable |
+| Differential storage | Use diffs instead of full files |
+| Dependency handling | Warn when files have dependencies |
+
+### Output Example
+
+**`/undo --list`**
+
+```text
+Checkpoints:
+#4  2026-05-13 10:32  "Add formatDate function"
+#3  2026-05-13 10:28  "Fix type errors"
+#2  2026-05-13 10:20  "Add new module"
+```
+
+**`/undo --preview`**
+
+```text
+Will revert to checkpoint #3:
+- src/utils.ts: remove formatDate()
+- src/types.ts: restore original
+```
 
 ### Priority
 
-P2.
+**P2** — not highest priority, but significantly improves safety.
+
+---
 
 ## 11. ADR / Docs Helper
 
 ### Background
 
-The current project already uses ADR and heavily relies on documentation sync. Can provide dedicated docs tooling.
+The project already uses ADRs and relies heavily on documentation sync. Dedicated docs tooling could be added.
 
-### Suggested Tools
+### Current Status
 
-```ts
-adr({
-  action: "new" | "list" | "show" | "supersede",
-  title?: string,
-  id?: string
-})
-```
+**❌ Do not implement** — tool value is limited and does not fit the lightweight-core principle.
 
-```ts
-docs_tool({
-  action: "check" | "toc" | "link-check" | "config-reference" | "adr-template"
-})
-```
+### Analysis
 
-### ADR Example
+#### Low value for content generation
+
+The value of ADRs is recording architecture decisions. Content generation can already be done directly by pi:
 
 ```text
-adr({ action: "new", title: "Evolve into personal pi coding toolkit" })
+User: record the decision we just discussed as an ADR
+pi: directly creates the file
 ```
 
-Generates:
+A tool that generates ADRs from conversation is not worth implementing because:
 
-```md
----
-status: proposed
-date: 2026-05-10
----
+1. Users can ask pi directly.
+2. Fixed templates have low value and can be copied manually.
 
-# 0005 - Evolve into personal pi coding toolkit
+#### ADR management varies widely between projects/users
 
-## Context
+| Dimension | Possible choices |
+|-----------|------------------|
+| Storage location | `docs/adr/`, `adr/`, `.adr/`, wiki, external system |
+| Naming | `0001-title.md`, `title.md`, date-based |
+| Template format | Traditional, simplified, table-based, custom |
+| Numbering | Centralized numbers, date numbers, no numbers |
+| Indexing | Extra index file, directory scan, external database |
 
-...
+Supporting all variants at the tool layer is costly and not worthwhile.
 
-## Decision
+#### Value summary
 
-...
+| Feature | Can pi do directly? | Unique tool value |
+|------|-------------------|---------------|
+| Content generation | ✅ Yes | ❌ None |
+| Template generation | ✅ Yes | ❌ Low |
+| Number management | ❌ Harder | ⭐ Medium |
+| Listing | ❌ Harder | ⭐ Medium |
 
-## Consequences
+**Conclusion**: tool value does not justify implementation cost.
 
-...
-```
+### Recommended Approach
+
+1. Use documentation conventions instead of a tool.
+2. Ask pi directly: "create an ADR".
+3. Keep the current manual maintenance workflow.
 
 ### Priority
 
-P2. Highly matched with current project workflow.
+**Do not implement** — consistent with the lightweight-core principle.
+
+---
 
 ## 12. Permission System Enhancement
 
 ### Background
 
-The current project already has readonly subagents and `subagents.allowWrite`, but a comprehensive toolkit may need more granular permissions.
+The project already has readonly subagents and `subagents.allowWrite`, but a comprehensive toolkit may need more granular permissions.
+
+### Current Status
+
+**🔄 To implement** — basic permission control exists (`allowWrite`), but fine-grained permissions are not implemented.
 
 ### Simplified Configuration
 
@@ -830,35 +1052,66 @@ The current project already has readonly subagents and `subagents.allowWrite`, b
 
 ### Priority
 
-P2. Recommend implementing before introducing more write operations or bash-like hooks.
+**P2**. Implement before adding more write operations or bash-like hooks.
+
+---
 
 ## 13. Changelog / Release Notes
 
-### Suggested Tool
+### Background
 
-```ts
-release_notes({
-  since?: string,
-  format: "markdown" | "github" | "npm"
-})
-```
+The project already has `CHANGELOG.md`. Automation could help maintain it.
 
-### Capabilities
+### Current Status
 
-- Generate release notes from git commits.
-- Generate changelog entry from changed files.
-- Check package.json version.
-- Remind to update README / docs.
+**❌ Do not implement** — tool value is limited and does not fit the lightweight-core principle.
+
+### Analysis
+
+#### Low value for content generation
+
+| Capability | Implementation | Can pi do directly? | Unique tool value |
+|------|----------|-------------------|---------------|
+| Generate from git commits | Programmatic | ❌ Harder | ⭐ Medium |
+| Generate from changed files | Requires LLM | ✅ Yes | ❌ Low |
+| Check version | Programmatic | ✅ Yes | ⭐ Low |
+| Remind docs update | Simple rule | ✅ Yes | ⭐ Low |
+
+Core issues:
+
+1. Generating changelog entries from changed files needs LLM content generation and can be done by pi directly.
+2. Formatting git commits can be done by scripts.
+3. Version checks and reminders can also be handled directly by pi.
+
+#### Similar to ADR / docs helper
+
+- Content generation can be done directly by pi.
+- Formatting can be scripted.
+- Unique tool value is insufficient.
+
+### Recommended Approach
+
+1. Keep manual `CHANGELOG.md` maintenance.
+2. Ask pi directly to generate changelog text.
+3. Use simple release scripts if needed.
 
 ### Priority
 
-P2/P3. Suitable for publishing npm packages.
+**Do not implement** — consistent with lightweight core.
 
 ---
 
 # P3 Features
 
 ## 14. GitHub Issue / PR Helper
+
+### Background
+
+The project does not require a GitHub workflow, but helpers may be useful if needed.
+
+### Current Status
+
+**🔄 To implement**
 
 ### Suggested Tools
 
@@ -891,17 +1144,23 @@ pr_description({
 
 ### Priority
 
-P3. Not a next-stage priority unless you frequently use GitHub PR workflow.
+**P3**. Unless GitHub PR workflow is frequent, this is not a next-stage priority.
+
+---
 
 ## 15. Repo Map Advanced / Embedding Search
 
 ### Background
 
-Aider's repo map is powerful, using tree-sitter and PageRank. Continue and other tools use vector retrieval.
+Aider's repo map is powerful and uses tree-sitter plus PageRank. Continue and similar tools use vector retrieval.
+
+### Current Status
+
+**🔄 To implement** — a lightweight `project_status` version can be implemented first. If repo map is needed, it can be a `project_status` focused/repo_map mode or a later standalone tool.
 
 ### Suggestion
 
-Don't start with embedding search. First do a lightweight version:
+Do not start with embedding search. Start with a lightweight version:
 
 ```ts
 repo_map({
@@ -911,7 +1170,7 @@ repo_map({
 })
 ```
 
-Combined with LSP symbols can generate:
+Combined with LSP symbols, output can look like:
 
 ```text
 src/
@@ -926,159 +1185,182 @@ src/
 │  │  - normalizeWebToolsConfig()
 ```
 
-Advanced capabilities include:
+Advanced features:
 
-- Import graph.
-- Reference热度.
-- Task-based related file selection.
-- Embedding search.
+- import graph
+- reference heat
+- task-based related file selection
+- embedding search
 
 ### Priority
 
-Lightweight repo map: P2.
-Advanced repo map / embedding: P3.
+Lightweight repo map: **P2** (prefer merging into `project_status` focused/repo_map mode).  
+Advanced repo map / embedding: **P3**.
+
+---
 
 ## 16. MCP Integration
 
 ### Background
 
-MCP is a hot community direction; Claude Code, Cline, Continue and other tools all support or integrate related ecosystems.
+MCP is popular in the community, and Claude Code, Cline, Continue, and other tools support or integrate with it.
 
-### Reason for Deferral
+### Current Status
 
-- High implementation complexity.
-- Complex security boundaries.
-- pi already has extension/tool mechanisms.
-- Current project needs workflow primitives more than external ecosystem protocols.
+**❌ Do not implement** — MCP is relatively heavy and does not fit the lightweight-core principle.
 
-### When to Consider
+### Analysis
 
-Only consider when there's a clear need to integrate:
+#### Why not now
 
-- GitHub
-- Linear
-- Notion
-- browser / Playwright
-- database
-- Custom MCP servers
+MCP is not lightweight:
+
+1. **Protocol complexity**: client/server model, resource management, tool calls.
+2. **Security boundary**: trust and permission issues for external MCP servers.
+3. **Maintenance cost**: the MCP ecosystem changes quickly.
+
+#### Conflict with project principles
+
+| Project principle | MCP problem |
+|----------|------------|
+| Lightweight core | Protocol itself is relatively heavy |
+| Secure by default | External MCP server trust boundaries are complex |
+| Introduce on demand | Unnecessary without a clear external ecosystem need |
+
+#### When to reconsider
+
+Only consider MCP when there is a concrete need to reuse external ecosystems:
+
+- GitHub API integration
+- Linear / Notion integration
+- browser automation (Playwright MCP)
+- database querying
+
+Before that:
+
+- Use pi's extension/tool mechanism.
+- Use direct HTTP calls.
+- Use CLI subprocesses.
 
 ### Priority
 
-P3.
+**Do not implement for now** — consistent with the lightweight-core principle; introduce only on demand.
+
+---
 
 ## 17. IDE Inline Edit / Autocomplete
 
 ### Background
 
-Cursor, Continue and other tools have strong auto-completion experiences, but this falls into IDE integration territory.
+Cursor, Continue, and similar tools provide strong autocomplete experiences, but this belongs to IDE integration.
 
-### Reasons Not Recommended as Priority
+### Current Status
 
-- Requires editor plugin or deep UI integration.
-- Doesn't fully match pi CLI / TUI coding workflow.
-- Very high implementation complexity.
+**❌ Do not implement in this package** — devkit-pi is a pi TUI turn-based extension and does not implement IDE realtime inline editing/autocomplete. A future separate IDE plugin could theoretically do this, but it is outside this package.
+
+### Analysis
+
+| Dimension | pi | IDE inline edit |
+|------|-----|-----------------|
+| Interaction | Turn-based, agent edits in batches | Realtime suggestions while typing |
+| User control | Review after changes | Accept/reject live |
+| Technical requirements | File operations, LLM | IDE plugin, deep LSP/editor integration |
+
+Root issue:
+
+- pi is a TUI terminal tool with a "user describes → agent edits → user reviews" workflow.
+- IDE inline edit is a "live suggestion → user accepts → direct insertion" workflow.
+- These workflows are fundamentally different.
+
+**Conclusion**: this feature does not fit devkit-pi's positioning and is outside the scope of this package.
 
 ### Priority
 
-P3, currently not recommended.
+**Do not implement** — unrelated to this package's positioning.
 
 ---
 
-# Recommended Implementation Roadmap
+# Recommended Implementation Route
 
 ## Phase A: Personal Workflow Infrastructure
 
-Prioritize implementing:
+Prioritize:
 
 ```text
-1. Project rules / memory
-2. project_context
-3. run_check
-4. git_tool
+1. project_status tool
+2. run_check tool
+3. git_tool tool
 ```
 
-Goal: Make agents know project rules, project structure, can run checks reliably, and can view and manage diffs every time they enter the project.
+Goal: let the agent understand project state, run checks reliably, and inspect/manage diffs.
 
 ## Phase B: Automation and Diagnostics
 
 Implement:
 
 ```text
-5. hooks
-6. diagnose
-7. Permission system enhancement
+4. hooks
+5. diagnose
+6. permission system enhancement
 ```
 
-Goal: Turn "things the model should remember to do" into system-determined executions.
+Goal: turn things we hope the model remembers into deterministic system behavior.
 
-## Phase C: Long Task Support
+## Phase C: Long-task Support
 
 Implement:
 
 ```text
-8. todo tracker
-9. compact_context
-10. plan/act workflow
-11. patch_queue
+7. todo tracker
+8. per-turn undo
+9. plan/act workflow
 ```
 
-Goal: Enable agents to handle cross-session, multi-file, multi-phase tasks more stably.
+Goal: make the agent more stable across multi-turn, multi-file, multi-stage tasks.
 
-## Phase D: Documentation and Release Assistance
+## Phase D: Release Assistance (ADR and Changelog Excluded)
 
 Implement:
 
 ```text
-12. adr
-13. docs_tool
-14. release_notes
-15. pr_description
+10. github_issue / pr_description
 ```
 
-Goal: Reduce costs of maintaining documentation, ADR, and release notes.
+Notes:
 
-## Phase E: Advanced Ecosystem Capabilities
+- ADR / docs helper is excluded because tool value is limited.
+- Changelog / release notes is excluded because tool value is limited.
 
-Implement only when there's clear need:
+Goal: reduce maintenance cost for GitHub issue / PR descriptions. ADR and Changelog continue to be generated directly by pi or maintained manually; no dedicated tool.
+
+## Phase E: Advanced Ecosystem Capabilities (On Demand)
+
+Implement only when clearly needed:
 
 ```text
-16. repo map advanced / embedding search
-17. MCP integration
-18. IDE integration
+14. repo map advanced / embedding search
 ```
+
+Notes:
+
+- MCP is not considered for now because the protocol is heavy and does not fit the lightweight principle.
+- IDE integration is excluded because it does not match the project positioning.
 
 ---
 
-# Minimal Recommended Next Steps
+## Appendix: Excluded Features and Reasons
 
-If only choosing 3 features, recommend in this order:
+The following features are excluded from the roadmap:
 
-```text
-P0-1: .pi/rules.md / PI.md Project rules auto-injection
-P0-2: project_context tool
-P1-1: run_check tool
-```
-
-If choosing 5 features, recommend:
-
-```text
-1. Project rules / memory
-2. project_context
-3. run_check
-4. git_tool
-5. hooks
-```
-
-These features can immediately improve personal usage experience and won't break the existing subagent + web + LSP architecture.
+| Feature | Reason |
+|------|------|
+| ~~Project memory / rules file~~ | pi platform already provides AGENTS.md |
+| ~~Context compaction~~ | pi platform already provides `/compact` |
+| ~~ADR / docs helper~~ | Limited tool value; does not fit lightweight core |
+| ~~Changelog / release notes~~ | Limited tool value; can be replaced by scripts |
+| ~~MCP integration~~ | Protocol is heavy; does not fit lightweight core; introduce only on demand |
+| ~~IDE inline edit / autocomplete~~ | Out of scope; pi is a turn-based TUI tool |
 
 ---
 
-# Current Recommendations
-
-After merging `pi-subagents` and `pi-lsp` into a personal comprehensive pi coding toolkit, the next stage should not rush to implement complex ecosystem features. Recommend prioritizing:
-
-```text
-Rules → Context → Check → Git → Hooks → Diagnose
-```
-
-This route best matches high-frequency needs of personal coding agent toolkit and is easiest to combine with existing modules.
+> **Note**: This document is continuously updated. Submit an issue or discussion if there are questions or suggestions.

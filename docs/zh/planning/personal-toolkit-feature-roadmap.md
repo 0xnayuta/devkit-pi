@@ -9,7 +9,7 @@ language: chinese
 
 ## 目的
 
-本文记录在 `pi-subagents` 与 `pi-lsp` 基本完成后，继续演进为个人综合 pi coding toolkit 时，值得添加的常见 AI coding agent / developer tooling 功能。
+本文记录了 `devkit-pi` 值得添加的常见 AI coding agent / developer tooling 功能。
 
 ## 项目当前状态
 
@@ -55,15 +55,15 @@ devkit-pi/
 
 | 命令 | 功能 |
 |------|------|
-| `/toolkit doctor` | 运行统一诊断检查 |
+| `/toolkit doctor` | 运行 toolkit 配置/依赖健康检查 |
 | `/toolkit modules` | 显示模块启用状态 |
-| `/toolkit logs` | 显示最近网络活动日志 |
+| `/toolkit logs` | 显示最近 toolkit activity（web search/fetch/get_content 与 convert） |
 | `/toolkit agents` | 列出内置/用户/项目 agent |
 | `/toolkit lsp` | 显示 LSP tool/hook 配置 |
 | `/toolkit activity` | 打开活动面板 |
 | `/toolkit help` | 显示帮助 |
 
-下一阶段不应优先增加更多复杂 agent，而应补齐主流 AI coding tools 常见的工作流基础设施：项目记忆、上下文构建、Git 集成、检查命令封装、hooks、诊断聚合、任务追踪和会话压缩。
+下一阶段不应优先增加更多复杂 agent，而应补齐主流 AI coding tools 常见的工作流基础设施：项目状态/上下文构建、Git 集成、检查命令封装、hooks、诊断聚合、任务追踪和安全撤销。项目规则和会话压缩依赖 pi 平台能力，不在 devkit-pi 重复实现。
 
 ## 参考工具与常见能力
 
@@ -98,29 +98,22 @@ devkit-pi/
 | 优先级 | 功能 | 价值 | 复杂度 | 推荐程度 |
 |---|---|---:|---:|---:|
 | P0 | project_status / 项目状态聚合 | 极高 | 中 | ⭐⭐⭐ 强烈推荐 |
-| P0 | ~~项目记忆 / 规则文件~~ | 极高 | 低 | ❌ 不实现（pi 平台提供） |
+| P0 | ~~项目记忆 / 规则文件~~ | 极高 | 低 | ❌ 不实现 |
 | P1 | run_check：检查命令封装 | 高 | 低-中 | ⭐⭐⭐ 强烈推荐 |
 | P1 | Git 集成：status、diff、commit、undo | 极高 | 中 | ⭐⭐⭐ 强烈推荐 |
 | P1 | Hooks：确定性自动化 | 高 | 中 | ⭐⭐ 推荐 |
 | P1 | diagnose：诊断聚合 | 高 | 中 | ⭐⭐ 推荐 |
 | P2 | Plan / Act workflow | 中高 | 低-中 | ⭐⭐ 推荐 |
 | P2 | Todo / task tracker | 中高 | 低 | ⭐⭐ 推荐 |
-| P2 | ~~Context compaction / session summary~~ | 高 | 中-高 | ❌ 不实现（pi 平台提供） |
-| P2 | Patch queue / apply preview | 中高 | 中 | ⭐⭐ 推荐 |
-| P2 | ADR / docs helper | 中高 | 低-中 | ⭐⭐ 推荐 |
+| P2 | ~~Context compaction / session summary~~ | 高 | 中-高 | ❌ 不实现 |
+| P2 | 按轮次撤销 / Undo | 中高 | 中 | ⭐⭐ 推荐 |
+| P2 | ~~ADR / docs helper~~ | 中高 | 低-中 | ❌ 不实现 |
 | P2 | 权限系统增强 | 中高 | 中 | ⭐⭐ 推荐 |
-| P2 | Changelog / release notes | 中 | 低-中 | ⭐ 可选 |
+| P2 | ~~Changelog / release notes~~ | 中 | 低-中 | ❌ 不实现 |
 | P3 | GitHub issue / PR helper | 中 | 中 | ⭐ 可选 |
 | P3 | Repo map advanced / embedding search | 中高 | 高 | ⏸️ 暂缓 |
-| P3 | MCP 集成 | 中 | 高 | ⏸️ 暂缓 |
-| P3 | IDE inline edit / autocomplete | 中 | 很高 | ⛔ 不建议优先做 |
-
-**图例：**
-- ⭐⭐⭐ 强烈推荐 — 优先实现
-- ⭐⭐ 推荐 — 值得实现
-- ⭐ 可选 — 按需实现
-- ⏸️ 暂缓 — 需要时再考虑
-- ⛔ 不建议 — 投入产出比低
+| P3 | ~~MCP 集成~~ | 中 | 高 | ❌ 不实现 |
+| P3 | ~~IDE inline edit / autocomplete~~ | 中 | 很高 | ❌ 不实现 |
 
 ## 当前模块图
 
@@ -129,46 +122,37 @@ devkit-pi/
 ```text
 devkit-pi
 ├─ agents
-│  ├─ subagent        ✅ 已实现（5 个内置 agent）
-│  ├─ explorer        ✅ 已实现
-│  ├─ reviewer        ✅ 已实现
-│  ├─ implementer     ✅ 已实现
-│  └─ tester          ✅ 已实现
-│
+│  ├─ subagent                ✅ 已实现（5 个内置 agent）
+│  ├─ explorer                ✅ 已实现
+│  ├─ reviewer                ✅ 已实现
+│  ├─ researcher              ✅ 已实现
+│  ├─ implementer             ✅ 已实现
+│  └─ tester                  ✅ 已实现
 ├─ intelligence
-│  ├─ lsp             ✅ 已实现（tool + diagnostics hook）
-│  └─ (project_status) 🔄 待实现（P0）
-│
+│  ├─ lsp                     ✅ 已实现（tool + diagnostics hook）
+│  └─ (project_status)        🔄 待实现（P0）
 ├─ research
-│  ├─ web_search      ✅ 已实现（6 个 provider）
-│  ├─ fetch_content   ✅ 已实现
-│  └─ get_search_content ✅ 已实现
-│
-├─ (workflow)         🔄 待实现（P2）
+│  ├─ web_search              ✅ 已实现（6 个 provider）
+│  ├─ fetch_content           ✅ 已实现
+│  └─ get_search_content      ✅ 已实现
+├─ (workflow)                 🔄 待实现（P2）
 │  ├─ todo
 │  ├─ plan
-│  ├─ compact
-│  └─ patch_queue
-│
-├─ (validation)       🔄 待实现（P1）
+│  └─ (undo)                  🔄 待实现（P2）
+├─ (validation)               🔄 待实现（P1）
 │  ├─ run_check
 │  ├─ diagnose
 │  └─ hooks
-│
-├─ (vcs)              🔄 待实现（P1）
+├─ (vcs)                      🔄 待实现（P1）
 │  ├─ git_status
 │  ├─ git_diff
 │  ├─ git_commit
 │  └─ git_undo
-│
-├─ convert            ✅ 已实现（MarkItDown CLI provider）
-│
-├─ commands           ✅ 已实现（/toolkit 命令中心）
-│
-└─ docs
-   ├─ adr             ✅ 已有（手动维护）
-   ├─ (adr_tool)      🔄 待实现（P2）
-   └─ (changelog)    🔄 待实现（P2）
+├─ convert                    ✅ 已实现（MarkItDown CLI provider）
+├─ commands                   ✅ 已实现（/toolkit 命令中心）
+├─ docs
+│  └─ adr                     ✅ 已有（手动维护）
+└─ CHANGELOG.md               ✅ 已有（手动维护）
 ```
 
 ---
@@ -312,7 +296,7 @@ Key files: AGENTS.md exists, package.json valid
 2. 读取 `AGENTS.md` 行数（确认存在）
 3. 列出 `src/modules/` 和 `agents/` 目录结构
 4. 调用 `git status --porcelain` 获取修改状态
-5. 调用 LSP `workspace-diagnostics` 获取错误/警告摘要
+5. 复用 `src/modules/lsp/core.ts` 的 LSP manager 或抽出 public helper 获取错误/警告摘要，避免通过 tool-to-tool 调用耦合
 
 `focused` 模式后续实现，可结合 LSP `symbols` 和文件树。
 
@@ -340,15 +324,17 @@ agent 可以直接用 bash 跑命令，但封装为专门工具更稳定、更�
 
 ### 当前状态
 
-**🔄 待实现** — 项目尚未实现 run_check 工具。但 `/toolkit doctor` 命令提供了部分诊断功能。
+**🔄 待实现** — 项目尚未实现 run_check 工具。`/toolkit doctor` 命令提供了部分 toolkit 健康检查，但不会封装或运行项目 typecheck/lint/test/docs 命令。
 
 ### 设计原则
 
 **混合方案**：自动检测项目类型 + 配置覆盖 + 命令默认值。
 
 - 优先使用用户配置的自定义命令
+- 对 Node/TypeScript 项目，优先使用 `package.json` 中已有 scripts 和当前包管理器（如 `pnpm typecheck`）
 - 其次根据项目类型自动检测默认命令
 - 确保多语言项目都能开箱即用
+- `format`/`lint --fix` 等写入型检查必须显式 `fix=true` 或被安全配置允许
 
 ### 项目类型检测
 
@@ -367,7 +353,7 @@ agent 可以直接用 bash 跑命令，但封装为专门工具更稳定、更�
 
 | 类型 | typecheck | test | lint | format |
 |------|-----------|------|------|--------|
-| **node** | `tsc --noEmit` | `pnpm test` | `pnpm lint` | `pnpm format` |
+| **node** | 优先 `<pm> typecheck`，否则 `tsc --noEmit` | 优先 `<pm> test` | 优先 `<pm> lint` | 优先检查型 `<pm> format`，写入型需 `fix=true` |
 | **rust** | `cargo check` | `cargo test` | `cargo clippy` | `cargo fmt` |
 | **go** | `go vet ./...` | `go test ./...` | `golangci-lint run` | `gofmt -w .` |
 | **python** | `mypy .` | `pytest` | `ruff check .` | `ruff format .` |
@@ -572,16 +558,16 @@ Claude Code 的 hooks 机制证明该能力很实用。
 
 ### 当前状态
 
-**🔄 待实现** — 项目尚未实现 Hooks 机制。但 LSP diagnostics hook 已作为类似概念实现。
+**🔄 待实现** — 项目尚未实现通用 workflow hooks 机制。当前仅实现了 LSP diagnostics 专用 hook（`lsp.hook.mode = "agent_end" | "edit_write" | "disabled"）。
 
 ### 建议事件
 
 第一版只支持少量高价值事件：
 
 ```text
-after_edit
-agent_end
-before_commit
+after_edit   # 可基于 pi 的 write/edit tool_result 捕获
+agent_end    # pi 已有 agent_end event
+before_commit # 非 pi 内置事件，应由未来 git tool 自己触发
 ```
 
 后续可扩展：
@@ -653,7 +639,7 @@ agent 如果分别调用这些工具再拼接结果，容易浪费 token。应�
 
 ### 当前状态
 
-**🔄 待实现** — 项目尚未实现 diagnose 工具。但 `/toolkit doctor` 命令已提供统一诊断检查。
+**🔄 待实现** — 项目尚未实现 diagnose 工具。`/toolkit doctor` 已提供 toolkit 配置/依赖健康检查（config、agents、providers、权限、Web/LSP 启用状态），但不是代码诊断聚合，不会运行 typecheck/lint/test/docs，也不会汇总 workspace LSP diagnostics。
 
 ### 建议工具
 
@@ -711,7 +697,7 @@ Suggested next step:
 
 ### 当前状态
 
-**🔄 待实现** — `implementer` agent 存在但尚未作为独立工具暴露。
+**🔄 待实现** — `implementer` agent 已可通过 `subagent` 工具间接用于实现规划，但尚未产品化为独立 `create_plan` 工具或 Plan/Act workflow。
 
 ### 建议工具
 
@@ -854,41 +840,112 @@ pi 平台已实现：
 
 ---
 
-## 10. Patch queue / apply preview
+## 10. 按轮次撤销 / Undo
 
 ### 背景
 
-许多 coding tools 的核心体验是：
+agent 修改文件后，用户可能发现结果不满意。当前选项：
 
-```text
-propose patch
-→ preview diff
-→ accept/reject
-```
+| 选项 | 问题 |
+|------|------|
+| 让 agent 重新修改 | 增加对话轮次，可能更慢 |
+| 用 `git restore` 手动撤销 | 需要用户操作，不够便捷 |
 
-当前项目强调 readonly planning 和安全边界，因此 patch queue 很适合。
+**需要一个 agent 可控的撤销机制**。
 
 ### 当前状态
 
-**🔄 待实现** — 项目尚未实现 Patch queue。
+**🔄 待实现** — pi 原版只有会话级别的 fork/branch，不影响文件。
+
+### 设计原则
+
+**per-turn 模式**：每轮结束时记录文件快照，支持撤销整个轮次的文件修改。
+
+### 与 `/tree` 的关键区别
+
+| 操作 | 会话位置（leaf） | LLM 上下文 | 文件状态 |
+|------|------------------|------------|----------|
+| `/tree` | 移到指定 entry（选择 user entry 时会移到其 parent 并把 prompt 放回编辑器；选择 assistant/tool 等 entry 时移到该 entry） | 只包括 tree 路径上的消息 | ❌ 不变（保持在修改后状态） |
+| **`/undo`** | ❌ 不变 | ✅ 保持完整上下文 | ✅ 回滚到上一轮 |
+
+**举例**：
+
+```
+Turn 3：用户说"修复这个 bug"，agent 修改了文件（改错了）
+
+用户：/undo
+→ 会话保持 Turn 3
+→ LLM 上下文仍包含"修复这个 bug"的对话
+→ 文件回滚到 Turn 2 状态
+
+用户：应该用 formatDate 而不是 formatTime
+→ agent 理解了上下文，重新修改
+```
+
+**对比 `/tree`**：
+
+```
+Turn 3：用户说"修复这个 bug"，agent 修改了文件（改错了）
+
+用户：/tree Turn 2
+→ 会话 leaf 按所选 entry 调整（选择 user entry 时通常移到其 parent，并把该 prompt 放回编辑器）
+→ LLM 上下文只保留新 tree 路径上的消息（通常不再包含 Turn 3 的"修复这个 bug"后续修改过程）
+→ 文件仍在 Turn 3 修改后状态
+
+用户：需要重新描述任务
+```
 
 ### 建议工具
 
 ```ts
-patch_queue({
-  action: "create" | "list" | "show" | "apply" | "discard",
-  patch?: string,
-  id?: string
+undo({
+  action: "list" | "preview" | "undo",
+  // 可选：撤销轮数（默认 last）
+  target?: "last" | number
 })
 ```
 
-### 用法
+### 相关命令
 
-`implementer` 子代理先输出 patch plan，不直接写文件。主代理或用户再决定是否 apply。
+```text
+/undo           — 撤销上一轮的文件修改
+/undo 3         — 撤销第 3 轮
+/undo --preview  — 预览但不执行
+/undo --list     — 列出可用 checkpoint
+```
+
+### 实现要点
+
+| 要点 | 说明 |
+|------|------|
+| 快照范围 | 只保存修改过的文件，忽略 .git/、node_modules/ |
+| 轮次标记 | 自动关联会话中的 turn number |
+| 数量限制 | 保留最近 N 个 checkpoint（可配置） |
+| 差量存储 | 用 diff 而非完整文件，节省空间 |
+| 依赖处理 | 如果文件有依赖关系，给出警告 |
+
+### 输出示例
+
+**`/undo --list`**
+
+```text
+Checkpoints:
+#4  2026-05-13 10:32  "帮我添加 formatDate 函数"
+#3  2026-05-13 10:28  "修复类型错误"
+#2  2026-05-13 10:20  "添加新模块"
+```
+
+**`/undo --preview`**
+
+```text
+Will revert to checkpoint #3:
+- src/utils.ts: remove formatDate()
+- src/types.ts: restore original
+```
 
 ### 优先级
 
-**P2**。
+**P2** — 不是最高优先级，但能显著提升安全性。
 
 ---
 
@@ -900,56 +957,55 @@ patch_queue({
 
 ### 当前状态
 
-**🔄 待实现** — ADR 目前手动维护，项目未实现专用工具。
+**❌ 不考虑实现** — 工具价值有限，不符合项目轻量核心原则。
 
-### 建议工具
+### 分析
 
-```ts
-adr({
-  action: "new" | "list" | "show" | "supersede",
-  title?: string,
-  id?: string
-})
+#### 内容生成价值低
+
+ADR 的核心价值是"记录架构决策"，但内容生成完全可以由 pi 直接完成：
+
+```
+用户：帮我把刚才讨论的决策记为 ADR
+pi：直接生成文件
 ```
 
-```ts
-docs_tool({
-  action: "check" | "toc" | "link-check" | "config-reference" | "adr-template"
-})
-```
+工具的"基于对话生成 ADR"功能不值得实现，因为：
+1. 用户可以对 pi 直接提需求
+2. 模板固定价值低，手动复制也可以
 
-### ADR 示例
+#### 不同项目/用户的 ADR 管理方式差异大
 
-```text
-adr({ action: "new", title: "Evolve into personal pi coding toolkit" })
-```
+| 维度 | 可能的选项 |
+|------|-----------|
+| 存储位置 | `docs/adr/`、`adr/`、`.adr/`、wiki、外部系统 |
+| 命名方式 | `0001-title.md`、`title.md`、日期命名 |
+| 格式模板 | 传统格式、简化格式、表格格式、自定义 |
+| 编号管理 | 集中编号、日期编号、无编号 |
+| 索引方式 | 额外索引文件、扫描目录、外部数据库 |
 
-生成：
+在工具层统一兼容所有这些方式，成本极高且吃力不讨好。
 
-```md
----
-status: proposed
-date: 2026-05-10
----
+#### 工具价值总结
 
-# 0005 - Evolve into personal pi coding toolkit
+| 功能 | 能否被 pi 直接替代 | 工具独特价值 |
+|------|-------------------|---------------|
+| 内容生成 | ✅ 可以 | ❌ 无 |
+| 模板生成 | ✅ 可以 | ❌ 低 |
+| 编号管理 | ❌ 不容易 | ⭐ 中 |
+| 列表功能 | ❌ 不容易 | ⭐ 中 |
 
-## Context
+**结论**：工具价值不足以覆盖实现成本。
 
-...
+### 推荐做法
 
-## Decision
-
-...
-
-## Consequences
-
-...
-```
+1. **用文档约定代替工具**：把 ADR 的最佳实践写成文档
+2. **用 pi 直接管理**："帮我创建 ADR"即可
+3. **保留现有手动维护方式**：当前 `docs/zh/planning/` 的组织方式已够用
 
 ### 优先级
 
-**P2**。与当前项目工作流高度匹配。
+**不实现** — 符合项目"轻量核心"原则。
 
 ---
 
@@ -1009,27 +1065,44 @@ date: 2026-05-10
 
 ### 当前状态
 
-**🔄 待实现** — changelog 目前手动维护。
+**❌ 不考虑实现** — 工具价值有限，不符合项目轻量核心原则。
 
-### 建议工具
+### 分析
 
-```ts
-release_notes({
-  since?: string,
-  format: "markdown" | "github" | "npm"
-})
-```
+#### 内容生成价值低
 
-### 能力
+工具声称的能力分析：
 
-- 从 git commits 生成 release notes。
-- 从 changed files 生成 changelog entry。
-- 检查 package.json version。
-- 提醒 README / docs 是否需要更新。
+| 能力 | 实现方式 | 能否被 pi 直接替代 | 工具独特价值 |
+|------|----------|-------------------|---------------|
+| 从 git commits 生成格式 | 纯程序化 | ❌ 不容易 | ⭐ 中 |
+| 从 changed files 生成内容 | 需要 LLM | ✅ 可以 | ❌ 低 |
+| 检查 version | 纯程序化 | ✅ 可以 | ⭐ 低 |
+| 提醒更新文档 | 简单规则 | ✅ 可以 | ⭐ 低 |
+
+**核心问题**：
+1. "从 changed files 生成 changelog entry" 需要 LLM 生成内容，可以被 pi 直接替代
+2. "格式化 git commits" 可以用脚本实现，工具价值有限
+3. 其他功能（检查 version、提醒更新）都可以用 pi 直接完成
+
+#### 与 ADR 问题类似
+
+与 ADR / docs helper 类似：
+- 内容生成可以被 pi 直接完成
+- 格式化功能可以用脚本替代
+- 工具的独特价值不足
+
+### 推荐做法
+
+1. **保持手动维护 CHANGELOG.md**：当前方式已够用
+2. **用 pi 直接生成**："帮我生成 changelog"即可
+3. **发布时用脚本**：简单的 shell 脚本可以完成格式化
 
 ### 优先级
 
-**P2/P3**。适合发布 npm 包时使用。
+**不实现** — 符合项目"轻量核心"原则。
+
+
 
 ---
 
@@ -1088,7 +1161,7 @@ Aider 的 repo map 很强，使用 tree-sitter 和 PageRank。Continue 等工具
 
 ### 当前状态
 
-**🔄 待实现** — `project_context` 的轻量版可先实现。
+**🔄 待实现** — `project_status` 的轻量版可先实现；如需要 repo map，可作为 `project_status` 的 focused/repo_map 模式或后续独立工具。
 
 ### 建议
 
@@ -1126,7 +1199,7 @@ src/
 
 ### 优先级
 
-轻量 repo map：**P2**（合并到 project_context）。  
+轻量 repo map：**P2**（优先合并到 `project_status` 的 focused/repo_map 模式）。  
 高级 repo map / embedding：**P3**。
 
 ---
@@ -1139,29 +1212,42 @@ MCP 是社区热门方向，Claude Code、Cline、Continue 等工具都支持或
 
 ### 当前状态
 
-**🔄 待实现** — 项目尚未实现 MCP 集成。
+**❌ 不考虑实现** — MCP 比较重，不符合项目轻量核心理念。
 
-### 暂缓原因
+### 分析
 
-- 实现复杂度高。
-- 安全边界复杂。
-- pi 已有 extension/tool 机制。
-- 当前项目更缺 workflow primitives，而不是外部生态协议。
+#### 为什么暂不考虑
 
-### 何时考虑
+MCP 协议本身并不轻量：
+1. **协议复杂度**：需要理解 MCP 的 client/server 模型、资源管理、工具调用等
+2. **安全边界**：外部 MCP server 的信任问题、权限控制
+3. **维护成本**：MCP 生态变化快，需要持续跟进
 
-只有当明确需要接入以下服务时再考虑：
+#### 与项目轻量理念的冲突
 
-- GitHub
-- Linear
-- Notion
-- browser / Playwright
-- database
-- 自定义 MCP servers
+| 项目原则 | MCP 的问题 |
+|----------|------------|
+| 轻量核心 | MCP 协议本身较重 |
+| 安全默认 | 外部 MCP server 信任边界复杂 |
+| 按需引入 | 不需要外部生态时不必要 |
+
+#### 何时考虑
+
+**只有当明确需要复用外部生态时才上 MCP**：
+
+- 需要接入 GitHub API
+- 需要接入 Linear / Notion 等工具
+- 需要浏览器自动化（Playwright MCP）
+- 需要数据库查询
+
+在此之前：
+- 用 pi 自带的 extension/tool 机制
+- 用直接 HTTP 调用替代 MCP
+- 用子进程调用 CLI 工具
 
 ### 优先级
 
-**P3**。
+**暂不考虑** — 符合项目"轻量核心"原则，按需引入。
 
 ---
 
@@ -1173,17 +1259,26 @@ Cursor、Continue 等工具的自动补全体验很强，但这属于 IDE 集成
 
 ### 当前状态
 
-**🔄 待实现** — 项目不计划实现 IDE 集成功能。
+**❌ 不在本包实现** — devkit-pi 是 pi TUI 回合制 extension，不实现 IDE 实时增量编辑/自动补全。若未来另做 IDE 插件理论上可以，但不属于本包范围。
 
-### 不建议优先做的原因
+### 分析
 
-- 需要编辑器插件或深度 UI 集成。
-- 与 pi CLI / TUI coding workflow 不完全匹配。
-- 实现复杂度很高。
+| 维度 | pi | IDE inline edit |
+|------|-----|-----------------|
+| 交互方式 | 回合制，agent 批量修改 | 实时，边写边提示 |
+| 用户控制 | 事后确认 | 实时接受/拒绝 |
+| 技术要求 | 文件操作、LLM | IDE 插件、LSP 深度集成 |
+
+**根本问题**：
+- pi 是 TUI 终端工具，工作流是"用户描述 → agent 修改 → 用户确认"
+- IDE inline edit 是"实时提示 → 用户接受 → 直接插入"
+- 这两种工作流完全不兼容
+
+**结论**：此功能与 devkit-pi 的项目定位完全不符，不属于本包范围。
 
 ### 优先级
 
-**P3**，当前不建议。
+**不实现** — 与本包定位无关。
 
 ---
 
@@ -1194,22 +1289,21 @@ Cursor、Continue 等工具的自动补全体验很强，但这属于 IDE 集成
 优先实现：
 
 ```text
-1. 项目规则 / memory (.pi/rules.md / PI.md)
-2. project_context 工具
-3. run_check 工具
-4. git_tool 工具
+1. project_status 工具
+2. run_check 工具
+3. git_tool 工具
 ```
 
-目标：让 agent 每次进入项目都知道规则、知道项目结构、能稳定运行检查、能查看和管理 diff。
+目标：让 agent 每次进入项目都知道项目状态、能稳定运行检查、能查看和管理 diff。
 
 ## Phase B：自动化与诊断
 
 实现：
 
 ```text
-5. hooks
-6. diagnose
-7. 权限系统增强
+4. hooks
+5. diagnose
+6. 权限系统增强
 ```
 
 目标：把"希望模型记得做的事"变成系统确定执行的事。
@@ -1219,69 +1313,54 @@ Cursor、Continue 等工具的自动补全体验很强，但这属于 IDE 集成
 实现：
 
 ```text
-8. todo tracker
-9. compact_context
-10. plan/act workflow
-11. patch_queue
+7. todo tracker
+8. undo 按轮次撤销
+9. plan/act workflow
 ```
 
 目标：让 agent 更稳定地处理跨多轮、多文件、多阶段任务。
 
-## Phase D：文档与发布辅助
+## Phase D：发布辅助（ADR 和 Changelog 已排除）
 
 实现：
 
 ```text
-12. adr
-13. docs_tool
-14. release_notes
-15. pr_description
+10. github_issue / pr_description
 ```
 
-目标：降低维护文档、ADR、release notes 的成本。
+**说明**：
+- ADR / docs helper 因工具价值有限而排除
+- Changelog / release notes 因工具价值有限而排除
 
-## Phase E：高级生态能力
+目标：降低 GitHub issue / PR 描述维护成本。ADR、Changelog 继续由 pi 直接生成或人工维护，不实现专用工具。
+
+## Phase E：高级生态能力（按需引入）
 
 仅在明确需要时实现：
 
 ```text
-16. repo map advanced / embedding search
-17. MCP integration
-18. IDE integration
+14. repo map advanced / embedding search
 ```
+
+**说明**：
+- MCP 因协议较重、不符合轻量理念而暂不考虑
+- IDE integration 因与项目定位无关而排除
 
 ---
 
-# 最小推荐下一步
+## 附录：已排除功能及原因
 
-如果只选 3 个功能，建议按此顺序：
+以下功能在 roadmap 讨论中被排除：
 
-```text
-P0-1: .pi/rules.md / PI.md 项目规则自动注入
-P0-2: project_context 工具
-P1-1: run_check 工具
-```
-
-如果只选 5 个功能，建议：
-
-```text
-1. 项目规则 / memory
-2. project_context
-3. run_check
-4. git_tool
-5. hooks
-```
-
-这些功能能立即提升个人使用体验，并且不会破坏现有 subagent + web + LSP 架构。
+| 功能 | 原因 |
+|------|------|
+| ~~项目记忆/规则文件~~ | pi 平台 AGENTS.md 已提供 |
+| ~~Context compaction~~ | pi 平台 `/compact` 已提供 |
+| ~~ADR / docs helper~~ | 工具价值有限，不符合轻量核心原则 |
+| ~~Changelog / release notes~~ | 工具价值有限，可以用脚本替代 |
+| ~~MCP 集成~~ | 协议较重，不符合轻量核心理念，按需引入 |
+| ~~IDE inline edit / autocomplete~~ | 与项目定位无关，pi 是 TUI 回合制工具 |
 
 ---
 
-# 当前建议
-
-在 `pi-subagents` 和 `pi-lsp` 合并为个人综合 pi coding toolkit 后，下一阶段不要急于实现复杂生态功能。建议优先补齐：
-
-```text
-规则 → 上下文 → 检查 → Git → hooks → 诊断
-```
-
-这条路线最符合个人 coding agent toolkit 的高频需求，也最容易与现有模块组合。
+> **注**：本文档持续更新中。如有疑问或建议，请提交 issue 或讨论。
