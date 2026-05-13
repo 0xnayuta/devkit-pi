@@ -9,6 +9,10 @@ language: chinese
 
 ## 最近修复
 
+### v0.2.1
+
+- 子代理引入双超时模型（`timeoutMs` 作为 hard cap，`idleTimeoutMs` 作为空闲超时）。`timeoutMs` 默认从 5 分钟提升至 15 分钟，`idleTimeoutMs` 默认为 3 分钟。有效活动事件（`message_end`、`tool_result_end`、`turn_end`）会重置 idle timer。详见 [子代理超时问题：双超时模型改造计划](./subagent-timeout-idle-model.md)。
+
 ### v0.2.0
 
 - 第 1 项：LSP 文件访问被限制在活动工作区根目录。

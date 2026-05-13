@@ -9,6 +9,10 @@ language: english
 
 ## Recently Fixed
 
+### v0.2.1
+
+- Subagents now support a dual-timeout model (`timeoutMs` as hard cap, `idleTimeoutMs` as idle timeout). `timeoutMs` defaults to 15 minutes (up from 5 minutes), and `idleTimeoutMs` defaults to 3 minutes. Valid activity events (`message_end`, `tool_result_end`, `turn_end`) reset the idle timer. See [Subagent Timeout: Dual-Timeout Model](./subagent-timeout-idle-model.md) for details.
+
 ### v0.2.0
 
 - Item 1: LSP file access is bounded to the active workspace root.
