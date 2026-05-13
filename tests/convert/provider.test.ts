@@ -4,6 +4,12 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import {
+  type ExternalCommandResolveOptions,
+  type ExternalCommandResult,
+  type ExternalCommandRunner,
+  type ExternalCommandSpec,
+} from "../../src/shared/external-command.ts";
+import {
   CONVERT_ERROR_CODES,
   ConvertProviderError,
   MarkItDownProvider,
@@ -11,11 +17,9 @@ import {
 
 let tempDir = "";
 
-function writeExecutable(name: string, content: string): string {
-  const filePath = path.join(tempDir, name);
-  fs.writeFileSync(filePath, content, "utf8");
-  fs.chmodSync(filePath, 0o755);
-  return filePath;
+interface RunnerCall {
+  command: ExternalCommandSpec;
+  options?: ExternalCommandResolveOptions;
 }
 
 function writeInput(name = "input.pdf", content = "input"): string {
@@ -24,10 +28,43 @@ function writeInput(name = "input.pdf", content = "input"): string {
   return filePath;
 }
 
-function provider(command: string): MarkItDownProvider {
+function createRunner(options: {
+  available?: boolean;
+  result?: ExternalCommandResult;
+  error?: NodeJS.ErrnoException;
+}): ExternalCommandRunner & { availabilityCalls: RunnerCall[]; runCalls: RunnerCall[] } {
+  const availabilityCalls: RunnerCall[] = [];
+  const runCalls: RunnerCall[] = [];
+  return {
+    availabilityCalls,
+    runCalls,
+    async isAvailable(command, resolveOptions) {
+      availabilityCalls.push({ command, options: resolveOptions });
+      return options.available ?? true;
+    },
+    async run(command, runOptions) {
+      runCalls.push({ command, options: runOptions });
+      if (options.error) throw options.error;
+      return (
+        options.result ?? {
+          exitCode: 0,
+          stdout: "# Converted\n",
+          stderr: "",
+          timedOut: false,
+        }
+      );
+    },
+  };
+}
+
+function provider(
+  runner: ExternalCommandRunner,
+  command: string | ExternalCommandSpec = "markitdown"
+): MarkItDownProvider {
   return new MarkItDownProvider({
     command,
-    env: { ...process.env, PATH: `${tempDir}${path.delimiter}${process.env.PATH ?? ""}` },
+    runner,
+    env: { ...process.env, TEST_PROVIDER_ENV: "1" },
   });
 }
 
@@ -41,34 +78,35 @@ afterEach(() => {
 
 describe("MarkItDownProvider", () => {
   it("reports command availability and caches the result", async () => {
-    writeExecutable(
-      "markitdown",
-      `#!/usr/bin/env node\nconsole.log("available");\n`
-    );
-    const instance = provider("markitdown");
+    const runner = createRunner({ available: true });
+    const instance = provider(runner);
 
     assert.equal(await instance.isAvailable(), true);
-    fs.rmSync(path.join(tempDir, "markitdown"));
     assert.equal(await instance.isAvailable(), true);
+    assert.equal(runner.availabilityCalls.length, 1);
   });
 
   it("reports missing commands as unavailable", async () => {
-    const instance = provider("missing-markitdown");
+    const runner = createRunner({ available: false });
+    const instance = provider(runner, "missing-markitdown");
+
     assert.equal(await instance.isAvailable(), false);
   });
 
-  it("converts a file by invoking the CLI and returns metadata", async () => {
-    const command = writeExecutable(
-      "mock-markitdown",
-      `#!/usr/bin/env node\nconsole.log("# Converted");\nconsole.log(process.argv[2]);\n`
-    );
+  it("converts a file by invoking the configured command and returns metadata", async () => {
+    const runner = createRunner({
+      result: { exitCode: 0, stdout: "# Converted\ndoc.pdf\n", stderr: "", timedOut: false },
+    });
     const input = writeInput("doc.pdf", "pdf bytes");
 
-    const result = await provider(command).convertFile(input, {
-      maxResponseBytes: 1024,
-      timeoutMs: 1000,
-      maxContentChars: 1000,
-    });
+    const result = await provider(runner, { executable: "markitdown", args: ["--format", "md"] }).convertFile(
+      input,
+      {
+        maxResponseBytes: 1024,
+        timeoutMs: 1000,
+        maxContentChars: 1000,
+      }
+    );
 
     assert.match(result.content, /# Converted/);
     assert.match(result.content, /doc\.pdf/);
@@ -76,13 +114,19 @@ describe("MarkItDownProvider", () => {
     assert.equal(result.metadata?.fileName, "doc.pdf");
     assert.equal(result.metadata?.fileSize, Buffer.byteLength("pdf bytes"));
     assert.equal(typeof result.metadata?.durationMs, "number");
+    assert.deepEqual(runner.runCalls[0]?.command, {
+      executable: "markitdown",
+      args: ["--format", "md", input],
+    });
   });
 
   it("throws COMMAND_NOT_FOUND for missing commands", async () => {
+    const runner = createRunner({ available: false });
     const input = writeInput();
+
     await assert.rejects(
       () =>
-        provider("missing-markitdown").convertFile(input, {
+        provider(runner, "missing-markitdown").convertFile(input, {
           maxResponseBytes: 1024,
           timeoutMs: 1000,
           maxContentChars: 1000,
@@ -94,13 +138,13 @@ describe("MarkItDownProvider", () => {
     );
   });
 
-  it("throws FILE_TOO_LARGE when input exceeds maxResponseBytes", async () => {
-    const command = writeExecutable("mock-markitdown", `#!/usr/bin/env node\nconsole.log("ok");\n`);
+  it("throws FILE_TOO_LARGE when input exceeds maxResponseBytes before invoking the runner", async () => {
+    const runner = createRunner({ available: true });
     const input = writeInput("large.pdf", "1234567890");
 
     await assert.rejects(
       () =>
-        provider(command).convertFile(input, {
+        provider(runner).convertFile(input, {
           maxResponseBytes: 5,
           timeoutMs: 1000,
           maxContentChars: 1000,
@@ -108,18 +152,18 @@ describe("MarkItDownProvider", () => {
       (error: unknown) =>
         error instanceof ConvertProviderError && error.code === CONVERT_ERROR_CODES.FILE_TOO_LARGE
     );
+    assert.equal(runner.runCalls.length, 0);
   });
 
   it("throws CONVERT_TIMEOUT when the CLI exceeds timeout", async () => {
-    const command = writeExecutable(
-      "mock-markitdown",
-      `#!/usr/bin/env node\nsetTimeout(() => console.log("late"), 2000);\n`
-    );
+    const runner = createRunner({
+      result: { exitCode: null, stdout: "", stderr: "", timedOut: true },
+    });
     const input = writeInput();
 
     await assert.rejects(
       () =>
-        provider(command).convertFile(input, {
+        provider(runner).convertFile(input, {
           maxResponseBytes: 1024,
           timeoutMs: 50,
           maxContentChars: 1000,
@@ -130,15 +174,19 @@ describe("MarkItDownProvider", () => {
   });
 
   it("throws CONVERT_FAILED with stderr summary on non-zero exit", async () => {
-    const command = writeExecutable(
-      "mock-markitdown",
-      `#!/usr/bin/env node\nconsole.error("very bad conversion failure");\nprocess.exit(7);\n`
-    );
+    const runner = createRunner({
+      result: {
+        exitCode: 7,
+        stdout: "",
+        stderr: "very bad conversion failure",
+        timedOut: false,
+      },
+    });
     const input = writeInput();
 
     await assert.rejects(
       () =>
-        provider(command).convertFile(input, {
+        provider(runner).convertFile(input, {
           maxResponseBytes: 1024,
           timeoutMs: 1000,
           maxContentChars: 1000,
@@ -153,13 +201,17 @@ describe("MarkItDownProvider", () => {
   });
 
   it("truncates stdout to maxContentChars", async () => {
-    const command = writeExecutable(
-      "mock-markitdown",
-      `#!/usr/bin/env node\nprocess.stdout.write("abcdefghijklmnopqrstuvwxyz");\n`
-    );
+    const runner = createRunner({
+      result: {
+        exitCode: 0,
+        stdout: "abcdefghijklmnopqrstuvwxyz",
+        stderr: "",
+        timedOut: false,
+      },
+    });
     const input = writeInput();
 
-    const result = await provider(command).convertFile(input, {
+    const result = await provider(runner).convertFile(input, {
       maxResponseBytes: 1024,
       timeoutMs: 1000,
       maxContentChars: 10,

@@ -62,10 +62,22 @@ src/
 │  │  ├─ schemas.ts              # lsp tool 参数 schema/actions
 │  │  ├─ tool.ts                 # lsp tool 实现
 │  │  └─ register.ts             # LSP 模块注册
+│  ├─ convert/                   # convert_content 文档转换
+│  │  ├─ index.ts                # convert tool 注册
+│  │  ├─ schemas.ts              # convert_content 参数 schema
+│  │  ├─ errors.ts               # convert 错误码和 provider error class
+│  │  ├─ types.ts                # convert tool result/config-adjacent 类型
+│  │  ├─ provider.ts             # provider interface + MarkItDown CLI provider
+│  │  ├─ security.ts             # 安全 URL 下载、redirect 校验、临时文件清理
+│  │  ├─ renderers.ts            # compact/expanded TUI renderers
+│  │  ├─ observability.ts        # toolkit-level convert activity 记录
+│  │  └─ tool.ts                 # path/URL 编排和错误映射
 │  └─ ...
 └─ shared/
    ├─ types.ts                   # 共享类型、配置类型、subagent 错误码
    ├─ errors.ts                  # LSP/subagent 共享错误类型
+   ├─ abort.ts                   # 共享 timeout/abort helper
+   ├─ external-command.ts        # 短生命周期外部命令解析/执行基础设施
    ├─ delegation-policy.ts       # 主代理 delegation policy 注入文本
    ├─ session-identity.ts        # session identity 辅助
    └─ post-exit-stdio-guard.ts   # child process stdio 防护
@@ -91,6 +103,7 @@ loadConfig()
   → registerWebTools(pi, config.web)
   → registerLspModule(pi, config.lsp)
   → registerSubagentsModule(pi, effectiveSubagentsConfig)
+  → registerConvertTools(pi, config.convertContent)
   → registerToolkitCommands(pi, config)
 ```
 
@@ -99,8 +112,9 @@ loadConfig()
 1. `web` tools 可在主代理和子代理进程注册。
 2. `lsp` tool 可在主代理和子代理进程注册，但 privileged actions 在子代理进程中始终被阻止。
 3. `subagents` 模块内部检查 `PI_SUBAGENT_CHILD`，子代理进程不会注册 `subagent` 工具。
-4. `/toolkit` commands 只在主代理进程注册。
-5. `subagents.allowLspTools` 会与 `lsp.enabled`、`lsp.tool.enabled` 合并后生效。
+4. `convert_content` 可在主代理和子代理进程注册；本地 `path` 和远程 `url` 转换在本地校验或安全 URL 下载后使用 MarkItDown CLI provider。
+5. `/toolkit` commands 只在主代理进程注册。
+6. `subagents.allowLspTools` 会与 `lsp.enabled`、`lsp.tool.enabled` 合并后生效。
 
 ## 模块职责
 
@@ -109,7 +123,7 @@ loadConfig()
 当前已实现：
 
 - 配置文件路径：`~/.pi/agent/extensions/devkit-pi/config.json`
-- 默认配置：`DEFAULT_CONFIG`、`DEFAULT_SUBAGENTS_CONFIG`、`DEFAULT_WEB_CONFIG`
+- 默认配置：`DEFAULT_CONFIG`、`DEFAULT_SUBAGENTS_CONFIG`、`DEFAULT_WEB_CONFIG`、`DEFAULT_CONVERT_CONTENT_CONFIG`
 - 配置合并与 normalize：`mergeConfig()`
 - 无效值回退：boolean、positive integer、non-negative integer、provider 名称、LSP hook mode、readonly LSP actions 等
 
@@ -171,10 +185,30 @@ loadConfig()
 - workspace 路径边界与结果截断。
 - 自动 diagnostics hook：主代理进程注册，支持 `agent_end`、`edit_write`、`disabled` 模式。
 - language server manager 和 session shutdown cleanup。
+- 使用 shared external command resolver 查找 language server binary，并对 Kotlin LSP 自动下载辅助命令使用 shared short command runner。长期运行的 language server JSON-RPC 进程生命周期仍由 `src/modules/lsp/core.ts` 负责。
 
 需人工确认：
 
 - 文档可列出源码注释中的支持 language server，但实际可用性取决于本机是否安装对应 server。
+
+### `src/modules/convert/`
+
+当前已实现：
+
+- 添加 `convertContent` 配置 namespace。
+- `convertContent.enabled=true` 时注册 `convert_content` tool。
+- 定义输入 schema 字段：`path`、`url`、`maxContentChars`、`timeoutMs`。
+- 定义 convert-specific 结构化错误码和 `ConvertProviderError`。
+- 提供 provider interface 和 MarkItDown CLI provider。
+- MarkItDown provider 将命令可用性检查、非 shell 执行、timeout、stdout/stderr 捕获委托给 `src/shared/external-command.ts`，同时把 convert-specific 文件大小检查、输出截断、metadata 和 convert 错误映射保留在 `src/modules/convert/provider.ts`。
+- Public tool 执行会校验 `path`/`url` 互斥、强制本地路径 workspace 边界、处理本地文件存在性/类型/大小检查、安全下载远程 URL 到临时文件、调用 provider、清理下载文件，并返回结构化 provider 错误。
+
+当前边界：
+
+- URL download 会在跟随重定向前对初始 URL 和每个 redirect hop 做 private-network protection 校验。
+- 提供 `convert_content` calls/results 的 compact/expanded TUI renderers。
+- 将 convert success/error entries 记录到共享 toolkit-level activity log。
+- `path` 是 canonical 本地文件输入字段；不使用 `file_path`。
 
 ### `src/modules/commands/`
 
@@ -184,7 +218,7 @@ loadConfig()
 - 子命令：
   - `/toolkit doctor`
   - `/toolkit modules`
-  - `/toolkit logs [--search|--fetch] [--limit N]`
+  - `/toolkit logs [--search|--fetch|--convert] [--limit N]`
   - `/toolkit agents`
   - `/toolkit lsp`
   - `/toolkit activity`
@@ -201,6 +235,8 @@ loadConfig()
 - delegation policy 注入文本。
 - session identity 与临时目录 scope。
 - 输出截断工具。
+- 共享 timeout/abort helpers。
+- 短生命周期外部命令基础设施：executable 解析、可选额外搜索路径、非 shell `spawn`、cwd/env/signal/timeout 处理，以及 stdout/stderr 收集。功能 provider 语义仍保留在各自模块中。
 
 需人工确认：
 
@@ -265,6 +301,7 @@ tests/
 ├─ web/                        # src/modules/web/*
 │  └─ providers/               # src/modules/web/providers/*
 ├─ lsp/                        # src/modules/lsp/*
+├─ convert/                    # src/modules/convert/*
 ├─ commands/                   # src/modules/commands/*
 ├─ shared/                     # src/shared/*
 └─ package-manifest.test.ts    # package.json 发布入口/文件检查
@@ -280,8 +317,9 @@ tests/
 | `tests/web/*.test.ts` | `src/modules/web/*.ts` | fetch/search/security/storage/cache/concurrency/renderers |
 | `tests/web/providers/*.test.ts` | `src/modules/web/providers/*.ts` | provider adapter 与 selection |
 | `tests/lsp/tool.test.ts` | `src/modules/lsp/*` | tool 注册、权限 gating、hook 注册边界 |
+| `tests/convert/*.test.ts` | `src/modules/convert/*` | 配置、schema、错误码清单、注册、MarkItDown provider 行为、本地路径转换、安全 URL 下载/转换、renderers 与 convert activity 记录 |
 | `tests/commands/register.test.ts` | `src/modules/commands/register.ts` | `/toolkit` 注册与子命令输出 |
-| `tests/shared/path-handling.test.ts` | `src/shared/*` | 路径与 scope 处理 |
+| `tests/shared/external-command.test.ts` | `src/shared/external-command.ts` | 外部命令解析、额外搜索路径、cwd、timeout、命令缺失行为 |
 
 ## 当前已实现 vs 设计方向
 
@@ -295,6 +333,8 @@ tests/
 - `fetch_content` 的文本类 handler、安全限制与 Jina fallback。
 - `lsp` tool 与主代理 diagnostics hook。
 - `/toolkit` 命令中心。
+- `convert_content` 工具，通过 MarkItDown CLI 支持本地路径和安全 URL 下载转换。
+- convert 和部分 LSP 短命令使用的 shared external command 基础设施。
 - 模块级 unit tests。
 
 ### 设计方向 / 后续规划
@@ -302,7 +342,6 @@ tests/
 以下内容出现在 roadmap、proposal 或 ADR 背景中，但当前不是已实现功能：
 
 - VitePress 文档站。
-- `convert_content` 工具。
 - background/async jobs。
 - chain/parallel workflow。
 - intercom。

@@ -41,6 +41,10 @@ import {
   WorkspaceDiagnosticRequest,
   type WorkspaceEdit,
 } from "vscode-languageserver-protocol";
+import {
+  NodeExternalCommandRunner,
+  resolveExternalExecutable,
+} from "../../shared/external-command.ts";
 
 // Config
 const INIT_TIMEOUT_MS = 30000;
@@ -48,6 +52,7 @@ const MAX_OPEN_FILES = 30;
 const IDLE_TIMEOUT_MS = 60_000;
 const CLEANUP_INTERVAL_MS = 30_000;
 const DIAGNOSTICS_WAIT_MS_DEFAULT = 3000;
+const LSP_EXTERNAL_COMMAND_TIMEOUT_MS = 120_000;
 
 export function diagnosticsWaitMsForFile(filePath: string): number {
   const ext = path.extname(filePath).toLowerCase();
@@ -129,8 +134,7 @@ interface FileDiagnosticsResult {
 }
 
 // Utilities
-const SEARCH_PATHS = [
-  ...(process.env.PATH?.split(path.delimiter) || []),
+const LSP_EXTRA_SEARCH_PATHS = [
   "/usr/local/bin",
   "/opt/homebrew/bin",
   `${process.env.HOME}/.pub-cache/bin`,
@@ -139,14 +143,10 @@ const SEARCH_PATHS = [
   `${process.env.HOME}/.cargo/bin`,
 ];
 
+const lspExternalCommandRunner = new NodeExternalCommandRunner();
+
 function which(cmd: string): string | undefined {
-  const ext = process.platform === "win32" ? ".exe" : "";
-  for (const dir of SEARCH_PATHS) {
-    const full = path.join(dir, cmd + ext);
-    try {
-      if (fs.existsSync(full) && fs.statSync(full).isFile()) return full;
-    } catch {}
-  }
+  return resolveExternalExecutable(cmd, { extraSearchPaths: LSP_EXTRA_SEARCH_PATHS });
 }
 
 function normalizeFsPath(p: string): string {
@@ -434,15 +434,15 @@ function findRootSwift(file: string, cwd: string): string | undefined {
 }
 
 async function runCommand(cmd: string, args: string[], cwd: string): Promise<boolean> {
-  return await new Promise((resolve) => {
-    try {
-      const p = spawn(cmd, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
-      p.on("error", () => resolve(false));
-      p.on("exit", (code) => resolve(code === 0));
-    } catch {
-      resolve(false);
-    }
-  });
+  try {
+    const result = await lspExternalCommandRunner.run(
+      { executable: cmd, args },
+      { cwd, timeoutMs: LSP_EXTERNAL_COMMAND_TIMEOUT_MS }
+    );
+    return !result.timedOut && result.exitCode === 0;
+  } catch {
+    return false;
+  }
 }
 
 async function ensureJetBrainsKotlinLspInstalled(): Promise<string | undefined> {

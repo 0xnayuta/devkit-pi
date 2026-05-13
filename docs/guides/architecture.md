@@ -76,6 +76,8 @@ src/
 └─ shared/
    ├─ types.ts                   # shared types, config types, subagent error codes
    ├─ errors.ts                  # LSP/subagent shared error types
+   ├─ abort.ts                   # shared timeout/abort helpers
+   ├─ external-command.ts        # short external command resolution/execution infrastructure
    ├─ delegation-policy.ts       # main agent delegation policy injection text
    ├─ session-identity.ts        # session identity helper
    └─ post-exit-stdio-guard.ts   # child process stdio guard
@@ -183,6 +185,7 @@ Currently implemented:
 - Workspace path boundary and result truncation.
 - Automatic diagnostics hook: registered in main agent process, supports `agent_end`, `edit_write`, `disabled` modes.
 - Language server manager and session shutdown cleanup.
+- Uses shared external command resolution for language server binary lookup and shared short command execution for Kotlin LSP auto-download helpers. Long-running language server JSON-RPC process lifecycle remains owned by `src/modules/lsp/core.ts`.
 
 Requires human confirmation:
 
@@ -197,7 +200,7 @@ Currently implemented:
 - Defines input schema fields: `path`, `url`, `maxContentChars`, `timeoutMs`.
 - Defines convert-specific structured error codes and `ConvertProviderError`.
 - Provides a provider interface and MarkItDown CLI provider.
-- MarkItDown provider checks command availability, runs `markitdown <input-file>` without shell interpolation, enforces timeout, captures stdout/stderr, truncates output, and maps provider failures to convert error codes.
+- MarkItDown provider delegates command availability, no-shell execution, timeout, and stdout/stderr capture to `src/shared/external-command.ts`, while keeping convert-specific file-size checks, output truncation, metadata, and convert error mapping in `src/modules/convert/provider.ts`.
 - Public tool execution validates `path`/`url` mutual exclusion, enforces local path workspace boundaries, handles local file existence/type/size checks, safely downloads remote URLs to temporary files, invokes the provider, cleans up downloaded files, and returns structured provider errors.
 
 Current boundaries:
@@ -232,6 +235,8 @@ Currently implemented:
 - Delegation policy injection text.
 - Session identity and temporary directory scope.
 - Output truncation utilities.
+- Shared timeout/abort helpers.
+- External command infrastructure for short-lived commands: executable resolution, optional extra search paths, no-shell `spawn`, cwd/env/signal/timeout handling, and stdout/stderr collection. Feature provider semantics remain in their owning modules.
 
 Requires human confirmation:
 
@@ -314,7 +319,7 @@ Mapping examples:
 | `tests/lsp/tool.test.ts` | `src/modules/lsp/*` | Tool registration, permission gating, hook registration boundary |
 | `tests/convert/*.test.ts` | `src/modules/convert/*` | Config, schema, error inventory, registration, MarkItDown provider behavior, local path conversion, safe URL download/conversion, renderers, and convert activity recording |
 | `tests/commands/register.test.ts` | `src/modules/commands/register.ts` | `/toolkit` registration and subcommand output |
-| `tests/shared/path-handling.test.ts` | `src/shared/*` | Path and scope handling |
+| `tests/shared/external-command.test.ts` | `src/shared/external-command.ts` | External command resolution, extra search paths, cwd, timeout, and missing-command behavior |
 
 ## Currently implemented vs design direction
 
@@ -328,6 +333,8 @@ Mapping examples:
 - `fetch_content` text-type handlers, security limits, and Jina fallback.
 - `lsp` tool with main agent diagnostics hook.
 - `/toolkit` command center.
+- `convert_content` tool with local path and safe URL download conversion through MarkItDown CLI.
+- Shared external command infrastructure used by convert and selected LSP short commands.
 - Module-level unit tests.
 
 ### Design direction / future plans
@@ -335,7 +342,6 @@ Mapping examples:
 The following appear in roadmap, proposal, or ADR background but are not currently implemented features:
 
 - VitePress documentation site.
-- `convert_content` tool.
 - Background/async jobs.
 - Chain/parallel workflow.
 - Intercom.

@@ -23,7 +23,7 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配�
 
 ## 完整默认配置示例
 
-对应源码：`src/config/load-config.ts` 中的 `DEFAULT_CONFIG`、`DEFAULT_SUBAGENTS_CONFIG`、`DEFAULT_WEB_CONFIG`。
+对应源码：`src/config/load-config.ts` 中的 `DEFAULT_CONFIG`、`DEFAULT_SUBAGENTS_CONFIG`、`DEFAULT_WEB_CONFIG`、`DEFAULT_CONVERT_CONTENT_CONFIG`。
 
 ```json
 {
@@ -105,6 +105,15 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配�
       "apiKeyEnv": "SERPER_API_KEY"
     }
   },
+  "convertContent": {
+    "enabled": true,
+    "provider": "markitdown",
+    "command": "markitdown",
+    "timeoutMs": 30000,
+    "maxResponseBytes": 10485760,
+    "maxContentChars": 50000,
+    "allowPrivateNetwork": false
+  },
   "lsp": {
     "enabled": true,
     "tool": {
@@ -139,6 +148,7 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配�
 | `normalizeJinaTriggers` | `web.jinaTriggers` | 接受非空 string 数组并去重；非数组回退默认值；空数组可保留为空 |
 | `normalizeLspReadonlyActions` | `subagents.allowedLspActions` | 只保留 readonly-safe LSP actions 并去重 |
 | `normalizeLspHookMode` | `lsp.hook.mode` | 只接受 `agent_end`、`edit_write`、`disabled` |
+| `nonEmptyString` | 外部命令 / provider URL / 环境变量名 | 去除首尾空白后非空 string 生效，否则使用默认值 |
 
 ## 顶层配置
 
@@ -150,6 +160,7 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配�
 | `subagents` | object | 见下方 | 否 | subagent 工具、内置 agents、delegation policy、子代理 LSP 暴露 | `src/modules/subagents/*` |
 | `web` | object | 见下方 | 否 | `web_search` / `fetch_content` / `get_search_content` | `src/modules/web/*` |
 | `lsp` | object | 见下方 | 否 | `lsp` tool 与自动 diagnostics hook | `src/modules/lsp/*` |
+| `convertContent` | object | 见下方 | 否 | `convert_content` 文档转换工具配置。本地 `path` 和远程 `url` 转换在安全来源处理后使用 MarkItDown provider | `src/modules/convert/*` |
 | `commands` | object | 见下方 | 否 | 统一 `/toolkit` developer command | `src/modules/commands/register.ts` |
 
 示例：关闭整个扩展。
@@ -489,6 +500,55 @@ selection availability 由 provider `enabled` gate 和 adapter 层技术检查�
     "enableJinaFallback": true,
     "jinaTimeoutMs": 8000,
     "jinaTriggers": ["short-html", "js-heavy-html"]
+  }
+}
+```
+
+## Convert content 配置
+
+`convert_content` 是可选文档转换工具。当前 public tool 支持通过已配置的 MarkItDown CLI provider 转换本地 `path` 和远程 `url`。远程 URL 会先安全下载到临时文件，再执行转换。TUI renderers 和 toolkit-level activity 集成已实现。MarkItDown provider 使用 shared external command 基础设施解析/执行命令，同时把 convert-specific 校验和错误映射保留在 `src/modules/convert/provider.ts`。
+
+对应源码：`DEFAULT_CONVERT_CONTENT_CONFIG`、`normalizeConvertContentConfig()`、`src/modules/convert/index.ts`、`src/modules/convert/schemas.ts`、`src/modules/convert/errors.ts`、`src/modules/convert/provider.ts`、`src/modules/convert/renderers.ts`、`src/modules/convert/observability.ts`。
+
+| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
+|---|---|---:|---|---|---|
+| `convertContent.enabled` | boolean | `true` | 否 | 是否注册 `convert_content` tool | `src/modules/convert/index.ts` |
+| `convertContent.provider` | `markitdown` | `markitdown` | 否 | 转换 provider 名称。当前 config 会将所有值 normalize 为 `markitdown` | `src/config/load-config.ts` |
+| `convertContent.command` | string | `markitdown` | 否 | 内部 MarkItDown provider 使用的外部 MarkItDown CLI 命令/路径；通过 shared external command 基础设施解析/执行 | `src/config/load-config.ts`, `src/modules/convert/provider.ts`, `src/shared/external-command.ts` |
+| `convertContent.timeoutMs` | number | `30000` | 否 | 远程下载和 MarkItDown provider 执行 timeout，单位 ms；必须是正整数 | `src/config/load-config.ts`, `src/modules/convert/security.ts`, `src/modules/convert/provider.ts` |
+| `convertContent.maxResponseBytes` | number | `10485760` | 否 | 转换执行允许的本地/远程 source 最大字节数；必须是正整数 | `src/config/load-config.ts`, `src/modules/convert/security.ts`, `src/modules/convert/provider.ts` |
+| `convertContent.maxContentChars` | number | `50000` | 否 | 返回 Markdown 最大字符数；provider 输出超出该限制时会截断并返回 `truncated=true` | `src/config/load-config.ts`, `src/modules/convert/provider.ts` |
+| `convertContent.allowPrivateNetwork` | boolean | `false` | 否 | URL 下载是否允许访问私网目标；默认阻止。每个 redirect hop 都会用该策略重新校验 | `src/config/load-config.ts`, `src/modules/convert/security.ts` |
+
+当前 tool schema 字段：
+
+```json
+{
+  "path": "./document.pdf",
+  "url": "https://example.com/document.pdf",
+  "maxContentChars": 50000,
+  "timeoutMs": 30000
+}
+```
+
+`path` 和 `url` 在执行时互斥；同时提供或都不提供会返回 `INVALID_INPUT`。`path` 会通过 MarkItDown 转换 active workspace（扩展进程的 `process.cwd()`）内已存在的本地文件；workspace 外路径返回 `INVALID_INPUT`。`url` 会经过校验、安全下载到临时文件、按 `maxResponseBytes` 限制大小、通过 MarkItDown 转换，然后清理临时文件。URL redirects 会手动跟随，且每个 hop 都重新执行 private-network 校验。
+
+示例：禁用 convert_content 注册。
+
+```json
+{
+  "convertContent": {
+    "enabled": false
+  }
+}
+```
+
+示例：配置 MarkItDown 命令路径。
+
+```json
+{
+  "convertContent": {
+    "command": "/usr/local/bin/markitdown"
   }
 }
 ```

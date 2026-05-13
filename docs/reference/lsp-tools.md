@@ -358,13 +358,13 @@ Example (requires configuration to allow main agent mutating actions):
   - `workspace-diagnostics` has corresponding item `status="error"`, `error="File not found"`.
   - Other actions usually return empty result or `No ... found/available`.
 - URI to path conversion uses Node `fileURLToPath()`, including Windows file URI fallback handling.
-- `tests/shared/path-handling.test.ts` mainly covers general cross-platform path handling principles, such as `path.isAbsolute()` and `path.join()`; LSP's own workspace boundary is covered by `tests/lsp/tool.test.ts`.
+- LSP's own workspace boundary is covered by `tests/lsp/tool.test.ts`. Shared external command resolution and runner behavior are covered by `tests/shared/external-command.test.ts`.
 
 Do not interpret the above implementation as a complete cross-platform promise; actual behavior is still subject to Node.js, runtime platform, language server URI output format, and file system differences.
 
 ## Language server behavior
 
-devkit-pi does not embed complete language servers, nor guarantees automatic installation of all servers. The LSP module selects source-defined server adapters based on file extension and project root markers, and attempts to start corresponding server binaries from the user environment.
+devkit-pi does not embed complete language servers, nor guarantees automatic installation of all servers. The LSP module selects source-defined server adapters based on file extension and project root markers, and attempts to start corresponding server binaries from the user environment. Binary lookup uses shared external command resolution with LSP-specific extra search paths, while long-running language server JSON-RPC process lifecycle remains in `src/modules/lsp/core.ts`.
 
 ### Server lifecycle
 
@@ -398,7 +398,7 @@ This table describes adapters existing in source code; does not guarantee availa
 - Whether the language server can successfully initialize
 - Whether project configuration is complete, e.g., TypeScript dependencies, Python env, C/C++ compile database
 
-Kotlin adapter additionally supports optional auto-download JetBrains Kotlin LSP: only triggered when environment variable `PI_LSP_AUTO_DOWNLOAD_KOTLIN_LSP=1` or `true`; default does not trigger network download.
+Kotlin adapter additionally supports optional auto-download JetBrains Kotlin LSP: only triggered when environment variable `PI_LSP_AUTO_DOWNLOAD_KOTLIN_LSP=1` or `true`; default does not trigger network download. Its short-lived helper commands (`curl`/`unzip`) use the shared external command runner with timeout handling; the installed language server process is still managed by the LSP module.
 
 ## Diagnostics hook
 
@@ -548,9 +548,10 @@ Boundary notes:
 | Core LSP logic / server manager | `src/modules/lsp/core.ts` |
 | Hook integration | `src/modules/lsp/hook.ts` |
 | Shared LSP errors | `src/shared/errors.ts` |
+| Shared external command infrastructure | `src/shared/external-command.ts` |
 | Config loading/defaults | `src/config/load-config.ts` |
 | Config types / subagent LSP env | `src/shared/types.ts` |
 | Toolkit command surface | `src/modules/commands/register.ts` |
 | LSP tests | `tests/lsp/tool.test.ts` |
 | Subagent LSP exposure tests | `tests/subagents/lsp-tools.test.ts` |
-| Path handling tests | `tests/shared/path-handling.test.ts` |
+| Shared external command tests | `tests/shared/external-command.test.ts` |

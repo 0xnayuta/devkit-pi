@@ -1,7 +1,11 @@
-import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { withTimeoutSignal } from "../web/abort.ts";
+import {
+  type ExternalCommandResult,
+  type ExternalCommandRunner,
+  type ExternalCommandSpec,
+  NodeExternalCommandRunner,
+} from "../../shared/external-command.ts";
 import { CONVERT_ERROR_CODES, ConvertProviderError } from "./errors.ts";
 import type { ConvertContentMetadata } from "./types.ts";
 
@@ -27,15 +31,9 @@ export interface ConvertProvider {
 }
 
 export interface MarkItDownProviderOptions {
-  command: string;
+  command: string | ExternalCommandSpec;
   env?: NodeJS.ProcessEnv;
-}
-
-interface CommandResult {
-  exitCode: number | null;
-  stdout: string;
-  stderr: string;
-  timedOut: boolean;
+  runner?: ExternalCommandRunner;
 }
 
 function summarizeStderr(stderr: string): string {
@@ -53,109 +51,42 @@ function truncateContent(
   return { content: content.slice(0, maxContentChars), truncated: true };
 }
 
-function searchPath(command: string, env: NodeJS.ProcessEnv): string | undefined {
-  const pathValue = env.PATH ?? process.env.PATH ?? "";
-  const extensions = process.platform === "win32" ? [".exe", ".cmd", ".bat", ""] : [""];
-
-  for (const dir of pathValue.split(path.delimiter)) {
-    if (!dir) continue;
-    for (const ext of extensions) {
-      const candidate = path.join(dir, command.endsWith(ext) ? command : `${command}${ext}`);
-      try {
-        fs.accessSync(candidate, fs.constants.X_OK);
-        if (fs.statSync(candidate).isFile()) return candidate;
-      } catch {}
-    }
-  }
-
-  return undefined;
+function normalizeCommand(command: string | ExternalCommandSpec): ExternalCommandSpec {
+  return typeof command === "string" ? { executable: command } : command;
 }
 
-function resolveCommand(command: string, env: NodeJS.ProcessEnv): string | undefined {
-  if (command.includes("/") || command.includes("\\")) {
-    try {
-      fs.accessSync(command, fs.constants.X_OK);
-      return fs.statSync(command).isFile() ? command : undefined;
-    } catch {
-      return undefined;
-    }
-  }
-  return searchPath(command, env);
-}
-
-function runCommand(
-  command: string,
-  args: string[],
-  options: { timeoutMs: number; signal?: AbortSignal; env: NodeJS.ProcessEnv }
-): Promise<CommandResult> {
-  return new Promise((resolve, reject) => {
-    let stdout = "";
-    let stderr = "";
-    let timedOut = false;
-    const signal = withTimeoutSignal(options.timeoutMs, options.signal);
-
-    const onAbort = () => {
-      timedOut = true;
-    };
-    signal.addEventListener("abort", onAbort, { once: true });
-
-    const child = spawn(command, args, {
-      env: options.env,
-      signal,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => {
-      stdout += chunk;
-    });
-    child.stderr.on("data", (chunk: string) => {
-      stderr += chunk;
-    });
-
-    child.on("error", (error: NodeJS.ErrnoException) => {
-      signal.removeEventListener("abort", onAbort);
-      if (error.name === "AbortError" || timedOut) {
-        resolve({ exitCode: null, stdout, stderr, timedOut: true });
-        return;
-      }
-      reject(error);
-    });
-
-    child.on("close", (exitCode) => {
-      signal.removeEventListener("abort", onAbort);
-      resolve({ exitCode, stdout, stderr, timedOut });
-    });
-  });
+function formatCommandForMessage(command: ExternalCommandSpec): string {
+  return [command.executable, ...(command.args ?? [])].join(" ");
 }
 
 export class MarkItDownProvider implements ConvertProvider {
   readonly name = "markitdown";
 
-  private readonly command: string;
+  private readonly command: ExternalCommandSpec;
 
   private readonly env: NodeJS.ProcessEnv;
+
+  private readonly runner: ExternalCommandRunner;
 
   private availabilityCache: boolean | undefined;
 
   constructor(options: MarkItDownProviderOptions) {
-    this.command = options.command;
+    this.command = normalizeCommand(options.command);
     this.env = options.env ?? process.env;
+    this.runner = options.runner ?? new NodeExternalCommandRunner();
   }
 
   async isAvailable(): Promise<boolean> {
     if (this.availabilityCache !== undefined) return this.availabilityCache;
-    this.availabilityCache = resolveCommand(this.command, this.env) !== undefined;
+    this.availabilityCache = await this.runner.isAvailable(this.command, { env: this.env });
     return this.availabilityCache;
   }
 
   async convertFile(filePath: string, options: ConvertOptions): Promise<ConvertResult> {
-    const command = resolveCommand(this.command, this.env);
-    if (!command) {
+    if (!(await this.isAvailable())) {
       throw new ConvertProviderError(
         CONVERT_ERROR_CODES.COMMAND_NOT_FOUND,
-        `MarkItDown CLI command '${this.command}' was not found. Install MarkItDown and configure convertContent.command if needed.`
+        `MarkItDown CLI command '${formatCommandForMessage(this.command)}' was not found. Install MarkItDown and configure convertContent.command if needed.`
       );
     }
 
@@ -168,9 +99,14 @@ export class MarkItDownProvider implements ConvertProvider {
       );
     }
 
-    let result: CommandResult;
+    const commandWithInput: ExternalCommandSpec = {
+      executable: this.command.executable,
+      args: [...(this.command.args ?? []), filePath],
+    };
+
+    let result: ExternalCommandResult;
     try {
-      result = await runCommand(command, [filePath], {
+      result = await this.runner.run(commandWithInput, {
         timeoutMs: options.timeoutMs,
         signal: options.signal,
         env: this.env,
@@ -180,7 +116,7 @@ export class MarkItDownProvider implements ConvertProvider {
       if (nodeError.code === "ENOENT") {
         throw new ConvertProviderError(
           CONVERT_ERROR_CODES.COMMAND_NOT_FOUND,
-          `MarkItDown CLI command '${this.command}' was not found. Install MarkItDown and configure convertContent.command if needed.`
+          `MarkItDown CLI command '${formatCommandForMessage(this.command)}' was not found. Install MarkItDown and configure convertContent.command if needed.`
         );
       }
       throw new ConvertProviderError(

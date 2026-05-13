@@ -53,13 +53,15 @@ Canonical source：`src/modules/convert/` 和 `src/config/load-config.ts`。
 
 `src/modules/convert/provider.ts` 实现了 `MarkItDownProvider`：
 
-- 检查已配置的 MarkItDown CLI 命令是否存在。
-- 不使用 shell interpolation，调用 `markitdown <input-file>`。
-- 使用 `AbortSignal` 应用转换 timeout。
-- 根据 `maxResponseBytes` 检查输入文件大小。
-- 捕获 stdout/stderr。
+- 使用 `src/shared/external-command.ts` 检查已配置 MarkItDown CLI 命令是否存在并执行命令。
+- 将输入文件作为结构化参数传给已配置 executable，不使用 shell interpolation。
+- 通过 shared external command runner 应用转换 timeout。
+- 在 convert provider 内根据 `maxResponseBytes` 于执行前检查输入文件大小。
+- 从 shared runner 接收 stdout/stderr。
 - 将命令缺失、timeout、非零退出和文件过大失败映射到 convert error codes。
 - 将 stdout 截断到 `maxContentChars`，并返回 `truncated=true`。
+
+`src/shared/external-command.ts` 只负责基础设施：解析/运行短生命周期外部命令并收集 stdout/stderr。MarkItDown-specific 行为、convert 错误映射、文件大小检查、metadata 和输出截断仍保留在 `src/modules/convert/provider.ts`。
 
 ## 成功结果
 

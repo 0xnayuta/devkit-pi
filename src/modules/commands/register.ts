@@ -6,6 +6,7 @@ import { createActivityPanel } from "../subagents/commands/activity.ts";
 import { formatDoctorReport, runDoctorChecks } from "../subagents/commands/doctor.ts";
 import { formatAgentList, getAgentList } from "../subagents/commands/list.ts";
 import { formatLogs, type LogsOptions } from "../subagents/commands/logs.ts";
+import { showToolkitReport } from "./report-viewer.ts";
 
 interface ToolkitCommandArgs {
   subcommand: string;
@@ -99,7 +100,10 @@ export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolki
         if (subcommand === "doctor") {
           const report = await runDoctorChecks(ctx.cwd, config);
           const output = formatDoctorReport(report);
-          console.log(output);
+          await showToolkitReport(ctx, {
+            title: "Toolkit Doctor",
+            content: output,
+          });
           ctx.ui.notify(
             `Doctor: ${report.summary.passed} passed, ${report.summary.warnings} warnings, ${report.summary.failed} failed`,
             "info"
@@ -108,27 +112,35 @@ export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolki
         }
 
         if (subcommand === "modules") {
-          console.log(formatModulesOverview(config));
-          ctx.ui.notify("Module status printed to console", "info");
+          await showToolkitReport(ctx, {
+            title: "Toolkit Modules",
+            content: formatModulesOverview(config),
+          });
           return;
         }
 
         if (subcommand === "logs") {
-          console.log(formatLogs(parseLogsOptions(rest)));
-          ctx.ui.notify("Activity logs printed to console", "info");
+          await showToolkitReport(ctx, {
+            title: "Toolkit Activity Logs",
+            content: formatLogs(parseLogsOptions(rest)),
+          });
           return;
         }
 
         if (subcommand === "agents") {
           const report = getAgentList(ctx.cwd);
-          console.log(formatAgentList(report));
-          ctx.ui.notify(`Found ${report.total} agents`, "info");
+          await showToolkitReport(ctx, {
+            title: `Toolkit Agents (${report.total})`,
+            content: formatAgentList(report),
+          });
           return;
         }
 
         if (subcommand === "lsp") {
-          console.log(formatLspOverview(config));
-          ctx.ui.notify("LSP module status printed to console", "info");
+          await showToolkitReport(ctx, {
+            title: "Toolkit LSP",
+            content: formatLspOverview(config),
+          });
           return;
         }
 
@@ -152,7 +164,10 @@ export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolki
           return;
         }
 
-        console.log(formatHelp());
+        await showToolkitReport(ctx, {
+          title: "Toolkit Help",
+          content: formatHelp(),
+        });
       } catch (error) {
         ctx.ui.notify(
           `Toolkit command failed: ${error instanceof Error ? error.message : error}`,

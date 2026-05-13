@@ -7,23 +7,28 @@ import { PI_SUBAGENT_CHILD } from "../../src/shared/types.ts";
 function createPiMock() {
   const commands: Array<{ name: string; handler: (args: string, ctx: any) => Promise<void> }> = [];
   const notifications: Array<{ message: string; level: string }> = [];
-  const logs: string[] = [];
+  const reports: string[] = [];
 
   return {
     commands,
     notifications,
-    logs,
+    reports,
     registerCommand(name: string, command: any) {
       commands.push({ name, handler: command.handler });
     },
-    createCtx() {
+    createCtx(options: { hasUI?: boolean; customResult?: unknown } = {}) {
       return {
         cwd: process.cwd(),
+        hasUI: options.hasUI ?? true,
         ui: {
           notify(message: string, level: string) {
             notifications.push({ message, level });
           },
-          custom: async () => {},
+          custom: async (factory: any) => {
+            const component = await factory({ requestRender() {} }, {}, {}, () => {});
+            reports.push(component.render(100).join("\n"));
+            return options.customResult ?? "closed";
+          },
         },
       };
     },
@@ -65,7 +70,7 @@ describe("commands module", () => {
     assert.equal(pi.commands.length, 0);
   });
 
-  it("toolkit modules prints module overview", async () => {
+  it("toolkit modules shows module overview in a TUI report panel", async () => {
     const pi = createPiMock();
     registerToolkitCommands(pi as any, mergeConfig({}));
 
@@ -76,8 +81,29 @@ describe("commands module", () => {
 
     await pi.commands[0].handler("modules", pi.createCtx());
 
-    assert.match(output.join("\n"), /devkit-pi modules/);
-    assert.match(output.join("\n"), /convert:/);
-    assert.match(output.join("\n"), /lsp:/);
+    assert.equal(output.length, 0);
+    assert.match(pi.reports.join("\n"), /devkit-pi modules/);
+    assert.match(pi.reports.join("\n"), /convert:/);
+    assert.match(pi.reports.join("\n"), /lsp:/);
+  });
+
+  it("toolkit help shows usage in a TUI report panel", async () => {
+    const pi = createPiMock();
+    registerToolkitCommands(pi as any, mergeConfig({}));
+
+    await pi.commands[0].handler("help", pi.createCtx());
+
+    assert.match(pi.reports.join("\n"), /Usage:/);
+    assert.match(pi.reports.join("\n"), /\/toolkit doctor/);
+  });
+
+  it("toolkit lsp shows LSP overview in a TUI report panel", async () => {
+    const pi = createPiMock();
+    registerToolkitCommands(pi as any, mergeConfig({}));
+
+    await pi.commands[0].handler("lsp", pi.createCtx());
+
+    assert.match(pi.reports.join("\n"), /LSP module/);
+    assert.match(pi.reports.join("\n"), /tool\.actions:/);
   });
 });

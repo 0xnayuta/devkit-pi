@@ -358,13 +358,13 @@ signature, rename, codeAction, restart, servers
   - `workspace-diagnostics` 中对应 item 的 `status="error"`、`error="File not found"`。
   - 其他 action 通常返回空结果或 `No ... found/available`。
 - URI 到路径的转换使用 Node `fileURLToPath()`，并包含 Windows file URI fallback 处理。
-- `tests/shared/path-handling.test.ts` 主要覆盖项目内通用跨平台路径处理原则，例如使用 `path.isAbsolute()` 与 `path.join()`；LSP 自身的 workspace 边界由 `tests/lsp/tool.test.ts` 覆盖。
+- LSP 自身的 workspace 边界由 `tests/lsp/tool.test.ts` 覆盖。Shared external command 解析和 runner 行为由 `tests/shared/external-command.test.ts` 覆盖。
 
 不要把上述实现理解为完整跨平台承诺；实际行为仍受 Node.js、运行平台、language server URI 输出格式和文件系统差异影响。
 
 ## Language server 行为
 
-devkit-pi 不内置完整 language server，也不保证自动安装所有 server。LSP 模块根据文件扩展名和项目 root marker 选择源码中定义的 server adapter，并尝试从用户环境中启动对应 server binary。
+devkit-pi 不内置完整 language server，也不保证自动安装所有 server。LSP 模块根据文件扩展名和项目 root marker 选择源码中定义的 server adapter，并尝试从用户环境中启动对应 server binary。Binary lookup 使用 shared external command resolver 和 LSP-specific 额外搜索路径；长期运行的 language server JSON-RPC 进程生命周期仍由 `src/modules/lsp/core.ts` 管理。
 
 ### Server lifecycle
 
@@ -398,7 +398,7 @@ devkit-pi 不内置完整 language server，也不保证自动安装所有 serve
 - language server 能否成功初始化
 - 项目自身配置是否完整，例如 TypeScript dependencies、Python env、C/C++ compile database
 
-Kotlin adapter 额外支持可选自动下载 JetBrains Kotlin LSP：只有环境变量 `PI_LSP_AUTO_DOWNLOAD_KOTLIN_LSP=1` 或 `true` 时才会尝试；默认不会触发网络下载。
+Kotlin adapter 额外支持可选自动下载 JetBrains Kotlin LSP：只有环境变量 `PI_LSP_AUTO_DOWNLOAD_KOTLIN_LSP=1` 或 `true` 时才会尝试；默认不会触发网络下载。其短生命周期辅助命令（`curl`/`unzip`）使用 shared external command runner 并带 timeout 处理；安装后的 language server 进程仍由 LSP 模块管理。
 
 ## Diagnostics hook
 
@@ -548,9 +548,10 @@ Internal implementation：
 | Core LSP logic / server manager | `src/modules/lsp/core.ts` |
 | Hook integration | `src/modules/lsp/hook.ts` |
 | Shared LSP errors | `src/shared/errors.ts` |
+| Shared external command infrastructure | `src/shared/external-command.ts` |
 | Config loading/defaults | `src/config/load-config.ts` |
 | Config types / subagent LSP env | `src/shared/types.ts` |
 | Toolkit command surface | `src/modules/commands/register.ts` |
 | LSP tests | `tests/lsp/tool.test.ts` |
 | Subagent LSP exposure tests | `tests/subagents/lsp-tools.test.ts` |
-| Path handling tests | `tests/shared/path-handling.test.ts` |
+| Shared external command tests | `tests/shared/external-command.test.ts` |

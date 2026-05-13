@@ -16,7 +16,7 @@ language: chinese
 它和 tools 的区别：
 
 - tools（例如 `subagent`、`web_search`、`fetch_content`、`lsp`）主要供 agent 在任务执行中调用，并返回 tool result。
-- `/toolkit` commands 主要供用户手动触发，输出到 console 或打开 TUI 面板，并通过 UI notification 提示执行结果。
+- `/toolkit` commands 主要供用户手动触发；交互式 UI 可用时会在只读 TUI report panel 中展示人类可读报告。非交互式、非协议 stdout 场景可将报告文本打印到 stdout 作为 fallback。
 - `/toolkit` commands 不替代 Web/LSP/subagent tools；它们是状态查看、调试和诊断入口。
 
 典型使用者：
@@ -68,8 +68,8 @@ doctor, modules, logs, agents, lsp, activity, help
 | Syntax | `/toolkit` 或 `/toolkit help` |
 | Arguments / flags | 无 |
 | 用途 | 查看当前支持的 `/toolkit` subcommands |
-| 输出 | console 输出 usage text |
-| 成功语义 | 打印 help 文本 |
+| 输出 | 在只读 TUI report panel 中显示 usage text；非交互式、非协议 stdout 场景可打印作为 fallback |
+| 成功语义 | 显示 help 文本 |
 | 失败语义 | 当前无专门失败分支；未知 subcommand 也回落到 help |
 | 相关配置 | `commands.enabled` |
 | 相关源码 | `src/modules/commands/register.ts` |
@@ -102,8 +102,8 @@ Usage:
 | Syntax | `/toolkit modules` |
 | Arguments / flags | 无 |
 | 用途 | 查看 devkit-pi 各模块是否启用 |
-| 输出 | console 输出模块概览，UI notification 显示 `Module status printed to console` |
-| 成功语义 | 打印当前 resolved config 中的模块状态 |
+| 输出 | 在只读 TUI report panel 中显示模块概览；非交互式、非协议 stdout 场景可打印作为 fallback |
+| 成功语义 | 显示当前 resolved config 中的模块状态 |
 | 失败语义 | handler 捕获异常并通过 UI notification 显示 `Toolkit command failed: ...` |
 | 相关配置 | `enabled`、`subagents.enabled`、`web.enabled`、`lsp.*`、`commands.enabled` |
 | 相关源码 | `src/modules/commands/register.ts` |
@@ -121,6 +121,7 @@ devkit-pi modules
 =
 subagents: enabled
 web:       enabled
+convert:   enabled
 lsp:       enabled (tool=on, hook=agent_end)
 commands:  enabled
 ```
@@ -136,8 +137,8 @@ commands:  enabled
 | Syntax | `/toolkit doctor` |
 | Arguments / flags | 无 |
 | 用途 | 运行统一诊断检查 |
-| 输出 | console 输出 box-drawing doctor report；UI notification 显示 pass/warn/fail summary |
-| 成功语义 | 完成检查并打印 report；report item 可为 `pass`、`warn`、`fail`、`info` |
+| 输出 | 在只读 TUI report panel 中显示 box-drawing doctor report；UI notification 显示 pass/warn/fail summary |
+| 成功语义 | 完成检查并显示 report；report item 可为 `pass`、`warn`、`fail`、`info` |
 | 失败语义 | 单项检查失败通常记录为 report item；handler 外层异常通过 UI notification 显示 `Toolkit command failed: ...` |
 | 相关配置 | 全局 config、web provider config、LSP config |
 | 相关源码 | `src/modules/subagents/commands/doctor.ts` |
@@ -178,8 +179,8 @@ commands:  enabled
 | Syntax | `/toolkit agents` |
 | Arguments / flags | 无 |
 | 用途 | 列出当前发现的 builtin/user/project agents |
-| 输出 | console 输出 agent list；UI notification 显示 `Found N agents` |
-| 成功语义 | 按 source 分组打印 agents |
+| 输出 | 在只读 TUI report panel 中显示 agent list |
+| 成功语义 | 按 source 分组显示 agents |
 | 失败语义 | agent discovery 异常由外层 handler 捕获并通知 |
 | 相关配置 | `subagents.enabled` 不影响此命令注册；命令读取当前 cwd 下的 project agents 与用户 agents |
 | 相关源码 | `src/modules/subagents/commands/list.ts` |
@@ -213,8 +214,8 @@ commands:  enabled
 | Syntax | `/toolkit logs [--search|--fetch|--convert] [--limit N]` |
 | Arguments / flags | `--search`、`--fetch`、`--convert`、`--limit N` |
 | 用途 | 查看近期 toolkit activity log 和统计信息 |
-| 输出 | console 输出 recent activity 与 statistics；UI notification 显示 `Activity logs printed to console` |
-| 成功语义 | 打印当前进程内 toolkit activity log；无日志时显示 `(no recent activity)` |
+| 输出 | 在只读 TUI report panel 中显示 recent activity 与 statistics；非交互式、非协议 stdout 场景可打印作为 fallback |
+| 成功语义 | 显示当前进程内 toolkit activity log；无日志时显示 `(no recent activity)` |
 | 失败语义 | handler 捕获异常并通过 UI notification 显示失败 |
 | 相关配置 | Web/convert tools 是否启用会影响是否产生日志；命令本身受 `commands.enabled` 控制 |
 | 相关源码 | `src/modules/subagents/commands/logs.ts`, `src/shared/activity.ts`, `src/modules/web/observability.ts`, `src/modules/convert/observability.ts` |
@@ -307,8 +308,8 @@ commands:  enabled
 | Syntax | `/toolkit lsp` |
 | Arguments / flags | 无 |
 | 用途 | 查看当前 LSP 模块配置摘要 |
-| 输出 | console 输出 LSP overview；UI notification 显示 `LSP module status printed to console` |
-| 成功语义 | 打印 resolved config 中 LSP tool/hook 状态与 action 列表 |
+| 输出 | 在只读 TUI report panel 中显示 LSP overview；非交互式、非协议 stdout 场景可打印作为 fallback |
+| 成功语义 | 显示 resolved config 中 LSP tool/hook 状态与 action 列表 |
 | 失败语义 | handler 捕获异常并通过 UI notification 显示失败 |
 | 相关配置 | `lsp.enabled`、`lsp.tool.enabled`、`lsp.tool.allowMutatingActions`、`lsp.hook.*`、默认子代理 readonly LSP actions |
 | 相关源码 | `src/modules/commands/register.ts`, `src/modules/lsp/schemas.ts` |
@@ -368,9 +369,11 @@ Web tools API 见 [`web-tools.md`](./web-tools.md)，provider 见 [`web-provider
 
 `/toolkit` commands 的输出主要面向人读：
 
-- 大多数 subcommands 通过 `console.log()` 打印文本报告。
-- 同时通过 `ctx.ui.notify()` 给出简短通知。
-- `/toolkit activity` 打开 TUI custom panel。
+- 大多数 report subcommands 在交互式 TUI 模式下打开只读 TUI report panel。
+- 非交互式、非协议 stdout 场景可将文本报告打印到 stdout 作为 fallback。
+- RPC/JSON 协议模式不得向 stdout 输出裸 report 文本。
+- `/toolkit doctor` 在 report 关闭后仍会通过 `ctx.ui.notify()` 给出简短 summary。
+- `/toolkit activity` 打开交互式 Toolkit Activity TUI panel。
 - 当前公开命令没有 `--json` flag。
 
 源码中存在某些 JSON formatter helper，例如 `formatAgentListJson()` 和 `formatLogsJson()`，但当前没有通过 `/toolkit` command 暴露为 public CLI 参数。

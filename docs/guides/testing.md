@@ -7,13 +7,15 @@ language: english
 
 # Testing Strategy
 
-This document describes devkit-pi's current test organization. Public API and configuration contracts are defined in [Reference index](../reference/README.md), [Configuration reference](../reference/configuration.md), [Subagents reference](../reference/subagents.md), [LSP tools reference](../reference/lsp-tools.md), [Web tools error codes](../reference/web-tools-error-codes.md), and [Toolkit commands reference](../reference/toolkit-commands.md).
+This document describes devkit-pi's current test organization. Public API and configuration contracts are defined in [Reference index](../reference/README.md), [Configuration reference](../reference/configuration.md), [Subagents reference](../reference/subagents.md), [LSP tools reference](../reference/lsp-tools.md), [Convert tools reference](../reference/convert-tools.md), [Web tools error codes](../reference/web-tools-error-codes.md), and [Toolkit commands reference](../reference/toolkit-commands.md).
 
 ## Core test coverage
 
 - subagents: tool registration, schema, agent loading, recursion guard, output collection, prompt runtime
 - web: provider selection, fetch security limits, caching, concurrency, observability, storage, renderers
 - lsp: module registration, `servers` action, privileged action gating, hook registration/disabling/child process isolation
+- convert: config, schema, registration, MarkItDown provider behavior, local path conversion, safe URL download/conversion, renderers, activity recording
+- shared: reusable infrastructure such as external command resolution/execution, cwd handling, timeout behavior, and missing-command behavior
 - config: namespace config merge, error codes, package manifest
 
 ## Test directory
@@ -25,12 +27,14 @@ tests/subagents/          # subagents module: agents, runtime, config, registrat
 tests/commands/           # unified toolkit command registration
 tests/web/                # web module
 tests/lsp/                # lsp module
+tests/convert/            # convert module
+tests/shared/             # shared infrastructure such as external-command
 tests/package-manifest.test.ts
 ```
 
 ## Current strategy
 
-Current tests are primarily unit tests, not depending on real pi child processes or real language servers.
+Current tests are primarily unit tests, not depending on real pi child processes, real language servers, or real MarkItDown CLI installations. Convert provider tests use a fake external command runner; shared external command tests cover runner infrastructure separately.
 
 When adding or refactoring comparable modules, tools, providers, commands, or feature areas, prefer aligned test patterns: matching directory paths, comparable fixtures, similar naming, and equivalent coverage for config defaults, normalize behavior, schema validation, registration, permissions, errors, and documentation updates.
 

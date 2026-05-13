@@ -136,7 +136,7 @@ console.log("Subagent extension is disabled in config");
 
 1. 交互式 TUI 环境中，`/toolkit` 不再直接写 stdout/stderr。
 2. `/toolkit` 的用户可见报告通过 pi TUI API 展示。
-3. 保留非 TUI 场景下的可见输出能力。
+3. 保留非 TUI、非协议 stdout 场景下的可见输出能力，并避免污染 RPC/JSON stdout。
 4. 保持现有 formatter 复用，减少改动范围。
 5. 同步更新测试和用户文档，避免继续把 console 输出作为公开契约。
 
@@ -162,10 +162,15 @@ async function showToolkitReport(
 ): Promise<void>
 ```
 
+对外可以保持 `Promise<void>`，但内部不要把 `ctx.ui.custom<void>()` 的 `undefined` 结果直接视为“用户已关闭面板”。建议使用类似 `ctx.ui.custom<"closed">(...)` 的哨兵值，只有返回 `"closed"` 才表示 TUI panel 已实际展示并正常关闭；返回 `undefined` 等情况应按 unsupported/degraded fallback 处理。
+
 职责：
 
-- 在 `ctx.hasUI === true` 时使用 `ctx.ui.custom()` 打开只读报告面板。
-- 在 `ctx.hasUI === false` 时允许 fallback 到 `console.log(content)`，用于非交互式或 print/RPC 场景。
+- 在交互式 TUI 中优先使用 `ctx.ui.custom()` 打开只读报告面板。
+- 不要仅用 `ctx.hasUI === true` 判断是否可用 TUI panel：pi 的 RPC 模式下 `ctx.hasUI` 也可能为 true，但 `ctx.ui.custom()` 不支持或会退化返回。
+- 实现应能识别 `ctx.ui.custom()` unsupported / degraded 的情况，例如内部使用非 `void` 哨兵返回值区分“用户关闭面板”和“custom UI 未实际显示”。
+- 只有在确认 stdout 不是 TUI 绘制流、也不是 RPC/JSON 协议通道时，才允许 fallback 到 `console.log(content)`。
+- RPC/JSON 协议模式不得输出裸文本到 stdout；应使用协议支持的 UI/响应机制，或暂时返回明确的 unsupported/fallback 提示。
 - 集中处理滚动、关闭、宽度裁剪和空内容展示。
 
 ### TUI 面板交互
@@ -185,6 +190,8 @@ async function showToolkitReport(
 ```text
 ↑/↓ scroll · PgUp/PgDn page · q/Esc close
 ```
+
+组件实现必须符合 pi TUI component contract：`render(width)` 返回 `string[]`，且每一行的可见宽度不得超过 `width`。长行应使用 `truncateToWidth()` 或等价逻辑裁剪/换行，滚动应基于已处理的行数组。快捷键匹配建议使用 `matchesKey()` / `Key`，避免手写不完整的 escape sequence 判断。
 
 ### Formatter 保持不变
 
@@ -365,7 +372,8 @@ ctx.ui.notify(
 - `q` / `Esc` 调用 `done()` 关闭。
 - `ArrowDown` / `ArrowUp` 更新 scroll offset。
 - 小宽度下不抛异常。
-- `ctx.hasUI === false` 时 fallback 到 stdout。
+- `ctx.hasUI === false` 且 stdout 确认不是协议通道时 fallback 到 stdout。
+- `ctx.hasUI === true` 但 `ctx.ui.custom()` unsupported/degraded（例如 RPC 模式返回 `undefined`）时不会静默丢失报告，也不会输出裸文本污染 RPC stdout。
 
 ## 文档更新计划
 
@@ -387,7 +395,8 @@ docs/zh/reference/toolkit-commands.md
 
 - `open a read-only TUI report panel`
 - `display report in TUI`
-- `non-interactive mode may print to stdout as fallback`
+- `non-interactive, non-protocol stdout mode may print to stdout as fallback`
+- `RPC/JSON mode must not emit raw report text to stdout`
 
 ## 实施顺序
 
@@ -431,7 +440,7 @@ docs/zh/reference/toolkit-commands.md
 
 1. `ctx.ui.custom()` 是交互式、等待关闭的 UI。相比原来的 `console.log()` 后立即返回，命令生命周期会变长。
 2. 通知可能遮挡报告面板，建议报告型命令减少通知，或在面板关闭后通知。
-3. 非 TUI 环境仍需要输出 fallback，否则 `/toolkit` 在 print/RPC 场景下不可见。
+3. 非 TUI 环境仍需要输出 fallback，否则 `/toolkit` 在 print 场景下不可见；但 RPC/JSON 协议模式不能输出裸文本到 stdout，应使用协议支持的 UI/响应机制或明确 unsupported。
 4. 初版 viewer 应尽量轻量，避免把修复 TUI 污染扩大成复杂 UI 重构。
 
 ## 验收标准
@@ -439,6 +448,6 @@ docs/zh/reference/toolkit-commands.md
 1. 在交互式 pi TUI 中执行 `/toolkit` 和各子命令，不再覆盖输入框、边框、cwd/git footer 或命令补全面板。
 2. `/toolkit` 报告内容仍完整可读。
 3. 长报告可滚动查看。
-4. 非 TUI 场景仍可获得文本输出。
+4. 非 TUI、非协议 stdout 场景仍可获得文本输出；RPC/JSON 协议场景不会被裸文本 stdout 污染。
 5. 测试不再要求 `/toolkit` 在 TUI 路径使用 `console.log()`。
 6. 文档不再将 console 输出描述为 `/toolkit` 的主要用户可见行为。

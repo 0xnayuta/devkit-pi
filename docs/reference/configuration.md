@@ -506,7 +506,7 @@ Example: enable Jina fallback.
 
 ## Convert content configuration
 
-`convert_content` is an optional document conversion tool. The current public tool supports local `path` conversion and remote `url` conversion through the configured MarkItDown CLI provider. Remote URLs are safely downloaded to a temporary file before conversion. TUI renderers and toolkit-level activity integration are implemented.
+`convert_content` is an optional document conversion tool. The current public tool supports local `path` conversion and remote `url` conversion through the configured MarkItDown CLI provider. Remote URLs are safely downloaded to a temporary file before conversion. TUI renderers and toolkit-level activity integration are implemented. The MarkItDown provider uses shared external command infrastructure for command resolution/execution while keeping convert-specific validation and error mapping in `src/modules/convert/provider.ts`.
 
 Source: `DEFAULT_CONVERT_CONTENT_CONFIG`, `normalizeConvertContentConfig()`, `src/modules/convert/index.ts`, `src/modules/convert/schemas.ts`, `src/modules/convert/errors.ts`, `src/modules/convert/provider.ts`, `src/modules/convert/renderers.ts`, `src/modules/convert/observability.ts`.
 
@@ -514,7 +514,7 @@ Source: `DEFAULT_CONVERT_CONTENT_CONFIG`, `normalizeConvertContentConfig()`, `sr
 |---|---|---:|---|---|---|
 | `convertContent.enabled` | boolean | `true` | No | Whether to register the `convert_content` tool | `src/modules/convert/index.ts` |
 | `convertContent.provider` | `markitdown` | `markitdown` | No | Conversion provider name. Current config normalizes all values to `markitdown` | `src/config/load-config.ts` |
-| `convertContent.command` | string | `markitdown` | No | External MarkItDown CLI command/path used by the internal MarkItDown provider | `src/config/load-config.ts`, `src/modules/convert/provider.ts` |
+| `convertContent.command` | string | `markitdown` | No | External MarkItDown CLI command/path used by the internal MarkItDown provider; resolved/executed through shared external command infrastructure | `src/config/load-config.ts`, `src/modules/convert/provider.ts`, `src/shared/external-command.ts` |
 | `convertContent.timeoutMs` | number | `30000` | No | Timeout in ms for remote download and MarkItDown provider execution; must be positive integer | `src/config/load-config.ts`, `src/modules/convert/security.ts`, `src/modules/convert/provider.ts` |
 | `convertContent.maxResponseBytes` | number | `10485760` | No | Max local/remote source bytes for conversion execution; must be positive integer | `src/config/load-config.ts`, `src/modules/convert/security.ts`, `src/modules/convert/provider.ts` |
 | `convertContent.maxContentChars` | number | `50000` | No | Max returned Markdown characters; provider output beyond this limit is truncated with `truncated=true` | `src/config/load-config.ts`, `src/modules/convert/provider.ts` |

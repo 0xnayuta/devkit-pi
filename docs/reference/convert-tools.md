@@ -53,13 +53,15 @@ Execution validates that exactly one of `path` or `url` is provided. Providing b
 
 `src/modules/convert/provider.ts` implements `MarkItDownProvider`:
 
-- Checks whether the configured MarkItDown CLI command exists.
-- Invokes `markitdown <input-file>` without shell interpolation.
-- Applies conversion timeout with `AbortSignal`.
-- Checks input file size against `maxResponseBytes`.
-- Captures stdout/stderr.
+- Uses `src/shared/external-command.ts` for configured MarkItDown CLI command availability checks and execution.
+- Invokes the configured executable with the input file as a structured argument, without shell interpolation.
+- Applies conversion timeout through the shared external command runner.
+- Checks input file size against `maxResponseBytes` in the convert provider before execution.
+- Receives stdout/stderr from the shared runner.
 - Maps missing command, timeout, non-zero exit, and file-too-large failures to convert error codes.
 - Truncates stdout to `maxContentChars` and returns `truncated=true`.
+
+`src/shared/external-command.ts` is infrastructure only: it resolves/runs short external commands and collects stdout/stderr. MarkItDown-specific behavior, convert error mapping, file-size checks, metadata, and output truncation remain in `src/modules/convert/provider.ts`.
 
 ## Success result
 

@@ -16,7 +16,7 @@ This document is the public reference for devkit-pi's `/toolkit` developer comma
 Difference from tools:
 
 - Tools (e.g., `subagent`, `web_search`, `fetch_content`, `lsp`) are mainly called by agents during task execution and return tool results.
-- `/toolkit` commands are mainly triggered manually by users, output to console or open TUI panels, and notify execution results via UI notification.
+- `/toolkit` commands are mainly triggered manually by users and display human-readable reports in a read-only TUI report panel when interactive UI is available. Non-interactive, non-protocol stdout mode may print report text as a fallback.
 - `/toolkit` commands do not replace Web/LSP/subagent tools; they are status viewing, debugging, and diagnostic entries.
 
 Typical users:
@@ -68,8 +68,8 @@ Unknown subcommands currently show help, not a command error.
 | Syntax | `/toolkit` or `/toolkit help` |
 | Arguments / flags | None |
 | Purpose | View currently supported `/toolkit` subcommands |
-| Output | Console outputs usage text |
-| Success semantics | Prints help text |
+| Output | Displays usage text in a read-only TUI report panel; non-interactive, non-protocol stdout mode may print it as fallback |
+| Success semantics | Shows help text |
 | Failure semantics | Currently no dedicated failure branch; unknown subcommands also fall back to help |
 | Related config | `commands.enabled` |
 | Related source | `src/modules/commands/register.ts` |
@@ -102,8 +102,8 @@ Usage:
 | Syntax | `/toolkit modules` |
 | Arguments / flags | None |
 | Purpose | View devkit-pi module enablement status |
-| Output | Console outputs module overview; UI notification shows `Module status printed to console` |
-| Success semantics | Prints module status from current resolved config |
+| Output | Displays module overview in a read-only TUI report panel; non-interactive, non-protocol stdout mode may print it as fallback |
+| Success semantics | Shows module status from current resolved config |
 | Failure semantics | Handler catches exceptions and shows `Toolkit command failed: ...` via UI notification |
 | Related config | `enabled`, `subagents.enabled`, `web.enabled`, `lsp.*`, `commands.enabled` |
 | Related source | `src/modules/commands/register.ts` |
@@ -137,8 +137,8 @@ The commands in this section are implemented in `src/modules/subagents/commands/
 | Syntax | `/toolkit doctor` |
 | Arguments / flags | None |
 | Purpose | Run unified diagnostic checks |
-| Output | Console outputs box-drawing doctor report; UI notification shows pass/warn/fail summary |
-| Success semantics | Completes checks and prints report; report items can be `pass`, `warn`, `fail`, `info` |
+| Output | Displays box-drawing doctor report in a read-only TUI report panel; UI notification shows pass/warn/fail summary |
+| Success semantics | Completes checks and shows report; report items can be `pass`, `warn`, `fail`, `info` |
 | Failure semantics | Individual check failures are usually recorded as report items; handler outer exceptions shown via UI notification as `Toolkit command failed: ...` |
 | Related config | Global config, web provider config, LSP config |
 | Related source | `src/modules/subagents/commands/doctor.ts` |
@@ -179,8 +179,8 @@ Example:
 | Syntax | `/toolkit agents` |
 | Arguments / flags | None |
 | Purpose | List currently discovered builtin/user/project agents |
-| Output | Console outputs agent list; UI notification shows `Found N agents` |
-| Success semantics | Prints agents grouped by source |
+| Output | Displays agent list in a read-only TUI report panel |
+| Success semantics | Shows agents grouped by source |
 | Failure semantics | Agent discovery exceptions caught by outer handler and notified |
 | Related config | `subagents.enabled` does not affect command registration; command reads current cwd's project agents and user agents |
 | Related source | `src/modules/subagents/commands/list.ts` |
@@ -214,8 +214,8 @@ Internally has `formatAgentListJson()` helper, but current `/toolkit agents` com
 | Syntax | `/toolkit logs [--search|--fetch|--convert] [--limit N]` |
 | Arguments / flags | `--search`, `--fetch`, `--convert`, `--limit N` |
 | Purpose | View recent toolkit activity log and statistics |
-| Output | Console outputs recent activity and statistics; UI notification shows `Activity logs printed to console` |
-| Success semantics | Prints current process toolkit activity log; shows `(no recent activity)` when empty |
+| Output | Displays recent activity and statistics in a read-only TUI report panel; non-interactive, non-protocol stdout mode may print it as fallback |
+| Success semantics | Shows current process toolkit activity log; shows `(no recent activity)` when empty |
 | Failure semantics | Handler catches exceptions and shows failure via UI notification |
 | Related config | Web/convert tool enablement affects whether logs are generated; command itself controlled by `commands.enabled` |
 | Related source | `src/modules/subagents/commands/logs.ts`, `src/shared/activity.ts`, `src/modules/web/observability.ts`, `src/modules/convert/observability.ts` |
@@ -308,8 +308,8 @@ Example:
 | Syntax | `/toolkit lsp` |
 | Arguments / flags | None |
 | Purpose | View current LSP module configuration summary |
-| Output | Console outputs LSP overview; UI notification shows `LSP module status printed to console` |
-| Success semantics | Prints LSP tool/hook status and action list from resolved config |
+| Output | Displays LSP overview in a read-only TUI report panel; non-interactive, non-protocol stdout mode may print it as fallback |
+| Success semantics | Shows LSP tool/hook status and action list from resolved config |
 | Failure semantics | Handler catches exceptions and shows failure via UI notification |
 | Related config | `lsp.enabled`, `lsp.tool.enabled`, `lsp.tool.allowMutatingActions`, `lsp.hook.*`, default subagent readonly LSP actions |
 | Related source | `src/modules/commands/register.ts`, `src/modules/lsp/schemas.ts` |
@@ -369,9 +369,11 @@ Web tools API: [`web-tools.md`](./web-tools.md); providers: [`web-providers.md`]
 
 `/toolkit` commands output is mainly human-readable:
 
-- Most subcommands print text reports via `console.log()`.
-- Simultaneously provide short notifications via `ctx.ui.notify()`.
-- `/toolkit activity` opens TUI custom panel.
+- Most report subcommands open a read-only TUI report panel in interactive TUI mode.
+- Non-interactive, non-protocol stdout mode may print text reports as fallback.
+- RPC/JSON protocol mode must not receive raw report text on stdout.
+- `/toolkit doctor` still provides a short summary notification after the report closes.
+- `/toolkit activity` opens the interactive Toolkit Activity TUI panel.
 - Currently no `--json` flag on public commands.
 
 Source code has certain JSON formatter helpers like `formatAgentListJson()` and `formatLogsJson()`, but currently not exposed as public CLI parameters via `/toolkit` commands.
