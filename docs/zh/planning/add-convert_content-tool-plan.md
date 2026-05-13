@@ -7,8 +7,6 @@ language: chinese
 
 # 二、新增 `convert_content` 工具计划
 
-> **⚠️ 状态：已实现的分阶段计划 / 历史设计记录 — not current behavior reference。** Phase 0–6 已实现，`convert_content` 在启用时会公开注册。本文件记录实现计划与剩余/未来想法；当前公开契约以 [Convert Content Tool Reference](../../reference/convert-tools.md)、[Reference index](../../reference/README.md)、`src/` 和 `tests/` 为准。
-
 ## 目标定位
 
 `convert_content` 是一个新的独立 agent 工具，负责：

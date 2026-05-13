@@ -7,8 +7,6 @@ language: chinese
 
 # 个人综合 pi coding toolkit 功能路线图
 
-> **⚠️ Status: Proposed / Roadmap — not current behavior.** This document records possible future directions. The features, tools, modules, and interfaces described here are **not part of the current public API** and may never be implemented as described. For the current public surface, see [Reference index](../reference/README.md), `src/`, and `tests/`.
-
 ## 目的
 
 本文记录在 `pi-subagents` 与 `pi-lsp` 基本完成后，继续演进为个人综合 pi coding toolkit 时，值得添加的常见 AI coding agent / developer tooling 功能。

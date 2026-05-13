@@ -7,8 +7,6 @@ language: english
 
 # Personal pi Coding Toolkit Feature Roadmap
 
-> **⚠️ Status: Proposed / Roadmap — not current behavior.** This document records possible future directions. The features, tools, modules, and interfaces described here are **not part of the current public API** and may never be implemented as described. For the current public surface, see [Reference index](../reference/README.md), `src/`, and `tests/`.
-
 ## Purpose
 
 This document records the common AI coding agent / developer tooling features worth adding when evolving from `pi-subagents` and `pi-lsp` to a personal comprehensive pi coding toolkit.

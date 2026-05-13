@@ -7,8 +7,6 @@ language: english
 
 # Plan: Add `convert_content` Tool
 
-> **⚠️ Status: Implemented phased plan / historical design record — not current behavior reference.** Phase 0–6 have been implemented and `convert_content` is publicly registered when enabled. This document records the implementation plan and remaining/future ideas; for the current public contract, see [Convert Content Tool Reference](../reference/convert-tools.md), [Reference index](../reference/README.md), `src/`, and `tests/`.
-
 ## Positioning
 
 `convert_content` is a new independent agent tool responsible for:

@@ -7,9 +7,6 @@ language: english
 
 # Tests Simplification Plan
 
-Status: phase 6 web infrastructure pruning completed  
-Date: 2026-05-12
-
 This plan started as the first-stage audit for simplifying `tests/`. Phase 2 consolidated low-risk subagent tests. Phase 3 consolidated low-risk web registration/schema/renderer and cache/storage tests. Phase 4 consolidated fetch/content extraction and handler tests. Phase 5 consolidated search provider tests into a single provider contract file. Phase 6 removed standalone internal web infrastructure tests and retained required timeout/concurrency/error coverage at tool or public-contract boundaries. Phase 6 also deleted `tests/shared/path-handling.test.ts` — its assertions tested generic Node.js `path` behavior rather than project-specific regressions (no `startsWith('/')` anti-pattern exists in the source), so per the plan's candidate-deletion criteria it was removed. The `tests/shared/` directory is now empty and was removed; `package.json` test globs were updated accordingly.
 
 ## Inputs reviewed
