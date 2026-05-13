@@ -7,7 +7,7 @@ language: chinese
 
 # 测试策略
 
-本文档说明 devkit-pi 当前测试组织方式。Public API 与配置契约参考 [Reference index](../reference/README.md)、[Configuration reference](../reference/configuration.md)、[Subagents reference](../reference/subagents.md)、[LSP tools reference](../reference/lsp-tools.md)、[Web tools error codes](../reference/web-tools-error-codes.md) 和 [Toolkit commands reference](../reference/toolkit-commands.md)。
+本文档说明 devkit-pi 当前测试组织方式。Public API 与配置契约参考 [Reference index](../../docs/reference/README.md)、[Configuration reference](../../docs/reference/configuration.md)、[Subagents reference](../../docs/reference/subagents.md)、[LSP tools reference](../../docs/reference/lsp-tools.md)、[Web tools error codes](../../docs/reference/web-tools-error-codes.md) 和 [Toolkit commands reference](../../docs/reference/toolkit-commands.md)。
 
 ## 核心测试范围
 

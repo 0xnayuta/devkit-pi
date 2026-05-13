@@ -21,10 +21,10 @@ This means legacy flat configuration fields, old directory layouts, or one-off c
 
 ## Related guides
 
-- [Architecture](../guides/architecture.md): Current source structure and module responsibilities.
+- [Goals and scope](../guides/goals-and-scope.md): Project goals, current capability boundaries, and explicit non-goals.
 - [Security model](../guides/security-model.md): Security boundaries and risk notes.
-- [Testing](../guides/testing.md): Test organization and documentation checks.
-- [Release checklist](../guides/release-checklist.md): Pre-release synchronization checks.
+
+Maintainer-only architecture, testing, release, ADR, planning, archive, issue, and audit documents live in `internal-docs/` and are intentionally not part of the public website navigation.
 
 ## Core references
 

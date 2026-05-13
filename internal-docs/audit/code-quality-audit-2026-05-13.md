@@ -1,0 +1,751 @@
+---
+status: current
+audience: maintainer
+last_verified: 2026-05-13
+language: chinese
+---
+
+# 项目代码质量审计报告 · devkit-pi
+
+> **审计基准 commit**: `db96565` · **审计日期**: 2026-05-13 · **审计对象**: `src/`、`tests/`、`agents/`、`docs/zh/guides`、`docs/zh/archive`、`docs/zh/reference` · **验证命令**: `pnpm typecheck`、`pnpm lint`、`pnpm test` 全部通过（280 tests）
+>
+> **历史路径说明**：本报告记录审计当时的仓库结构。后续文档分流后，部分维护者文档、归档文档和审计文档已从 `docs/` / `docs/zh/` 移动到 `internal-docs/`；报告正文中的旧路径保留为当时上下文。
+
+---
+
+## 一、项目基本信息
+
+### 项目名称
+
+**devkit-pi**
+
+### 项目类型
+
+- ☑ **pi coding agent 扩展包**
+- ☑ 个人工作流开发工具集
+- ☑ TypeScript / Node.js 工具型项目
+- ☐ 完整多代理框架
+- ☐ 独立 SaaS / Web 服务
+
+### 技术栈
+
+**核心语言**：TypeScript 6 · ESM · Node.js 内置 test runner  
+**运行时 / 宿主**：pi coding agent extension API 0.74.x  
+**协议 / 外部能力**：Language Server Protocol（`vscode-jsonrpc`、`vscode-languageserver-protocol`）· Fetch API · 外部 CLI（MarkItDown）  
+**Schema / 类型**：typebox  
+**文档**：VitePress · 中英文 docs  
+**工程化**：pnpm 11 · Biome · TypeScript compiler · GitHub Actions
+
+### 核心能力
+
+```text
+subagents（前台只读任务委派）
++ web research（web_search / fetch_content / get_search_content）
++ convert_content（MarkItDown CLI 文件转 Markdown）
++ LSP code intelligence（显式 lsp tool + diagnostics hook）
++ /toolkit 命令中心
+```
+
+---
+
+## 二、项目目录结构审计
+
+### 当前目录结构（核心）
+
+```text
+devkit-pi/
+├── index.ts                         # package 根入口，重导出 src/index.ts
+├── package.json
+├── pnpm-lock.yaml
+├── biome.json
+├── agents/                          # 5 个内置 readonly agent 定义
+├── src/
+│   ├── index.ts                      # extension 主入口：加载配置并注册模块
+│   ├── config/load-config.ts         # 默认配置、读取、merge/normalize
+│   ├── shared/                       # 通用类型、错误、外部命令、委派策略
+│   └── modules/
+│       ├── subagents/                # agent 发现、执行、输出收集、命令支撑
+│       ├── web/                      # web tools、providers、handlers、storage
+│       ├── convert/                  # convert_content + MarkItDown provider
+│       ├── lsp/                      # LSP manager、tool、hook
+│       └── commands/                 # /toolkit 命令注册与报告展示
+├── tests/                            # 23 个测试文件，按模块镜像
+├── docs/zh/guides/                   # 架构、安全、测试、范围指南
+├── docs/zh/reference/                # 配置、工具、命令、结果 schema reference
+└── docs/zh/archive/                  # 历史计划归档，不作为当前行为依据
+```
+
+### 优点
+
+- **模块边界清晰**：`subagents`、`web`、`convert`、`lsp`、`commands` 分区明确，入口 `src/index.ts` 只做组合注册。
+- **源码 / 测试 / 文档结构一致**：`src/modules/*`、`tests/*`、`docs/zh/reference/*` 基本按同一能力域映射。
+- **配置集中**：`src/config/load-config.ts` 是默认值和 normalize 的 canonical source，符合文档中的架构一致性策略。
+- **内置 agent 独立为 Markdown**：`agents/*.md` 便于用户理解 prompt 与工具边界。
+- **历史文档有归档边界**：`docs/zh/archive/index.md` 明确 archive 仅供参考，降低旧计划误导当前实现的风险。
+
+### 问题
+
+- **`src/modules/lsp/core.ts` 过大**：约 1876 行，混合 server discovery、spawn、JSON-RPC client、诊断、symbol/format helper、Kotlin 辅助下载等职责，是当前最明显的维护热点。
+- **`docs/zh/reference/configuration.md` 与源码存在默认值不一致**：源码 `DEFAULT_SUBAGENTS_CONFIG.timeoutMs = 900000`，但配置参考完整默认示例和表格写 `300000`；同时源码已有 `idleTimeoutMs=180000`，完整默认示例未列出。
+- **内置 agents 目录定位逻辑脆弱**：`src/modules/subagents/agents.ts` 会优先向上查找任意 `agents/` 目录作为 builtin 根，普通工作区若也有 `agents/` 目录，可能混淆内置 agent 来源。
+- **中文测试文档未列出 `tests/convert/` 与 `tests/shared/`**：`docs/zh/guides/testing.md` 的测试目录示例落后于当前仓库。
+
+### 风险等级
+
+- ☑ **中** —— 结构整体健康，但 LSP 核心文件和少量文档漂移会持续放大维护成本。
+
+### 是否建议重构目录结构
+
+- ☑ **否（不建议大规模重排）**
+- ☑ **是（建议局部拆分 LSP core）**
+
+建议保持当前模块化顶层结构，只将 `src/modules/lsp/core.ts` 拆成 `server-registry.ts`、`client-manager.ts`、`diagnostics.ts`、`formatters.ts`、`server-install.ts` 等内部文件。
+
+---
+
+## 三、技术栈与依赖审计
+
+### 核心依赖清单
+
+| 依赖 | 当前版本 | 用途 | 状态 | 风险 |
+|---|---:|---|---|---|
+| `typebox` | `^1.1.38` | tool 参数 schema | 合理 | 低 |
+| `vscode-jsonrpc` | `^8.2.1` | LSP JSON-RPC 连接 | 合理 | 低 |
+| `vscode-languageserver-protocol` | `^3.17.5` | LSP 类型与 request | 合理 | 低 |
+| `@earendil-works/pi-*` | `^0.74.0` | pi extension peer/dev runtime | 合理 | 中（宿主 API 版本耦合） |
+| `@biomejs/biome` | `^2.4.15` | lint/format | 合理 | 低 |
+| `typescript` | `^6.0.3` | 类型检查 | 偏新 | 中（生态兼容需持续确认） |
+| `vitepress` | `^1.6.4` | 文档站 | 合理 | 低 |
+
+### 是否存在过时依赖
+
+未发现明显废弃依赖。项目依赖克制，核心运行时依赖仅 3 个，符合“轻量核心”原则。
+
+### 是否存在重复依赖
+
+未发现重复依赖。
+
+### 是否存在无用依赖
+
+从当前静态扫描看，`typebox`、LSP 相关依赖、pi runtime devDependencies 均有明确用途。没有发现类似“声明但完全未引用”的明显死依赖。
+
+### 高风险依赖 / 版本策略
+
+- `typescript@^6.0.3` 与 `@types/node@^25.6.2` 使用较新的 major，短期可接受，但若发布给更广泛用户，建议明确 Node/TS 支持矩阵。
+- pi 相关包作为 peerDependencies 且 optional，符合 extension 包形态；但它也意味着真实运行质量依赖宿主 pi 版本，需继续依靠 CI 和 package manifest 测试锁定直接 runtime imports。
+
+### 优化建议
+
+1. 在 `package.json` 增加 `engines.node`，明确最低 Node 版本（建议以当前 Fetch/Web Streams/AbortSignal 使用为准）。
+2. 发布前在 release checklist 中加入“pi 0.74.x smoke test”。
+3. 对 TypeScript 6 相关升级保持谨慎；若未来遇到生态兼容问题，可考虑 pin 到经过验证的 minor。
+
+---
+
+## 四、代码质量审计
+
+### 审计评分
+
+| 维度 | 分数 | 依据 |
+|---|---:|---|
+| 命名规范 | **8/10** | 模块、配置、错误码命名整体一致；少量 legacy 注释与实现不完全同步 |
+| 可读性 | **7/10** | 大部分文件职责单一；`lsp/core.ts` 过长显著拉低可读性 |
+| 可维护性 | **7/10** | 有测试和文档兜底；但 LSP、HTTP pool、agent discovery 等热点需要拆分/修复 |
+| 解耦程度 | **8/10** | provider/handler/runner/config 抽象较好；高层依赖接口较多 |
+| 可扩展性 | **8/10** | 新 web provider、convert provider、tool/command 的模式清晰 |
+| 类型安全 | **6/10** | public schema 明确，但 LSP/renderer/runtime 边界存在较多 `any` |
+
+### 主要问题
+
+#### 问题 1：LSP core 文件职责过多
+
+**文件位置**：`src/modules/lsp/core.ts`
+
+该文件约 1876 行，包含：
+
+- language id 和 server registry
+- root detection
+- server spawn / shutdown
+- JSON-RPC client 管理
+- diagnostics / workspace diagnostics
+- definition / references / hover / signature / symbols
+- rename / code action formatting
+- Kotlin LSP 辅助下载
+- 结果格式化 helper
+
+**影响**：
+
+- 单文件上下文过大，修改 LSP 某个 action 时容易影响其他 action。
+- 单元测试只能通过外层 `lsp/tool.test.ts` 间接覆盖，manager 内部场景难以精细测试。
+- `any` 与 LSP 协议返回类型混杂，使 schema drift 更难发现。
+
+**建议**：先不改变 public API，内部拆分为：
+
+```text
+src/modules/lsp/
+├─ core.ts                 # facade / public manager
+├─ server-registry.ts      # server configs、root detection
+├─ client-manager.ts       # spawn/init/open/close/cleanup
+├─ diagnostics.ts          # diagnostics/workspace diagnostics
+├─ actions.ts              # definition/references/hover/signature/symbols
+├─ edits.ts                # rename/codeAction formatting
+└─ server-install.ts       # Kotlin 等辅助安装逻辑
+```
+
+#### 问题 2：HTTP connection pool 默认禁用 TLS 证书校验
+
+**文件位置**：`src/modules/web/http-pool.ts:78`、`src/modules/web/http-pool.ts:182`
+
+```ts
+rejectUnauthorized: false
+```
+
+**问题描述**：HTTPS Agent 默认允许自签名证书，注释为“flexibility”。这与项目“安全默认”原则冲突。
+
+**影响**：
+
+- 如果 Node fetch/运行时采纳该 agent，则 HTTPS 请求可被中间人攻击。
+- 即使当前运行时未完全使用 `agent` 参数，这段代码也会成为未来迁移或重构时的安全陷阱。
+
+**建议**：默认删除该字段或设为 `true`。如确需自签名证书，应新增显式配置，例如 `web.connectionPool.allowInsecureTls`，默认 `false`，并在安全文档中标为高级风险选项。
+
+#### 问题 3：外部命令与子进程输出无硬性字节上限
+
+**文件位置**：
+
+- `src/shared/external-command.ts:143-149`
+- `src/modules/subagents/execution.ts:262-272`
+- `src/modules/web/providers/ddgs.ts:124` 及其他 search providers 的 `response.text()` 路径
+
+**问题描述**：部分路径会把 stdout/stderr/HTTP body 先完整累积到内存，再由上层截断。
+
+**影响**：
+
+- MarkItDown CLI、子 pi 进程、搜索 provider 若输出异常大，可能导致内存膨胀。
+- `convertContent.maxContentChars` 只能限制最终返回字符，不能限制 stdout 收集过程。
+
+**建议**：
+
+- 给 `ExternalCommandRunOptions` 增加 `maxStdoutBytes` / `maxStderrBytes`。
+- 给 `runSync` 的 stdout/stderr line buffer 增加硬上限，超限后终止子进程并返回结构化错误。
+- search provider 复用 `readLimitedBody()` 风格的有限读取，而不是直接 `response.text()`。
+
+#### 问题 4：Web / Convert SSRF 防护存在 DNS rebinding TOCTOU 风险
+
+**文件位置**：
+
+- `src/modules/web/security.ts:119-145`
+- `src/modules/web/fetch.ts:468-501`
+- `src/modules/convert/security.ts:149-208`
+
+**问题描述**：当前先 `dns.lookup()` 检查 hostname 是否解析到私网，再调用 `fetch()`，实际连接时底层可能重新解析 DNS。
+
+**影响**：攻击者控制域名时，可在校验和连接之间切换解析结果，绕过私网阻断。
+
+**建议**：
+
+- 使用支持自定义 lookup / dispatcher 的 fetch 实现，将已校验 IP pin 到连接阶段；或
+- 对高风险环境在文档中明确“当前防护不覆盖 DNS rebinding”，并优先在 web/convert 安全测试中加入回归用例。
+
+#### 问题 5：配置文档与源码默认值漂移
+
+**文件位置**：
+
+- 源码：`src/config/load-config.ts`
+- 文档：`docs/zh/reference/configuration.md`
+
+**问题描述**：
+
+- `subagents.timeoutMs` 源码默认 `900000`，文档示例/表格写 `300000`。
+- 源码已有 `idleTimeoutMs=180000`，中文配置完整示例未列出。
+
+**影响**：用户按文档预期调试超时行为时会产生误判；也削弱“配置参考以源码为 canonical source”的可信度。
+
+**建议**：同步中文/英文配置 reference，并在 `docs:check` 增加关键默认值一致性检查。
+
+---
+
+## 五、架构审计
+
+### 当前架构分析
+
+#### 分层情况
+
+- **扩展入口层**：`src/index.ts` 负责加载配置并注册模块。
+- **配置层**：`src/config/load-config.ts` 负责默认值、类型归一化和 namespace merge。
+- **功能模块层**：`src/modules/{subagents,web,convert,lsp,commands}`。
+- **共享基础设施层**：`src/shared/*` 提供错误、外部命令、timeout、activity、delegation policy 等。
+- **文档与测试层**：`docs/zh/reference` 描述 public contract，`tests/` 锁定行为。
+
+依赖方向总体健康：入口组合模块，模块主要依赖 `shared` 和自身内部实现，未发现大面积跨模块深度耦合。
+
+### 架构优点
+
+- **Provider / adapter 意识强**：web search providers、convert provider、content handlers 均有可扩展接口。
+- **安全边界模块化**：web URL 校验、convert 本地路径校验、LSP action gating、subagent readonly 工具过滤都有明确实现。
+- **命令中心统一**：`/toolkit` 避免散落多个 slash command。
+- **测试结构镜像架构**：新增模块时已有清晰测试模式可参考。
+
+### 架构问题
+
+#### 模块边界
+
+- `lsp/core.ts` 已经成为 LSP 子系统内部“上帝文件”。
+- `subagents/agents.ts` 中 builtin root 推断混入 cwd 向上查找，导致“扩展包内置资源”与“用户工作区资源”边界不够硬。
+- `shared/external-command.ts` 足够通用，但缺少输出上限，导致所有复用方继承同一资源风险。
+
+#### 数据流
+
+- `web_search(includeContent=true)` 会复用 fetch 流程，整体合理；但搜索 provider 自身的响应体读取没有统一走 `maxResponseBytes`。
+- `convert_content(url=...)` 下载临时文件再交给 MarkItDown provider，职责清楚；临时文件清理已有测试覆盖。
+- `subagent` 通过 child pi JSONL 输出收集结果，符合 foreground 单子进程设计；但 stdout/stderr 累积需要硬限制。
+
+#### 状态管理
+
+- web storage 有 `maxStoredResults` / `maxStoredContentChars` 限制，较健康。
+- activity log 有上限测试，较健康。
+- LSP manager 维护 clients/open files/cleanup interval，属于合理状态集中；但拆分后更易维护。
+
+### 架构评级
+
+- ☐ S
+- ☑ **A-**
+- ☐ B
+- ☐ C
+- ☐ D
+
+**说明**：整体模块化和契约意识明显强于一般个人工具项目；主要扣分来自 LSP 单文件复杂度、安全默认值细节和文档漂移。
+
+---
+
+## 六、核心业务逻辑审计
+
+### 核心模块列表
+
+| 模块 | 职责 | 风险等级 |
+|---|---|---|
+| `src/modules/subagents/executor.ts` | 委派编排、agent 选择、prompt 构造、重试、结果归一化 | 中 |
+| `src/modules/subagents/execution.ts` | child pi 进程执行、timeout/idle timeout、JSONL streaming 收集 | 中 |
+| `src/modules/web/fetch.ts` | URL 拉取、redirect、安全限制、内容类型识别、handler 编排 | 中 |
+| `src/modules/web/search.ts` | provider 选择、查询归一化、includeContent、storage | 中 |
+| `src/modules/convert/tool.ts` | path/url 输入编排、本地/远程转换、错误映射 | 低-中 |
+| `src/modules/convert/security.ts` | workspace 路径围栏、安全下载、临时文件 | 中 |
+| `src/modules/lsp/tool.ts` | action 参数校验、权限 gating、输出格式 | 中 |
+| `src/modules/lsp/core.ts` | LSP server 生命周期与所有核心 action | 中-高 |
+| `src/config/load-config.ts` | 默认值与配置 normalize | 低-中 |
+
+### 模块详细分析
+
+#### 模块一 · `subagent` 执行链路
+
+**输入**：`{ agent, task }` + 当前 cwd/session context。  
+**输出**：`AgentToolResult<Details>`，包含 result、usage、sessionFile、displayItems、错误码等。
+
+**做得好的地方**：
+
+- `maxDepth` 和 `PI_SUBAGENT_CHILD` 阻止 nested delegation。
+- readonly agent 工具过滤包含 read/grep/find/ls/web/convert/readonly LSP。
+- runtime timeout 与 idle timeout 分离。
+- transient error 支持有限重试。
+- 输出经过 `sanitizeOutput()` 与 `truncateOutput()`。
+
+**风险点**：
+
+1. child stdout/stderr 在 `runSync` 内持续字符串拼接，无硬上限。
+2. `spawnPi()` abort listener 使用匿名函数 add/remove，remove 不能移除原 listener，长期大量 spawn 存在低等级 listener 泄漏。
+3. builtin agent 发现可能受 cwd 中 `agents/` 目录影响。
+
+**建议**：加入输出 byte cap；修复 abort listener 引用；固定 builtin agents dir 为 package 自身 `agents/`。
+
+#### 模块二 · `web fetch/search` 链路
+
+**输入**：URL 或 query。  
+**输出**：结构化结果、responseId、metadata、truncation 信息或 web error。
+
+**做得好的地方**：
+
+- 默认拒绝 localhost/private network/file protocol。
+- `fetch_content` 使用有限 body reader，支持 redirect hop 再校验。
+- 内容 handler 支持 HTML/JSON/CSV/XML/YAML/source text，并拒绝明确二进制。
+- Jina fallback 默认关闭，且不会向 Jina 发送私网 URL。
+- web error code 与 recovery 建议比较完整。
+
+**风险点**：
+
+1. DNS rebinding 防护不完整。
+2. search providers 多数直接 `response.text()`，没有统一 max bytes。
+3. HTTPS pool 默认 `rejectUnauthorized:false`。
+
+**建议**：统一 provider fetch helper；修复 TLS 默认；增强 SSRF 连接阶段保护。
+
+#### 模块三 · `convert_content`
+
+**输入**：`path` 或 `url`，互斥。  
+**输出**：Markdown 内容、metadata、truncated 标记或 convert error。
+
+**做得好的地方**：
+
+- 本地路径同时做 lexical boundary 与 realpath symlink 检查。
+- URL 下载检查 content-length 和流式大小上限。
+- 临时文件失败清理有测试覆盖。
+- MarkItDown 是 optional external CLI，没有把重依赖带入核心包。
+- 外部命令非 shell 执行，避免 shell interpolation。
+
+**风险点**：
+
+- MarkItDown stdout/stderr 在 shared runner 中完整收集后才截断。
+- URL 下载同样有 DNS rebinding TOCTOU 风险。
+- 当前配置虽然有 `provider` 字段，但 normalize 固定为 `markitdown`；若后续扩展多 provider，需要补完整 registry/factory。
+
+#### 模块四 · LSP tool/hook
+
+**做得好的地方**：
+
+- privileged actions 默认禁用，子代理中始终禁用。
+- `rename`/`codeAction` 返回建议，不直接写文件。
+- 文件路径限制在 workspace 内。
+- hook 只在主代理注册，避免子代理自动诊断噪声。
+
+**风险点**：
+
+- `readFileSync(fp, "utf-8")` 无文件大小限制，针对超大文件可能阻塞事件循环。
+- core 单文件复杂度高。
+- manager 级集成测试少，当前测试主要覆盖注册、权限和路径边界。
+
+**建议**：增加 `lsp.maxFileBytes` 或内部常量；大文件返回结构化错误；拆分核心文件并补 manager 单测。
+
+---
+
+## 七、性能审计
+
+### 性能风险点
+
+| 文件 | 问题 | 风险等级 | 优化方案 |
+|---|---|---|---|
+| `src/modules/lsp/core.ts` | 同步读取文件且无大小限制 | 中 | 增加文件大小上限，必要时异步读取 |
+| `src/shared/external-command.ts` | stdout/stderr 无硬上限 | 中 | 增加 max bytes，超限终止或截断并标记 |
+| `src/modules/subagents/execution.ts` | child stdout/stderr 字符串累积 | 中 | line/byte cap + 超限终止 |
+| `src/modules/web/providers/*.ts` | provider 响应多用 `response.text()` | 中 | 统一有限读取 helper |
+| `src/modules/lsp/core.ts` | 单 manager 文件同步逻辑较多 | 低-中 | 拆分并减少事件循环阻塞 |
+
+### 重复计算
+
+- LSP root detection / server lookup 在多文件诊断中会重复发生，当前可接受；如果 workspace-diagnostics 文件数增大，应考虑 cache root detection。
+- web provider availability 每次选择可能读取环境变量和 baseUrl，成本很低。
+- MarkItDown provider availability 已缓存，设计合理。
+
+### 内存泄漏 / 资源泄漏
+
+- `spawnPi()` abort listener remove 逻辑无效，是低等级资源泄漏风险。
+- LSP client cleanup 有 idle timeout 和 shutdown cleanup，方向正确；但应通过拆分后测试覆盖更多异常关闭路径。
+- web storage/activity/cache 都有容量限制，表现较好。
+
+### 缓存策略
+
+- web search cache 可配置且默认关闭，适合安全默认。
+- MarkItDown command availability 有缓存。
+- LSP client 长连接复用，适合性能需求。
+
+---
+
+## 八、安全审计
+
+### 安全风险检查
+
+| 检查项 | 状态 | 风险 |
+|---|---|---|
+| API key 泄露 | ✅ 基本通过 | provider key 通过环境变量名配置，未发现明文回传 UI 的路径 |
+| Token 泄露 | ✅ 基本通过 | 文档要求输出清理；仍需持续测试 sanitize |
+| SSRF / 私网访问 | ⚠️ 部分通过 | 默认阻断私网，但 DNS rebinding 仍是缺口 |
+| TLS 校验 | ❌ 失败 | `rejectUnauthorized:false` 违反安全默认 |
+| 文件路径穿越 | ✅ 大体通过 | convert/LSP 都限制 workspace；subagent 文件读写依赖 pi runtime 工具权限 |
+| 命令注入 | ✅ 大体通过 | MarkItDown runner 使用 structured args，无 shell；但 stdout/stderr 无上限 |
+| 子代理权限 | ✅ 大体通过 | readonly-first、maxDepth=1、privileged LSP 禁用 |
+| LSP mutating action | ✅ 通过 | 默认禁用；子代理始终禁用；rename/codeAction 不直接写文件 |
+| 输出资源耗尽 | ⚠️ 部分 | 外部命令、子进程、provider response 有内存上限缺口 |
+| 文档安全声明 | ✅ 较完整 | `docs/zh/guides/security-model.md` 清楚说明默认边界与 writable 风险 |
+
+### 高危问题
+
+#### 问题 1 · HTTPS 证书校验默认关闭
+
+详见第四章问题 2。建议作为第一优先级修复。
+
+#### 问题 2 · DNS rebinding 使 SSRF 防护不是强保证
+
+当前实现已经覆盖大量常见私网/localhost/IP literal 场景，测试也较完整；但安全模型不应声称“强 SSRF 防护”。建议：
+
+1. 代码层：连接阶段 pin 已校验地址。
+2. 文档层：在 `security-model.md` 和 web/convert reference 中补充限制说明。
+3. 测试层：加入模拟 DNS rebinding 的安全回归测试。
+
+#### 问题 3 · 大输出导致内存耗尽
+
+该问题跨 `web provider`、`subagent child process`、`external command runner` 三条路径。它不一定能直接越权，但在工具型 agent 场景中容易被 prompt injection 或恶意网页触发，建议作为安全与稳定性共同问题处理。
+
+---
+
+## 九、日志与异常处理审计
+
+### 日志体系评分
+
+**评分：6/10**
+
+- ✅ web observability 有 stats、activity log 和 debug level。
+- ✅ `/toolkit logs/activity/doctor` 提供面向用户的诊断入口。
+- ✅ 错误码体系较完整，尤其 web/convert/subagent。
+- ⚠️ 仍存在少量 `console.log/error` fallback：`src/index.ts`、`src/modules/subagents/register.ts`、`src/modules/web/observability.ts`、`src/modules/commands/*`。
+- ⚠️ 没有统一的 extension-level logger interface；不同模块使用 diagnostics/activity/console 的边界不完全一致。
+
+### 异常处理评分
+
+**评分：7/10**
+
+- ✅ 用户可见工具错误多为结构化结果，而不是直接抛出。
+- ✅ convert provider error 有稳定错误码。
+- ✅ web error mapping 包含 retryable/recovery 语义。
+- ⚠️ config 加载错误只 `console.error`，没有进入统一 diagnostics。
+- ⚠️ 多处 `catch {}` 用于容错，合理但降低排障信息。
+- ⚠️ LSP 大文件/协议异常路径仍需更细粒度测试。
+
+### 优化建议
+
+1. 增加 `src/shared/logger.ts` 或统一 diagnostics sink，逐步替换裸 `console.*`。
+2. 对 config load error、provider error、LSP initialization failure 输出统一健康检查项。
+3. 给 `catch {}` 的关键路径保留 safe debug metadata，避免吞掉可诊断信息。
+
+---
+
+## 十、测试体系审计
+
+### 当前测试覆盖情况
+
+| 模块 | 单元测试 | 集成/仿真测试 | 备注 |
+|---|---|---|---|
+| subagents | ✅ | ✅（mock child runtime） | 覆盖 agent 发现、readonly policy、timeout、prompt runtime |
+| web | ✅ | ✅（mock fetch） | 覆盖 security、providers、fetch、storage、observability |
+| convert | ✅ | ✅（mock provider / mock download） | 覆盖 path/url、临时文件、错误映射、MarkItDown provider |
+| lsp | ⚠️ | ⚠️ | 主要覆盖注册、权限、path cap；缺 manager 深测 |
+| commands | ✅ | ✅（mock TUI） | 覆盖 report viewer、subcommands |
+| shared | ✅ | ✅ | 覆盖 external-command 基础行为 |
+| docs contract | ✅ | — | `pnpm docs:check` 存在，但本次未运行 |
+
+### 本次验证
+
+```text
+pnpm typecheck  ✅
+pnpm lint       ✅
+pnpm test       ✅ 280 tests passed
+```
+
+### 测试优点
+
+- 测试数量和范围明显优于个人工具项目平均水平。
+- 不依赖真实 pi 子进程或真实 language server，CI 稳定性好。
+- web security 边界测试覆盖 localhost/private IP/IPv6/allowPrivateNetwork。
+- convert URL 下载、redirect 私网阻断、临时文件清理都有测试。
+
+### 测试缺口
+
+1. **LSP manager 内部缺少单元测试**：server init failure、large file、cleanup、workspace diagnostics 多 server 行为都值得补。
+2. **TLS 默认安全缺少测试**：应锁定 HTTPS agent 不关闭证书校验。
+3. **DNS rebinding 缺少测试**：至少以 mock lookup/fetch 的形式暴露 TOCTOU 风险。
+4. **输出上限缺少测试**：external command stdout/stderr、subagent JSONL、search provider body 都应覆盖超限行为。
+5. **文档默认值一致性缺少测试**：`subagents.timeoutMs` 已出现漂移，应纳入 docs check。
+
+### 优先补充测试模块
+
+| 模块 | 优先级 | 建议测试 |
+|---|---|---|
+| `web/http-pool.ts` | 高 | HTTPS agent 默认校验证书 |
+| `shared/external-command.ts` | 高 | stdout/stderr 超限截断或终止 |
+| `subagents/execution.ts` | 高 | child stdout/stderr 超限与 listener cleanup |
+| `web/providers/*` | 高 | provider 大响应不完整读入内存 |
+| `lsp/core.ts` | 高 | 大文件拒绝、manager cleanup、server init failure |
+| `docs:check` | 中 | 配置默认值从源码抽样比对文档 |
+
+---
+
+## 十一、工程化审计
+
+### 工程化能力检查
+
+| 项目 | 状态 |
+|---|---|
+| README / 中文 README | ✅ |
+| 架构文档 | ✅ |
+| Reference 文档 | ✅ |
+| Lint | ✅ `biome check src` |
+| Format | ✅ `biome format --write src` |
+| Type check | ✅ `tsc --noEmit` |
+| Unit tests | ✅ Node test runner，280 tests |
+| Docs check | ✅ `scripts/check-docs.mjs` |
+| CI | ✅ `.github/workflows/ci.yml` / docs workflow |
+| Release checklist | ✅ `docs/zh/guides/release-checklist.md` |
+| CHANGELOG | ✅ |
+| License | ✅ MIT |
+| Docker | N/A（extension 包，不需要） |
+| Coverage 报告 | ⚠️ 未见覆盖率门禁 |
+| Node engines | ⚠️ 未声明 |
+
+### 工程化优点
+
+- `prepublishOnly` 跑 `docs:check && pnpm test`，发布前有基本兜底。
+- package manifest 对 pi extension 入口、files、peerDependencies 声明完整。
+- Biome/TypeScript/Node test 三件套简洁、快速。
+
+### 工程化问题
+
+- 未声明 Node engine，用户在旧 Node 上可能遇到 Web Streams / fetch / `AbortSignal.any` 兼容问题。
+- 没有测试覆盖率统计，难以量化 LSP core 等热点覆盖缺口。
+- 文档一致性检查还不够强，未捕获 `timeoutMs` 默认值漂移。
+
+### 工程化建议
+
+1. 增加 `engines.node`。
+2. 引入轻量 coverage（Node test 可配合 c8/内置 V8 coverage），不必一开始设高门槛，先观察热点。
+3. 扩展 `docs:check`：校验配置默认值、测试目录列表、工具错误码与 reference 表格。
+
+---
+
+## 十二、重构路线图
+
+### 第一阶段（立即执行 · 0.5–1 天）
+
+**目标**：修复安全默认和文档漂移。
+
+1. ✅ 移除 `http-pool.ts` 中 `rejectUnauthorized:false`，或改成显式高风险配置且默认关闭。
+2. ✅ 更新 `docs/zh/reference/configuration.md`：`subagents.timeoutMs=900000`、补 `idleTimeoutMs=180000`。
+3. ✅ 更新 `docs/zh/guides/testing.md`：补 `tests/convert/`、`tests/shared/`。
+4. ✅ 修复 `spawnPi()` abort listener remove 引用。
+5. ✅ 为以上变更补测试。
+
+### 第二阶段（稳定性提升 · 2–4 天）
+
+**目标**：补齐资源上限和安全缺口。
+
+1. 给 `ExternalCommandRunner` 增加 stdout/stderr byte cap。
+2. 给 subagent child 输出收集增加 hard cap 与结构化错误。
+3. search providers 改用统一有限 body reader。
+4. LSP 文件读取增加大小限制。
+5. 在安全文档中说明 DNS rebinding 限制，并设计连接阶段 pin IP 方案。
+
+### 第三阶段（维护性优化 · 1 周）
+
+**目标**：降低 LSP 复杂度和强化文档契约。
+
+1. 拆分 `src/modules/lsp/core.ts`。
+2. 补 LSP manager 级单测。
+3. 扩展 `docs:check` 默认值一致性检查。
+4. 增加 coverage 报告。
+5. 建立统一 logger/diagnostics sink，减少裸 `console.*`。
+
+### 第四阶段（长期）
+
+**目标**：更强安全模型与可扩展 provider 体系。
+
+1. Web/convert URL 访问实现 DNS resolution pinning。
+2. Convert provider 从固定 `markitdown` 演进为 registry/factory。
+3. 对可写 subagents 做独立 safety hardening ADR。
+4. 为 LSP server 支持矩阵建立可选 integration tests。
+
+---
+
+## 十三、推荐目录结构（局部重构后）
+
+```text
+src/modules/lsp/
+├── register.ts
+├── schemas.ts
+├── tool.ts
+├── hook.ts
+├── core.ts                    # facade，保留对外 LSPManager 接口
+├── server-registry.ts          # LSP_SERVERS、language ids、root detection
+├── client-manager.ts           # init/open/close/restart/cleanup
+├── diagnostics.ts              # document/workspace diagnostics
+├── actions.ts                  # definition/references/hover/signature/symbols
+├── edits.ts                    # rename/codeAction result formatting
+├── server-install.ts           # Kotlin/Dart 等辅助外部命令
+└── formatters.ts               # shared output formatting helpers
+```
+
+```text
+src/modules/web/
+├── http-client.ts              # validate + limited read + provider fetch helper
+├── http-pool.ts                # keep-alive only，不关闭 TLS 校验
+└── providers/*.ts              # 不再直接 response.text() 大响应
+```
+
+```text
+src/shared/
+├── external-command.ts         # 增加 maxStdoutBytes/maxStderrBytes
+├── logger.ts                   # 可选：统一 diagnostics/logger adapter
+└── limits.ts                   # 可选：共享 byte/char limit helper
+```
+
+**说明**：不建议改变当前顶层模块边界；推荐只拆大文件、补共享基础设施。
+
+---
+
+## 十四、综合评分
+
+| 维度 | 分数 | 备注 |
+|---|---:|---|
+| 项目结构 | **8/10** | 模块清晰，LSP core 过大扣分 |
+| 代码质量 | **7/10** | 可读性总体好，部分 `any` 和 console/fallback 存在 |
+| 架构设计 | **8/10** | provider/handler/config/test/doc 契约成熟 |
+| 性能 | **7/10** | 常规使用足够，外部输出和 LSP 大文件需硬上限 |
+| 安全 | **6/10** | 默认边界不错，但 TLS 与 DNS rebinding 是实质缺口 |
+| 测试 | **8/10** | 280 tests 通过，覆盖广；LSP manager/资源上限缺口明显 |
+| 工程化 | **8/10** | typecheck/lint/test/docs/CI 完整；缺 engines/coverage |
+| 文档一致性 | **7/10** | 文档体系完整，但配置默认值和测试目录有漂移 |
+
+### 综合评分
+
+**59 / 80（折算 74 / 100）**
+
+### 评级
+
+- ☐ S 商业级
+- ☑ **A- 良好但需安全/稳定性加固**
+- ☐ B 可优化
+- ☐ C 原型阶段
+- ☐ D 高风险
+
+**说明**：devkit-pi 已明显超过原型阶段，具备清晰架构、稳定测试和完整文档。当前不宜继续无节制加功能，应先修复安全默认值、资源上限和 LSP 复杂度。
+
+---
+
+## 十五、最终结论
+
+### 当前阶段
+
+**成熟个人工具包 / 早期可发布扩展**。项目在模块化、测试、文档和配置规范方面做得较好，符合“轻量、模块化、主代理编排”的定位。
+
+### 最大问题
+
+**安全默认与资源上限仍有关键缺口**：HTTPS pool 关闭证书校验、URL 私网防护存在 DNS rebinding 缺口、外部命令/子进程/provider 响应缺少硬性输出上限。这些问题不一定影响日常本地使用，但会影响项目作为通用扩展包的可信度。
+
+### 是否建议继续加功能
+
+- ☐ 是
+- ☑ **否，建议先完成第一/第二阶段加固**
+
+### 是否建议先重构
+
+- ☑ **是，但只做局部重构**：优先拆 `lsp/core.ts`，不要重排顶层结构。
+
+### 是否适合商业化
+
+- ☐ 是
+- ☑ **暂不适合直接商业化**：需要修复 TLS/SSRF/资源上限，补 LSP manager 测试和更强 release smoke test。
+
+### 是否适合多人协作
+
+- ☑ **基本适合**：已有 CI、lint、typecheck、tests、docs；建议补 coverage、CONTRIBUTING 和更严格 docs contract 后更稳。
+
+### 下一步最优先执行的三件事
+
+1. **修复安全默认**：删除 `rejectUnauthorized:false`，补测试，并更新安全文档。
+2. **补资源硬上限**：external command、subagent execution、web provider response 三条路径增加 byte cap。
+3. **修正文档漂移**：同步 `subagents.timeoutMs` / `idleTimeoutMs`，并让 `docs:check` 自动校验关键默认值。

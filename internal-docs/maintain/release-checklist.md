@@ -7,7 +7,7 @@ language: chinese
 
 # 发布前检查清单
 
-发布前应同步检查 [Documentation index](../README.md)、[Reference index](../reference/README.md)、[Configuration reference](../reference/configuration.md)、[Web tools error codes](../reference/web-tools-error-codes.md)、[Toolkit commands reference](../reference/toolkit-commands.md) 与 [CHANGELOG.md](../../../CHANGELOG.md)。
+发布前应同步检查 [Documentation index](../README.md)、[Reference index](../../docs/reference/README.md)、[Configuration reference](../../docs/reference/configuration.md)、[Web tools error codes](../../docs/reference/web-tools-error-codes.md)、[Toolkit commands reference](../../docs/reference/toolkit-commands.md) 与 [CHANGELOG.md](../../CHANGELOG.md)。
 
 ## 代码验证
 

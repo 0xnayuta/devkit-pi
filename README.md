@@ -206,7 +206,7 @@ pnpm docs:preview
 - [Documentation index](docs/README.md)
 - [Reference index](docs/reference/README.md)
 - [Goals and scope](docs/guides/goals-and-scope.md)
-- [Architecture](docs/guides/architecture.md)
+- [Security model](docs/guides/security-model.md)
 - [Configuration reference](docs/reference/configuration.md)
 - [Subagents reference](docs/reference/subagents.md)
 - [Subagent tool reference](docs/reference/subagent-tool.md)
@@ -218,8 +218,7 @@ pnpm docs:preview
 - [Convert content tool reference](docs/reference/convert-tools.md)
 - [Web providers reference](docs/reference/web-providers.md)
 - [Web tools error codes](docs/reference/web-tools-error-codes.md)
-- [Security model](docs/guides/security-model.md)
-- [Architecture Decision Records](docs/adr/README.md)
+- [Internal maintainer docs](internal-docs/README.md)
 
 ## License
 

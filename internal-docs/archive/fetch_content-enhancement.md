@@ -1,5 +1,5 @@
 ---
-status: current
+status: implemented
 audience: all
 last_verified: 2026-05-12
 language: chinese
@@ -7,7 +7,7 @@ language: chinese
 
 # `fetch_content` 内容类型增强
 
-本文档记录 `fetch_content` 工具的内容类型检测增强、handler 架构重构、安全配置变更，以及 Phase 6 与 `convert_content` 的 handoff guidance。当前 `fetch_content` public API、配置和错误码以 [Web tools reference](../reference/web-tools.md)、[Configuration reference](../reference/configuration.md) 与 [Web tools error codes](../reference/web-tools-error-codes.md) 为准。
+本文档记录 `fetch_content` 工具的内容类型检测增强、handler 架构重构、安全配置变更，以及 Phase 6 与 `convert_content` 的 handoff guidance。当前 `fetch_content` public API、配置和错误码以 [Web tools reference](../../docs/reference/web-tools.md)、[Configuration reference](../../docs/reference/configuration.md) 与 [Web tools error codes](../../docs/reference/web-tools-error-codes.md) 为准。
 
 ## 支持的内容类型
 

@@ -42,7 +42,7 @@ Built-in `web_search`, `fetch_content`, `get_search_content` remain readonly. To
 - Max response body size and max output character count
 - Does not write project files; responseId storage follows session lifecycle restore/clear, subject to configuration limits
 
-Full design background in [ADR 0004](../adr/0004-bundled-readonly-web-tools.md). Current provider, Jina fallback, storage, and URL security boundaries are defined in [Web tools reference](../reference/web-tools.md), [Web providers reference](../reference/web-providers.md), and [Configuration reference](../reference/configuration.md).
+Current provider, Jina fallback, storage, and URL security boundaries are defined in [Web tools reference](../reference/web-tools.md), [Web providers reference](../reference/web-providers.md), and [Configuration reference](../reference/configuration.md). Historical design background is kept in `internal-docs/adr/0004-bundled-readonly-web-tools.md`.
 
 ## LSP security boundaries
 

@@ -21,10 +21,10 @@ Reference 文档不是教程，也不记录 roadmap。若 proposal、ADR 或 arc
 
 ## 相关指南
 
-- [架构总览](../guides/architecture.md)：当前源码结构与模块职责。
+- [目标与范围](../guides/goals-and-scope.md)：项目目标、当前能力边界和明确不做的能力。
 - [安全模型](../guides/security-model.md)：安全边界与风险说明。
-- [测试策略](../guides/testing.md)：测试组织与文档检查。
-- [发布前检查清单](../guides/release-checklist.md)：发布前同步检查。
+
+维护者专用的架构、测试、发布、ADR、规划、归档、问题日志和审计文档位于 `internal-docs/`，刻意不进入公开网站导航。
 
 ## 核心 References
 

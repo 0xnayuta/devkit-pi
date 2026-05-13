@@ -7,7 +7,7 @@ language: chinese
 
 # Pi Extension API 用法参考
 
-本文档记录 devkit-pi 当前使用的 pi extension API 子集。当前 public API、配置和命令行为以 [Reference index](../reference/README.md)、[Configuration reference](../reference/configuration.md)、[Subagents reference](../reference/subagents.md)、[Subagent tool reference](../reference/subagent-tool.md)、[Web tools reference](../reference/web-tools.md)、[LSP tools reference](../reference/lsp-tools.md) 与 [Toolkit commands reference](../reference/toolkit-commands.md) 为准。
+本文档记录 devkit-pi 当前使用的 pi extension API 子集。当前 public API、配置和命令行为以 [Reference index](../../docs/reference/README.md)、[Configuration reference](../../docs/reference/configuration.md)、[Subagents reference](../../docs/reference/subagents.md)、[Subagent tool reference](../../docs/reference/subagent-tool.md)、[Web tools reference](../../docs/reference/web-tools.md)、[LSP tools reference](../../docs/reference/lsp-tools.md) 与 [Toolkit commands reference](../../docs/reference/toolkit-commands.md) 为准。
 
 ## 工具注册
 
@@ -63,4 +63,4 @@ web 与 lsp tools 可以提供 `renderCall` / `renderResult`，用于压缩 UI �
 
 ## 兼容边界
 
-devkit-pi 使用新 namespace 配置，不实现旧配置迁移层。配置默认值和 normalize 规则见 [Configuration reference](../reference/configuration.md)。
+devkit-pi 使用新 namespace 配置，不实现旧配置迁移层。配置默认值和 normalize 规则见 [Configuration reference](../../docs/reference/configuration.md)。

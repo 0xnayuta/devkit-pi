@@ -9,7 +9,7 @@ language: chinese
 
 本文档以当前 `src/` 目录结构为准，说明 devkit-pi 已实现的模块边界、注册流程和测试映射。历史 ADR 中出现的旧目录或旧项目名仅作为决策背景，不作为当前实现依据。
 
-Public API、配置和命令契约请从 [Reference index](../reference/README.md) 进入；核心 reference 包括 [Configuration](../reference/configuration.md)、[Subagents](../reference/subagents.md)、[Web tools](../reference/web-tools.md)、[LSP tools](../reference/lsp-tools.md) 与 [Toolkit commands](../reference/toolkit-commands.md)。
+Public API、配置和命令契约请从 [Reference index](../../docs/reference/README.md) 进入；核心 reference 包括 [Configuration](../../docs/reference/configuration.md)、[Subagents](../../docs/reference/subagents.md)、[Web tools](../../docs/reference/web-tools.md)、[LSP tools](../../docs/reference/lsp-tools.md) 与 [Toolkit commands](../../docs/reference/toolkit-commands.md)。
 
 ## 架构一致性策略
 
@@ -172,7 +172,7 @@ loadConfig()
 
 当前边界：
 
-- Web 错误码 canonical source 是 `src/modules/web/errors.ts` 中的 `WEB_ERROR_CODES`；完整 active/reserved/deprecated 语义见 [Web tools error codes](../reference/web-tools-error-codes.md)。
+- Web 错误码 canonical source 是 `src/modules/web/errors.ts` 中的 `WEB_ERROR_CODES`；完整 active/reserved/deprecated 语义见 [Web tools error codes](../../docs/reference/web-tools-error-codes.md)。
 
 ### `src/modules/lsp/`
 

@@ -20,6 +20,7 @@ const keyReferenceFiles = [
   "docs/reference/web-providers.md",
   "docs/reference/web-tools-error-codes.md",
   "docs/reference/lsp-tools.md",
+  "docs/reference/convert-tools.md",
   "docs/reference/toolkit-commands.md",
 ];
 
@@ -50,11 +51,19 @@ function parseFrontmatter(content) {
 }
 
 function allowedStatusFor(file) {
-  return /^docs\/(zh\/)?adr\/\d{4}-/.test(file) ? allowedAdrStatus : allowedDocStatus;
+  return /^(docs\/(zh\/)?adr|internal-docs\/adr)\/\d{4}-/.test(file)
+    ? allowedAdrStatus
+    : allowedDocStatus;
+}
+
+function markdownFilesUnder(...dirs) {
+  return dirs.flatMap((dir) =>
+    fs.existsSync(path.join(root, dir)) ? walk(dir).filter((f) => f.endsWith(".md")) : []
+  );
 }
 
 function checkDocFrontmatter() {
-  for (const file of walk("docs").filter((f) => f.endsWith(".md"))) {
+  for (const file of markdownFilesUnder("docs", "internal-docs")) {
     const fm = parseFrontmatter(read(file));
     if (!fm) {
       errors.push(`${file}: missing frontmatter`);
@@ -90,7 +99,7 @@ function checkDocFrontmatter() {
 }
 
 function checkLinks() {
-  for (const file of walk("docs").filter((f) => f.endsWith(".md"))) {
+  for (const file of markdownFilesUnder("docs", "internal-docs")) {
     const content = read(file);
     for (const match of content.matchAll(/\[[^\]]*\]\((?!https?:|mailto:|#)([^)]+)\)/g)) {
       const target = match[1].split("#")[0];
@@ -214,16 +223,16 @@ function checkGuideNavigation() {
     }
   }
 
-  const releaseChecklist = read("docs/guides/release-checklist.md");
+  const internalReleaseChecklist = read("internal-docs/maintain/release-checklist.md");
   for (const text of ["pnpm test", "pnpm docs:check", "CHANGELOG.md"]) {
-    if (!releaseChecklist.includes(text)) {
-      errors.push(`docs/guides/release-checklist.md: missing '${text}'`);
+    if (!internalReleaseChecklist.includes(text)) {
+      errors.push(`internal-docs/maintain/release-checklist.md: missing '${text}'`);
     }
   }
 
-  const testing = read("docs/guides/testing.md");
-  if (!testing.includes("docs:check")) {
-    errors.push("docs/guides/testing.md: missing docs:check mention");
+  const internalTesting = read("internal-docs/maintain/testing.md");
+  if (!internalTesting.includes("docs:check")) {
+    errors.push("internal-docs/maintain/testing.md: missing docs:check mention");
   }
 }
 
@@ -262,7 +271,7 @@ function checkVitePressSite() {
     }
   }
 
-  for (const file of ["docs/index.md", "docs/reference/index.md", "docs/adr/index.md"]) {
+  for (const file of ["docs/index.md", "docs/reference/index.md", "docs/zh/index.md", "docs/zh/reference/index.md"]) {
     if (!fs.existsSync(path.join(root, file))) {
       errors.push(`${file}: missing VitePress directory index page`);
     }
@@ -278,9 +287,9 @@ function checkVitePressSite() {
     }
     for (const nav of [
       '{ text: "Guide", link: "/" }',
-      '{ text: "Development", link: "/maintain" }',
       '{ text: "Reference", link: "/reference/" }',
-      '{ text: "ADRs", link: "/adr/" }',
+      '{ text: "指南", link: "/zh/" }',
+      '{ text: "参考", link: "/zh/reference/" }',
     ]) {
       if (!config.includes(nav)) {
         errors.push(`${configFile}: missing VitePress nav item ${nav}`);
@@ -344,9 +353,9 @@ function checkWebErrorCodes() {
 
 function checkPlanningDocs() {
   const planningFiles = [
-    "docs/planning/README.md",
-    "docs/planning/add-convert_content-tool-plan.md",
-    "docs/planning/personal-toolkit-feature-roadmap.md",
+    "internal-docs/planning/README.md",
+    "internal-docs/planning/add-convert_content-tool-plan.md",
+    "internal-docs/planning/personal-toolkit-feature-roadmap.md",
   ];
 
   for (const file of planningFiles) {
@@ -366,8 +375,8 @@ function checkPlanningDocs() {
   }
 
   const planningStatusByFile = new Map([
-    ["docs/planning/add-convert_content-tool-plan.md", new Set(["implemented"])],
-    ["docs/planning/personal-toolkit-feature-roadmap.md", new Set(["proposed"])],
+    ["internal-docs/planning/add-convert_content-tool-plan.md", new Set(["implemented"])],
+    ["internal-docs/planning/personal-toolkit-feature-roadmap.md", new Set(["proposed"])],
   ]);
 
   for (const [file, allowedStatuses] of planningStatusByFile) {
@@ -408,7 +417,7 @@ function checkPlanningNotInMainSidebar() {
 }
 
 function checkAdr0005Title() {
-  const file = "docs/adr/0005-evolve-into-devkit-pi.md";
+  const file = "internal-docs/adr/0005-evolve-into-devkit-pi.md";
   if (!fs.existsSync(path.join(root, file))) return;
   const content = read(file);
   if (content.includes("# ADR 0004") && !content.includes("# ADR 0005")) {
@@ -418,8 +427,14 @@ function checkAdr0005Title() {
 
 function checkDocsReadmeSections() {
   const docsReadme = read("docs/README.md");
-  if (!docsReadme.includes("docs/planning/") && !docsReadme.includes("planning/")) {
-    errors.push("docs/README.md: Documentation overview should mention docs/planning/");
+  if (!docsReadme.includes("internal-docs/")) {
+    errors.push("docs/README.md: Documentation overview should mention internal-docs/");
+  }
+  const internalReadme = read("internal-docs/README.md");
+  for (const section of ["maintain", "adr", "planning", "archive", "issues", "audit"]) {
+    if (!internalReadme.includes(`./${section}/`)) {
+      errors.push(`internal-docs/README.md: missing ${section} section link`);
+    }
   }
 }
 

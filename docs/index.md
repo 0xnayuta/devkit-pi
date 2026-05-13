@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-11
+last_verified: 2026-05-13
 language: english
 ---
 
@@ -11,9 +11,9 @@ language: english
 
 # devkit-pi
 
-`devkit-pi` is a personal all-in-one pi coding toolkit for agentic coding workflows. It combines subagents, Web research tools, LSP code intelligence, automatic diagnostics hooks, and developer commands into a modular pi extension.
+`devkit-pi` is a personal all-in-one pi coding toolkit for agentic coding workflows. It combines subagents, Web research tools, content conversion, LSP code intelligence, automatic diagnostics hooks, and developer commands into a modular pi extension.
 
-The canonical current public contract / API reference lives in [`docs/reference/`](./reference/). Proposal, roadmap, archive, and ADR content should not be read as current behavior unless it is also reflected in reference docs, source, and tests.
+The public documentation site is intentionally split into guides and reference. Internal maintainer documents live in the repository's `internal-docs/` directory and are not part of the public website navigation.
 
 ## Documentation site
 
@@ -31,16 +31,16 @@ pnpm docs:preview
 
 ## Main entry points
 
-- [Guide](./README.md): documentation overview, reading paths, current guides, and content policy.
+- [Guide](./README.md): documentation overview, reading paths, and content policy.
 - [Reference](./reference/): current public contract / API reference.
-- [ADRs](./adr/): historical decision records, not current API reference.
 - [GitHub](https://github.com/0xnayuta/devkit-pi): source repository.
 
 ## Start here
 
-- [Architecture](./guides/architecture.md): current source structure and module responsibilities.
-- [Security model](./guides/security-model.md): security boundaries for subagents, Web tools, LSP, and write capability.
+- [Goals and scope](./guides/goals-and-scope.md): project goals and current capability boundaries.
+- [Security model](./guides/security-model.md): security boundaries for subagents, Web tools, LSP, convert, and write capability.
 - [Subagents reference](./reference/subagents.md): subagent module surface and execution boundaries.
 - [Web tools reference](./reference/web-tools.md): `web_search`, `fetch_content`, and `get_search_content`.
 - [LSP tools reference](./reference/lsp-tools.md): LSP tool actions and diagnostics hook behavior.
+- [Convert tools reference](./reference/convert-tools.md): `convert_content` behavior and MarkItDown provider boundary.
 - [Toolkit commands reference](./reference/toolkit-commands.md): `/toolkit` command surface.

@@ -206,7 +206,7 @@ pnpm docs:preview
 - [文档总入口](docs/zh/README.md)
 - [Reference 索引](docs/zh/reference/README.md)
 - [目标与范围](docs/zh/guides/goals-and-scope.md)
-- [架构](docs/zh/guides/architecture.md)
+- [安全模型](docs/zh/guides/security-model.md)
 - [配置参考](docs/zh/reference/configuration.md)
 - [Subagents 参考](docs/zh/reference/subagents.md)
 - [Subagent tool 参考](docs/zh/reference/subagent-tool.md)
@@ -218,8 +218,7 @@ pnpm docs:preview
 - [Convert content 工具参考](docs/zh/reference/convert-tools.md)
 - [Web providers 参考](docs/zh/reference/web-providers.md)
 - [Web tools 错误码](docs/zh/reference/web-tools-error-codes.md)
-- [安全模型](docs/zh/guides/security-model.md)
-- [架构决策记录](docs/zh/adr/README.md)
+- [内部维护文档](internal-docs/README.md)
 
 ## 许可证
 

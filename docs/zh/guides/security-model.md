@@ -42,7 +42,7 @@ language: chinese
 - 设置最大响应体大小与最大输出字符数
 - 不写项目文件；responseId storage 随 session lifecycle restore/clear，并受配置限制
 
-完整设计背景见 [ADR 0004](../adr/0004-bundled-readonly-web-tools.md)。当前 provider、Jina fallback、storage 和 URL 安全边界以 [Web tools reference](../reference/web-tools.md)、[Web providers reference](../reference/web-providers.md) 与 [Configuration reference](../reference/configuration.md) 为准。
+当前 provider、Jina fallback、storage 和 URL 安全边界以 [Web tools reference](../reference/web-tools.md)、[Web providers reference](../reference/web-providers.md) 与 [Configuration reference](../reference/configuration.md) 为准。历史设计背景保存在 `internal-docs/adr/0004-bundled-readonly-web-tools.md`。
 
 ## LSP 安全边界
 
