@@ -3,6 +3,8 @@
  * Phase 6: UI Integration - Interactive activity log viewer
  */
 
+import type { Theme } from "@earendil-works/pi-coding-agent";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { getConvertToolStats, resetConvertToolStats } from "../../convert/observability.ts";
 import type { ActivityEntry, WebToolStats } from "../../web/observability.ts";
 import {
@@ -24,6 +26,7 @@ export interface ActivityPanelOptions {
   maxEntries?: number;
   showStats?: boolean;
   autoRefresh?: boolean;
+  theme?: Theme;
 }
 
 function combineStats(web: WebToolStats, convert: WebToolStats): WebToolStats {
@@ -73,14 +76,21 @@ export class ActivityPanel {
 
   private cachedWidth?: number;
 
+  private theme?: Theme;
+
   constructor(options: ActivityPanelOptions = {}) {
     this.maxVisibleLines = options.maxEntries ?? 15;
+    this.theme = options.theme;
     this.state = {
       selectedIndex: 0,
       scrollOffset: 0,
       stats: getToolkitStats(),
       entries: getActivityLog(100),
     };
+  }
+
+  setTheme(theme: Theme): void {
+    this.theme = theme;
   }
 
   setOnClose(callback: () => void): void {
@@ -174,24 +184,45 @@ export class ActivityPanel {
 
     const lines: string[] = [];
     const { entries, stats } = this.state;
+    const th = this.theme;
 
-    // Header
-    lines.push(`┌─ Toolkit Activity ${"─".repeat(Math.max(0, width - 24))}┐`);
+    // Helper: apply color or return plain string
+    const color = (colorName: any, text: string) => th ? th.fg(colorName, text) : text;
+    const border = (text: string) => color("borderMuted", text);
+    const accent = (text: string) => color("accent", th ? th.bold(text) : text);
+    const dim = (text: string) => color("dim", text);
+    const padVisible = (text: string, targetWidth: number) =>
+      `${text}${" ".repeat(Math.max(0, targetWidth - visibleWidth(text)))}`;
 
-    // Stats bar
+    // 1. Top Border with Title and Stats
+    const titleText = " Toolkit Activity ";
     const statsLine = this.formatStatsBar(stats);
-    lines.push(`│ ${statsLine.padEnd(width - 4)} │`);
+    const rightInfo = ` ${statsLine} `;
+    const middleWidth = Math.max(0, width - 4);
+    const fixedTextWidth = titleText.length + rightInfo.length;
+    
+    if (width <= 2) {
+      lines.push(border("─".repeat(width)));
+    } else if (fixedTextWidth > middleWidth) {
+      lines.push(
+        border("╭─") +
+          accent(truncateToWidth(`${titleText}${rightInfo}`, middleWidth, "", true)) +
+          border("─╮")
+      );
+    } else {
+      const filler = "─".repeat(middleWidth - fixedTextWidth);
+      lines.push(border("╭─") + accent(titleText) + border(filler) + dim(rightInfo) + border("─╮"));
+    }
 
-    // Separator
-    lines.push(`├${"─".repeat(width - 2)}┤`);
-
-    // Entries
+    // 2. Entries
+    let bodyCount = 0;
     if (entries.length === 0) {
-      lines.push(`│ ${"(no recent activity)".padEnd(width - 4)} │`);
+      lines.push(`${border("│")} ${padVisible(dim("(no recent activity)"), width - 4)} ${border("│")}`);
+      bodyCount++;
     } else {
       const visibleEntries = entries.slice(
         this.state.scrollOffset,
-        this.state.scrollOffset + this.maxVisibleLines - 5
+        this.state.scrollOffset + this.maxVisibleLines - 2
       );
 
       for (let i = 0; i < visibleEntries.length; i++) {
@@ -200,24 +231,30 @@ export class ActivityPanel {
         const isSelected = actualIndex === this.state.selectedIndex;
 
         const entryLine = this.formatEntry(entry, width - 4, isSelected);
-        const prefix = isSelected ? "►" : " ";
-        lines.push(`│${prefix} ${entryLine.padEnd(width - 5)}│`);
+        const prefix = isSelected ? color("success", "►") : " ";
+        // formatEntry has colors encoded if theme is available
+        lines.push(`${border("│")}${prefix} ${padVisible(entryLine, width - 5)} ${border("│")}`);
+        bodyCount++;
       }
     }
 
     // Fill remaining space
-    const remaining = this.maxVisibleLines - lines.length + 2;
-    for (let i = 0; i < remaining && lines.length < this.maxVisibleLines - 3; i++) {
-      lines.push(`│${" ".repeat(width - 2)}│`);
+    const targetBodyLines = this.maxVisibleLines - 2;
+    for (let i = bodyCount; i < targetBodyLines; i++) {
+      lines.push(`${border("│")} ${"".padEnd(width - 4)} ${border("│")}`);
     }
 
-    // Help bar
-    lines.push(`├${"─".repeat(width - 2)}┤`);
-    const helpText = "↑↓ navigate  r:refresh  c:clear  s:reset stats  esc:close";
-    lines.push(`│ ${helpText.padEnd(width - 4)} │`);
-
-    // Footer
-    lines.push(`└${"─".repeat(width - 2)}┘`);
+    // 3. Bottom Border with Help text
+    const helpText = " ↑↓ navigate | r refresh | c clear | s stats | Esc close ";
+    const bottomMiddleWidth = Math.max(0, width - 4);
+    const help = truncateToWidth(helpText, bottomMiddleWidth, "", false);
+    const botFiller = "─".repeat(Math.max(0, bottomMiddleWidth - visibleWidth(help)));
+    
+    if (width <= 2) {
+      lines.push(border("─".repeat(width)));
+    } else {
+      lines.push(border("╰─") + dim(help) + border(botFiller) + border("─╯"));
+    }
 
     this.cachedLines = lines;
     this.cachedWidth = width;
@@ -235,8 +272,12 @@ export class ActivityPanel {
   }
 
   private formatEntry(entry: ActivityEntry, maxWidth: number, isSelected: boolean): string {
-    const time = formatTimestamp(entry.timestamp);
-    const typeTag =
+    const th = this.theme;
+    const color = (colorName: any, text: string) => th ? th.fg(colorName, text) : text;
+    const dim = (text: string) => th ? th.fg("dim", text) : text;
+    
+    const time = dim(formatTimestamp(entry.timestamp));
+    const typeTagRaw =
       entry.type === "search"
         ? "SEARCH"
         : entry.type === "fetch"
@@ -244,8 +285,10 @@ export class ActivityPanel {
           : entry.type === "convert"
             ? "CONVERT"
             : "CONTENT";
-    const provider = entry.provider ?? "-";
-    const status =
+            
+    const typeTag = entry.type === "search" ? color("accent", typeTagRaw) : color("warning", typeTagRaw);
+    const provider = dim(entry.provider ?? "-");
+    const statusRaw =
       entry.status === "success"
         ? "OK"
         : entry.status === "rate_limited"
@@ -253,20 +296,29 @@ export class ActivityPanel {
           : entry.status === "error"
             ? "ERR"
             : "---";
-    const duration = entry.duration !== undefined ? `${entry.duration}ms` : "-";
+            
+    const status = entry.status === "success" 
+        ? color("success", statusRaw) 
+        : entry.status === "error" 
+            ? color("error", statusRaw) 
+            : color("warning", statusRaw);
+            
+    const duration = dim(entry.duration !== undefined ? `${entry.duration}ms` : "-");
 
     const parts = [time, typeTag, provider, status, duration];
+    const rawLen = formatTimestamp(entry.timestamp).length + typeTagRaw.length + (entry.provider ?? "-").length + statusRaw.length + (entry.duration !== undefined ? `${entry.duration}ms` : "-").length + 8;
+    
     let line = parts.join("  ");
 
-    if (line.length > maxWidth) {
-      line = `${line.substring(0, maxWidth - 3)}...`;
+    if (rawLen > maxWidth) {
+      line = truncateToWidth(line, maxWidth, "", true);
     }
 
     if (isSelected && entry.error) {
-      line += ` | ${entry.error}`;
+      line += ` | ${dim(entry.error)}`;
     }
 
-    return line;
+    return truncateToWidth(line, maxWidth, "", true);
   }
 
   invalidate(): void {

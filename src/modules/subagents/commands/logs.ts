@@ -65,7 +65,7 @@ export function formatLogs(options: LogsOptions = {}): string {
 
   // Header
   lines.push(`Recent Activity (last ${entries.length})`);
-  lines.push("─".repeat(60));
+  lines.push("");
 
   if (entries.length === 0) {
     lines.push("  (no recent activity)");
@@ -108,8 +108,7 @@ export function formatLogs(options: LogsOptions = {}): string {
 
   // Stats summary
   lines.push("");
-  lines.push("─".repeat(60));
-  lines.push("Statistics");
+  lines.push("[STATISTICS]");
   lines.push(`  Total Requests:  ${stats.totalRequests}`);
   lines.push(`  Success:         ${stats.successCount}`);
   lines.push(`  Errors:          ${stats.errorCount}`);

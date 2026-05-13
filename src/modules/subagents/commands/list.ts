@@ -60,12 +60,11 @@ export function formatAgentList(report: AgentListReport): string {
   const lines: string[] = [];
 
   lines.push(`Available Agents (${report.total})`);
-  lines.push("─".repeat(50));
+  lines.push("");
 
   // Builtin agents
   if (report.builtin.length > 0) {
-    lines.push("");
-    lines.push("[builtin]");
+    lines.push("[BUILTIN]");
     for (const agent of report.builtin) {
       const readonlyTag = agent.readonly ? " (readonly)" : " (read/write)";
       lines.push(`  ${agent.name.padEnd(14)} ${truncate(agent.description, 30)}${readonlyTag}`);
@@ -75,7 +74,7 @@ export function formatAgentList(report: AgentListReport): string {
   // User agents
   if (report.user.length > 0) {
     lines.push("");
-    lines.push("[user]");
+    lines.push("[USER]");
     for (const agent of report.user) {
       const readonlyTag = agent.readonly ? " (readonly)" : " (read/write)";
       lines.push(`  ${agent.name.padEnd(14)} ${truncate(agent.description, 30)}${readonlyTag}`);
@@ -85,7 +84,7 @@ export function formatAgentList(report: AgentListReport): string {
   // Project agents
   if (report.project.length > 0) {
     lines.push("");
-    lines.push("[project]");
+    lines.push("[PROJECT]");
     for (const agent of report.project) {
       const readonlyTag = agent.readonly ? " (readonly)" : " (read/write)";
       lines.push(`  ${agent.name.padEnd(14)} ${truncate(agent.description, 30)}${readonlyTag}`);

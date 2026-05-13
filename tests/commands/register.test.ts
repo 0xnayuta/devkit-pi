@@ -5,7 +5,11 @@ import { registerToolkitCommands } from "../../src/modules/commands/register.ts"
 import { PI_SUBAGENT_CHILD } from "../../src/shared/types.ts";
 
 function createPiMock() {
-  const commands: Array<{ name: string; handler: (args: string, ctx: any) => Promise<void> }> = [];
+  const commands: Array<{
+    name: string;
+    handler: (args: string, ctx: any) => Promise<void>;
+    getArgumentCompletions?: (argumentPrefix: string) => unknown[] | null | Promise<unknown[] | null>;
+  }> = [];
   const notifications: Array<{ message: string; level: string }> = [];
   const reports: string[] = [];
 
@@ -14,7 +18,11 @@ function createPiMock() {
     notifications,
     reports,
     registerCommand(name: string, command: any) {
-      commands.push({ name, handler: command.handler });
+      commands.push({
+        name,
+        handler: command.handler,
+        getArgumentCompletions: command.getArgumentCompletions,
+      });
     },
     createCtx(options: { hasUI?: boolean; customResult?: unknown } = {}) {
       return {
@@ -25,7 +33,21 @@ function createPiMock() {
             notifications.push({ message, level });
           },
           custom: async (factory: any) => {
-            const component = await factory({ requestRender() {} }, {}, {}, () => {});
+            const component = await factory(
+              { requestRender() {} },
+              {
+                mode: "dark",
+                fg: (_color: any, text: string) => text,
+                bg: (_color: any, text: string) => text,
+                bold: (text: string) => text,
+                italic: (text: string) => text,
+                underline: (text: string) => text,
+                strikethrough: (text: string) => text,
+                inverse: (text: string) => text,
+              },
+              {},
+              () => {}
+            );
             reports.push(component.render(100).join("\n"));
             return Object.hasOwn(options, "customResult") ? options.customResult : "closed";
           },
@@ -70,6 +92,61 @@ describe("commands module", () => {
     registerToolkitCommands(pi as any, mergeConfig({}));
 
     assert.equal(pi.commands.length, 0);
+  });
+
+  it("provides toolkit subcommand argument completions", async () => {
+    const pi = createPiMock();
+    registerToolkitCommands(pi as any, mergeConfig({}));
+
+    const complete = pi.commands[0].getArgumentCompletions;
+    assert.equal(typeof complete, "function");
+
+    assert.deepEqual(await complete?.(""), [
+      {
+        value: "doctor",
+        label: "/toolkit doctor",
+        description: "Run unified diagnostics checks",
+      },
+      {
+        value: "modules",
+        label: "/toolkit modules",
+        description: "Show module enablement status",
+      },
+      {
+        value: "logs",
+        label: "/toolkit logs",
+        description: "Show recent web activity logs",
+      },
+      {
+        value: "agents",
+        label: "/toolkit agents",
+        description: "List builtin/user/project agents",
+      },
+      {
+        value: "lsp",
+        label: "/toolkit lsp",
+        description: "Show LSP tool/hook configuration",
+      },
+      {
+        value: "activity",
+        label: "/toolkit activity",
+        description: "Open activity panel",
+      },
+      {
+        value: "help",
+        label: "/toolkit help",
+        description: "Show help",
+      },
+    ]);
+    assert.deepEqual(await complete?.("d"), [
+      {
+        value: "doctor",
+        label: "/toolkit doctor",
+        description: "Run unified diagnostics checks",
+      },
+    ]);
+    assert.equal(await complete?.("unknown"), null);
+    assert.equal(await complete?.("logs --"), null);
   });
 
   it("toolkit modules shows module overview in a TUI report panel", async () => {

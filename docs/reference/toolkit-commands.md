@@ -42,6 +42,20 @@ Current public subcommands:
 doctor, modules, logs, agents, lsp, activity, help
 ```
 
+`/toolkit` provides argument completions for these public subcommands. Typing `/toolkit ` in interactive mode shows completions for:
+
+```text
+/toolkit doctor
+/toolkit modules
+/toolkit logs
+/toolkit agents
+/toolkit lsp
+/toolkit activity
+/toolkit help
+```
+
+Typing a partial subcommand filters the list, for example `/toolkit d` suggests `/toolkit doctor`. First-stage completion covers only the subcommand token; flags such as `/toolkit logs --search` are documented below but are not completed by this command.
+
 There are no independent `/toolkit web`, `/toolkit config`, `/toolkit restart`, or `/toolkit subagents` commands. Web capabilities are mainly exposed through Web tools; LSP restart is exposed through the `lsp` tool's privileged `restart` action, not the `/toolkit lsp` command.
 
 ## Command list

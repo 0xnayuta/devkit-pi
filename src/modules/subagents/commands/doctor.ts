@@ -317,22 +317,24 @@ export async function runDoctorChecks(
 
 export function formatDoctorReport(report: DoctorReport): string {
   const lines: string[] = [];
-  const width = 64;
 
-  // Header
-  lines.push(`╔${"═".repeat(width)}╗`);
-  lines.push(`║${" Toolkit Doctor - Diagnostic Report ".padEnd(width)}║`);
-  lines.push(`╠${"═".repeat(width)}╣`);
+  lines.push("Toolkit Doctor - Diagnostic Report");
+  lines.push("");
+  lines.push(
+    `Summary: ${report.summary.passed} passed, ${report.summary.warnings} warnings, ${report.summary.failed} failed`
+  );
 
-  // Group by category
+  // Group by category. The surrounding ToolkitReportPanel owns the visual frame,
+  // so this formatter intentionally emits semantic text only (no nested box art).
   const categories = [...new Set(report.items.map((i) => i.category))];
 
   for (const category of categories) {
     const categoryItems = report.items.filter((i) => i.category === category);
-    lines.push(`║  [${category.toUpperCase()}]`);
+    lines.push("");
+    lines.push(`[${category.toUpperCase()}]`);
 
     for (const item of categoryItems) {
-      const icon =
+      const status =
         item.status === "pass"
           ? "PASS"
           : item.status === "warn"
@@ -340,27 +342,14 @@ export function formatDoctorReport(report: DoctorReport): string {
             : item.status === "fail"
               ? "FAIL"
               : "INFO";
-      const iconColored = icon;
-      const message =
-        item.message.length > width - 12 ? `${item.message.slice(0, width - 15)}...` : item.message;
-      lines.push(`║    [${iconColored}]  ${message}`);
+
+      lines.push(`  [${status}] ${item.message}`);
 
       if (item.details) {
-        const details =
-          item.details.length > width - 12
-            ? `${item.details.slice(0, width - 15)}...`
-            : item.details;
-        lines.push(`║              ${details}`);
+        lines.push(`         ${item.details}`);
       }
     }
-    lines.push("║");
   }
-
-  // Summary
-  lines.push(`╠${"═".repeat(width)}╣`);
-  const summaryLine = `  Summary: ${report.summary.passed} passed, ${report.summary.warnings} warnings, ${report.summary.failed} failed  `;
-  lines.push(`║${summaryLine.padEnd(width)}║`);
-  lines.push(`╚${"═".repeat(width)}╝`);
 
   return lines.join("\n");
 }

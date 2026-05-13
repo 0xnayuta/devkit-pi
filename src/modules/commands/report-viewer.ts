@@ -1,9 +1,10 @@
-import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import {
   type Component,
   Key,
   matchesKey,
   truncateToWidth,
+  visibleWidth,
   wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
 
@@ -27,6 +28,7 @@ export class ToolkitReportPanel implements Component {
   private readonly title: string;
   private readonly content: string;
   private readonly maxVisibleLines: number;
+  private readonly theme: Theme;
   private readonly done: () => void;
   private scrollOffset = 0;
   private cachedWidth?: number;
@@ -35,10 +37,13 @@ export class ToolkitReportPanel implements Component {
   private cachedBodyLines?: string[];
   private cachedBodyHeight?: number;
 
-  constructor(options: ToolkitReportOptions & { done: () => void; maxVisibleLines?: number }) {
+  constructor(
+    options: ToolkitReportOptions & { done: () => void; maxVisibleLines?: number; theme: Theme }
+  ) {
     this.title = options.title;
     this.content = options.content.trimEnd() || "(empty report)";
     this.done = options.done;
+    this.theme = options.theme;
     this.maxVisibleLines = options.maxVisibleLines ?? DEFAULT_VISIBLE_LINES;
   }
 
@@ -66,13 +71,9 @@ export class ToolkitReportPanel implements Component {
     const isEmpty = bodyContent.length === 0;
 
     const lines = [
-      this.borderLine(safeWidth, this.title),
-      this.statusLine(safeWidth, bodyLines.length, bodyHeight),
-      this.headerLine(safeWidth),
+      this.topBorder(safeWidth, this.title, bodyLines.length, bodyHeight),
       ...this.bodyLines(visible, innerWidth, isEmpty),
-      this.footerLine(safeWidth),
-      this.contentLine(this.helpText(bodyLines.length, bodyHeight), innerWidth),
-      this.bottomLine(safeWidth),
+      this.bottomBorder(safeWidth),
     ].map((line) => truncateToWidth(line, safeWidth, ""));
 
     this.cachedWidth = safeWidth;
@@ -115,21 +116,50 @@ export class ToolkitReportPanel implements Component {
     this.invalidate();
   }
 
-  private headerLine(width: number): string {
-    if (width <= 2) return "─".repeat(width);
-    return `├${"─".repeat(width - 2)}┤`;
+  private topBorder(width: number, title: string, totalLines: number, bodyHeight: number): string {
+    const th = this.theme;
+    if (width <= 2) return th.fg("borderMuted", "─".repeat(width));
+
+    const scrollInfo = totalLines > bodyHeight ? ` ${this.scrollOffset + 1}/${totalLines} ` : "";
+    const titleText = ` ${title} `;
+
+    const middleWidth = Math.max(0, width - 4);
+    const fixedTextWidth = titleText.length + scrollInfo.length;
+
+    if (fixedTextWidth > middleWidth) {
+      return (
+        th.fg("borderMuted", "╭─") +
+        th.fg("accent", th.bold(truncateToWidth(`${titleText}${scrollInfo}`, middleWidth, "", true))) +
+        th.fg("borderMuted", "─╮")
+      );
+    }
+
+    const filler = "─".repeat(middleWidth - fixedTextWidth);
+
+    return (
+      th.fg("borderMuted", "╭─") +
+      th.fg("accent", th.bold(titleText)) +
+      th.fg("borderMuted", filler) +
+      th.fg("dim", scrollInfo) +
+      th.fg("borderMuted", "─╮")
+    );
   }
 
-  private footerLine(width: number): string {
-    if (width <= 2) return "─".repeat(width);
-    return `├${"─".repeat(width - 2)}┤`;
-  }
+  private bottomBorder(width: number): string {
+    const th = this.theme;
+    if (width <= 2) return th.fg("borderMuted", "─".repeat(width));
 
-  private statusLine(width: number, totalLines: number, bodyHeight: number): string {
-    if (width <= 2) return "─".repeat(width);
-    const scrollInfo = totalLines > bodyHeight ? `  ${this.scrollOffset + 1} / ${totalLines}` : "";
-    const label = `│${scrollInfo.padStart(width - 1)}│`;
-    return truncateToWidth(label, width, "");
+    const helpText = " ↑↓ scroll | Esc close ";
+    const middleWidth = Math.max(0, width - 4);
+    const help = truncateToWidth(helpText, middleWidth, "", false);
+    const filler = "─".repeat(Math.max(0, middleWidth - visibleWidth(help)));
+
+    return (
+      th.fg("borderMuted", "╰─") +
+      th.fg("dim", help) +
+      th.fg("borderMuted", filler) +
+      th.fg("borderMuted", "─╯")
+    );
   }
 
   private bodyLines(lines: string[], innerWidth: number, isEmpty: boolean): string[] {
@@ -148,7 +178,7 @@ export class ToolkitReportPanel implements Component {
   }
 
   private pageSize(): number {
-    return Math.max(1, this.maxVisibleLines - 6);
+    return Math.max(1, this.maxVisibleLines - 2);
   }
 
   private scrollBy(delta: number): void {
@@ -156,27 +186,10 @@ export class ToolkitReportPanel implements Component {
     this.invalidate();
   }
 
-  private borderLine(width: number, title: string): string {
-    if (width <= 2) return "─".repeat(width);
-    const label = ` ${title} `;
-    const visibleLabel = truncateToWidth(label, Math.max(0, width - 2), "");
-    return `┌${visibleLabel}${"─".repeat(Math.max(0, width - 2 - visibleLabel.length))}┐`;
-  }
-
-  private bottomLine(width: number): string {
-    if (width <= 2) return "─".repeat(width);
-    return `└${"─".repeat(width - 2)}┘`;
-  }
-
   private contentLine(text: string, width: number): string {
+    const th = this.theme;
     const content = truncateToWidth(text, width, "", true);
-    return `│ ${content} │`;
-  }
-
-  private helpText(totalLines: number, bodyHeight: number): string {
-    const scrollInfo = totalLines > bodyHeight ? `  ${this.scrollOffset + 1} / ${totalLines}` : "";
-    const keys = "↑↓·PgUp/PgDn·Home/End·q/Esc close";
-    return `${keys}${scrollInfo}`;
+    return `${th.fg("borderMuted", "│")} ${content} ${th.fg("borderMuted", "│")}`;
   }
 }
 
@@ -196,9 +209,10 @@ export async function showToolkitReport(
     return;
   }
 
-  const result = await ctx.ui.custom<PanelResult>((tui, _theme, _keybindings, done) => {
+  const result = await ctx.ui.custom<PanelResult>((tui, theme, _keybindings, done) => {
     const panel = new ToolkitReportPanel({
       ...options,
+      theme,
       done: () => done(PANEL_RESULT_CLOSED),
     });
 

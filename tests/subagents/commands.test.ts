@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import { addToolkitActivityEntry } from "../../src/shared/activity.ts";
 import { resetConvertToolStats } from "../../src/modules/convert/observability.ts";
 import { ActivityPanel, createActivityPanel } from "../../src/modules/subagents/commands/activity.ts";
@@ -8,6 +9,10 @@ import { formatAgentList, formatAgentListJson, getAgentList } from "../../src/mo
 import { formatLogs, formatLogsJson, getRecentLogs } from "../../src/modules/subagents/commands/logs.ts";
 import { clearActivityLog, recordFetchActivity, recordSearchActivity, resetWebToolStats } from "../../src/modules/web/observability.ts";
 import { SEARCH_PROVIDER_NAMES } from "../../src/modules/web/providers/metadata.ts";
+
+function stripAnsi(value: string): string {
+	return value.replace(/\x1b\[[0-9;]*m/g, "");
+}
 
 describe("subagent commands - doctor", () => {
 	it("returns a diagnostic report with required categories and valid summary", async () => {
@@ -41,6 +46,7 @@ describe("subagent commands - doctor", () => {
 		assert.ok(output.includes("PASS") || output.includes("WARN") || output.includes("FAIL"));
 		assert.ok(output.includes("CONFIG") || output.includes("config"));
 		assert.ok(output.includes("AGENTS") || output.includes("agents"));
+		assert.doesNotMatch(output, /[╔╗╚╝╠╣║═]/);
 	});
 
 	it("formats an empty doctor report", () => {
@@ -49,6 +55,7 @@ describe("subagent commands - doctor", () => {
 
 		assert.ok(output.includes("Summary"));
 		assert.ok(output.includes("0"));
+		assert.doesNotMatch(output, /[╔╗╚╝╠╣║═]/);
 	});
 
 	it("reports ddgs availability and disabled provider statuses safely", async () => {
@@ -87,7 +94,7 @@ describe("subagent commands - list", () => {
 
 		assert.ok(output.includes("Available Agents"));
 		assert.ok(output.includes(report.total.toString()));
-		assert.ok(output.includes("[builtin]"));
+		assert.ok(output.includes("[BUILTIN]"));
 		assert.ok(output.includes("explorer"));
 		assert.ok(output.includes("(readonly)"));
 		assert.ok(output.includes("subagent({"));
@@ -181,6 +188,11 @@ describe("subagent commands - activity panel", () => {
 
 	it("renders header, stats, help, empty state, and activity entries", () => {
 		let lines = panel.render(80);
+		assert.equal(visibleWidth(lines[0]!), 80);
+		assert.equal(visibleWidth(lines.at(-1)!), 80);
+		assert.ok(stripAnsi(lines[0]!).endsWith("╮"));
+		assert.ok(stripAnsi(lines.at(-1)!).endsWith("╯"));
+		assert.match(stripAnsi(lines.at(-1)!), /Esc close ─+─╯$/);
 		assert.ok(lines[0]?.includes("Toolkit Activity"));
 		assert.ok(lines.some((line) => line.includes("total:")));
 		assert.ok(lines.some((line) => line.includes("success:")));

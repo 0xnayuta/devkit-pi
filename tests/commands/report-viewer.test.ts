@@ -1,7 +1,23 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
+import type { Theme } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { showToolkitReport, ToolkitReportPanel } from "../../src/modules/commands/report-viewer.ts";
+
+function stripAnsi(value: string): string {
+  return value.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
+const dummyTheme = {
+  mode: "dark",
+  fg: (_color: any, text: string) => text,
+  bg: (_color: any, text: string) => text,
+  bold: (text: string) => text,
+  italic: (text: string) => text,
+  underline: (text: string) => text,
+  strikethrough: (text: string) => text,
+  inverse: (text: string) => text,
+} as unknown as Theme;
 
 function createCtx(options: { hasUI?: boolean; customResult?: unknown } = {}) {
   const notifications: Array<{ message: string; level: string }> = [];
@@ -17,7 +33,21 @@ function createCtx(options: { hasUI?: boolean; customResult?: unknown } = {}) {
           notifications.push({ message, level });
         },
         custom: async (factory: any) => {
-          const component = await factory({ requestRender() {} }, {}, {}, () => {});
+          const component = await factory(
+            { requestRender() {} },
+            {
+              mode: "dark",
+              fg: (_color: any, text: string) => text,
+              bg: (_color: any, text: string) => text,
+              bold: (text: string) => text,
+              italic: (text: string) => text,
+              underline: (text: string) => text,
+              strikethrough: (text: string) => text,
+              inverse: (text: string) => text,
+            },
+            {},
+            () => {}
+          );
           renders.push(component.render(80).join("\n"));
           return Object.hasOwn(options, "customResult") ? options.customResult : "closed";
         },
@@ -44,6 +74,7 @@ describe("toolkit report viewer", () => {
       content: "hello\nworld",
       done: () => {},
       maxVisibleLines: 8,
+      theme: dummyTheme,
     });
 
     const output = panel.render(40).join("\n");
@@ -57,23 +88,44 @@ describe("toolkit report viewer", () => {
       title: "Empty",
       content: "",
       done: () => {},
+      theme: dummyTheme,
     });
 
     assert.match(panel.render(40).join("\n"), /\(empty report\)/);
   });
 
-  it("keeps rendered lines within width", () => {
+  it("keeps rendered lines within width and preserves right rounded corners", () => {
     const panel = new ToolkitReportPanel({
       title: "Narrow",
       content: "a very long line that must not exceed the requested width",
       done: () => {},
       maxVisibleLines: 8,
+      theme: dummyTheme,
     });
 
     const width = 12;
-    for (const line of panel.render(width)) {
+    const lines = panel.render(width);
+    for (const line of lines) {
       assert.ok(visibleWidth(line) <= width, `${line} exceeds width ${width}`);
     }
+    assert.equal(visibleWidth(lines[0]), width);
+    assert.equal(visibleWidth(lines.at(-1)!), width);
+    assert.ok(stripAnsi(lines[0]).endsWith("╮"));
+    assert.ok(stripAnsi(lines.at(-1)!).endsWith("╯"));
+  });
+
+  it("fills the bottom help border with horizontal rule characters", () => {
+    const panel = new ToolkitReportPanel({
+      title: "Help Border",
+      content: "content",
+      done: () => {},
+      maxVisibleLines: 8,
+      theme: dummyTheme,
+    });
+
+    const bottom = stripAnsi(panel.render(80).at(-1)!);
+    assert.equal(visibleWidth(bottom), 80);
+    assert.match(bottom, /Esc close ─+─╯$/);
   });
 
   it("scrolls long text", () => {
@@ -83,6 +135,7 @@ describe("toolkit report viewer", () => {
       content,
       done: () => {},
       maxVisibleLines: 8,
+      theme: dummyTheme,
     });
 
     const before = panel.render(50).join("\n");
@@ -101,6 +154,7 @@ describe("toolkit report viewer", () => {
       done: () => {
         closed = true;
       },
+      theme: dummyTheme,
     });
 
     panel.handleInput("q");

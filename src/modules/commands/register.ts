@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { AutocompleteItem } from "@earendil-works/pi-tui";
 import { DEFAULT_SUBAGENT_LSP_ACTIONS } from "../../config/load-config.ts";
 import { PI_SUBAGENT_CHILD, type ResolvedToolkitConfig } from "../../shared/types.ts";
 import { LSP_ACTIONS } from "../lsp/tool.ts";
@@ -11,6 +12,54 @@ import { showToolkitReport } from "./report-viewer.ts";
 interface ToolkitCommandArgs {
   subcommand: string;
   rest: string;
+}
+
+const TOOLKIT_SUBCOMMAND_COMPLETIONS: AutocompleteItem[] = [
+  {
+    value: "doctor",
+    label: "/toolkit doctor",
+    description: "Run unified diagnostics checks",
+  },
+  {
+    value: "modules",
+    label: "/toolkit modules",
+    description: "Show module enablement status",
+  },
+  {
+    value: "logs",
+    label: "/toolkit logs",
+    description: "Show recent web activity logs",
+  },
+  {
+    value: "agents",
+    label: "/toolkit agents",
+    description: "List builtin/user/project agents",
+  },
+  {
+    value: "lsp",
+    label: "/toolkit lsp",
+    description: "Show LSP tool/hook configuration",
+  },
+  {
+    value: "activity",
+    label: "/toolkit activity",
+    description: "Open activity panel",
+  },
+  {
+    value: "help",
+    label: "/toolkit help",
+    description: "Show help",
+  },
+];
+
+function getToolkitArgumentCompletions(argumentPrefix: string): AutocompleteItem[] | null {
+  const normalized = argumentPrefix.trimStart().toLowerCase();
+  if (normalized.includes(" ")) return null;
+
+  const filtered = TOOLKIT_SUBCOMMAND_COMPLETIONS.filter((item) =>
+    item.value.startsWith(normalized)
+  );
+  return filtered.length > 0 ? filtered : null;
 }
 
 function parseToolkitArgs(args: string): ToolkitCommandArgs {
@@ -93,6 +142,7 @@ export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolki
 
   pi.registerCommand("toolkit", {
     description: "devkit-pi command center: doctor/modules/logs/agents/lsp/activity",
+    getArgumentCompletions: getToolkitArgumentCompletions,
     handler: async (args: string, ctx) => {
       const { subcommand, rest } = parseToolkitArgs(args);
 
@@ -153,7 +203,8 @@ export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolki
           }
 
           const panel = createActivityPanel({ maxEntries: 15, autoRefresh: true });
-          const result = await ctx.ui.custom<"closed">((tui, _theme, _keybindings, done) => {
+          const result = await ctx.ui.custom<"closed">((tui, theme, _keybindings, done) => {
+            panel.setTheme(theme);
             panel.setOnClose(() => done("closed"));
 
             return {
