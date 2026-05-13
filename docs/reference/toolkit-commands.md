@@ -51,10 +51,10 @@ There are no independent `/toolkit web`, `/toolkit config`, `/toolkit restart`, 
 | `/toolkit` | Without arguments shows help | usage text | `src/modules/commands/register.ts` |
 | `/toolkit help` | Show help | usage text | `src/modules/commands/register.ts` |
 | `/toolkit doctor` | Run unified diagnostic checks | doctor report + UI notification | `src/modules/subagents/commands/doctor.ts` |
-| `/toolkit modules` | View module enablement status | modules overview + UI notification | `src/modules/commands/register.ts` |
-| `/toolkit logs [--search|--fetch|--convert] [--limit N]` | View recent toolkit activity logs | activity log + stats + UI notification | `src/modules/subagents/commands/logs.ts` |
-| `/toolkit agents` | List builtin/user/project agents | agent list + UI notification | `src/modules/subagents/commands/list.ts` |
-| `/toolkit lsp` | View LSP tool/hook configuration | LSP overview + UI notification | `src/modules/commands/register.ts` |
+| `/toolkit modules` | View module enablement status | modules overview report panel | `src/modules/commands/register.ts` |
+| `/toolkit logs [--search|--fetch|--convert] [--limit N]` | View recent toolkit activity logs | activity log + stats report panel | `src/modules/subagents/commands/logs.ts` |
+| `/toolkit agents` | List builtin/user/project agents | agent list report panel | `src/modules/subagents/commands/list.ts` |
+| `/toolkit lsp` | View LSP tool/hook configuration | LSP overview report panel | `src/modules/commands/register.ts` |
 | `/toolkit activity` | Open toolkit activity TUI panel | interactive panel + close notification | `src/modules/subagents/commands/activity.ts` |
 
 Unknown subcommands currently show help, not a command error.
@@ -420,7 +420,7 @@ Public contract:
 
 - Root command: `/toolkit`
 - Current subcommands: `doctor`, `modules`, `logs`, `agents`, `lsp`, `activity`, `help`
-- `logs` current public flags: `--search`, `--fetch`, `--limit N`
+- `logs` current public flags: `--search`, `--fetch`, `--convert`, `--limit N`
 - `commands.enabled` configuration switch
 - Subagent processes do not register `/toolkit`
 
@@ -447,6 +447,7 @@ Not recommended for external scripts to strongly depend on `/toolkit`'s human-re
 | Subagent registration/tool | `src/modules/subagents/register.ts` |
 | LSP registration/tool/hook | `src/modules/lsp/register.ts`, `src/modules/lsp/tool.ts`, `src/modules/lsp/hook.ts` |
 | LSP schemas/actions | `src/modules/lsp/schemas.ts` |
+| Report viewer panel | `src/modules/commands/report-viewer.ts` |
 | Web registration/tools | `src/modules/web/register.ts` |
 | Web schemas | `src/modules/web/schemas.ts` |
 | Toolkit activity logs / Web stats | `src/shared/activity.ts`, `src/modules/web/observability.ts`, `src/modules/convert/observability.ts` |

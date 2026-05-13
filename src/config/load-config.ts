@@ -140,15 +140,21 @@ export function getConfigPath(): string {
   );
 }
 
-export function loadConfig(configPath = getConfigPath()): ToolkitConfig {
+export function loadConfig(configPath = getConfigPath()): {
+  config: ToolkitConfig;
+  errors: string[];
+} {
+  const errors: string[] = [];
   try {
     if (fs.existsSync(configPath)) {
-      return JSON.parse(fs.readFileSync(configPath, "utf-8")) as ToolkitConfig;
+      return { config: JSON.parse(fs.readFileSync(configPath, "utf-8")) as ToolkitConfig, errors };
     }
   } catch (error) {
-    console.error(`Failed to load devkit-pi config from '${configPath}':`, error);
+    errors.push(
+      `Failed to load devkit-pi config from '${configPath}': ${error instanceof Error ? error.message : String(error)}`
+    );
   }
-  return {};
+  return { config: {}, errors };
 }
 
 function positiveInteger(value: unknown, fallback: number): number {

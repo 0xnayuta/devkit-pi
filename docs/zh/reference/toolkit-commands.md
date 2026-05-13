@@ -51,10 +51,10 @@ doctor, modules, logs, agents, lsp, activity, help
 | `/toolkit` | 无参数时显示 help | usage text | `src/modules/commands/register.ts` |
 | `/toolkit help` | 显示 help | usage text | `src/modules/commands/register.ts` |
 | `/toolkit doctor` | 运行统一诊断检查 | doctor report + UI notification | `src/modules/subagents/commands/doctor.ts` |
-| `/toolkit modules` | 查看模块启用状态 | modules overview + UI notification | `src/modules/commands/register.ts` |
-| `/toolkit logs [--search|--fetch|--convert] [--limit N]` | 查看近期 toolkit 活动日志 | activity log + stats + UI notification | `src/modules/subagents/commands/logs.ts` |
-| `/toolkit agents` | 列出 builtin/user/project agents | agent list + UI notification | `src/modules/subagents/commands/list.ts` |
-| `/toolkit lsp` | 查看 LSP tool/hook 配置 | LSP overview + UI notification | `src/modules/commands/register.ts` |
+| `/toolkit modules` | 查看模块启用状态 | modules overview report panel | `src/modules/commands/register.ts` |
+| `/toolkit logs [--search|--fetch|--convert] [--limit N]` | 查看近期 toolkit 活动日志 | activity log + stats report panel | `src/modules/subagents/commands/logs.ts` |
+| `/toolkit agents` | 列出 builtin/user/project agents | agent list report panel | `src/modules/subagents/commands/list.ts` |
+| `/toolkit lsp` | 查看 LSP tool/hook 配置 | LSP overview report panel | `src/modules/commands/register.ts` |
 | `/toolkit activity` | 打开 toolkit activity TUI 面板 | interactive panel + close notification | `src/modules/subagents/commands/activity.ts` |
 
 未知 subcommand 当前会显示 help，不会抛出命令错误。
@@ -420,7 +420,7 @@ Public contract：
 
 - Root command：`/toolkit`
 - 当前 subcommands：`doctor`、`modules`、`logs`、`agents`、`lsp`、`activity`、`help`
-- `logs` 当前公开 flags：`--search`、`--fetch`、`--limit N`
+- `logs` 当前公开 flags：`--search`、`--fetch`、`--convert`、`--limit N`
 - `commands.enabled` 配置开关
 - 子代理进程不注册 `/toolkit`
 
@@ -447,6 +447,7 @@ Developer convenience / 可能调整：
 | Subagent registration/tool | `src/modules/subagents/register.ts` |
 | LSP registration/tool/hook | `src/modules/lsp/register.ts`, `src/modules/lsp/tool.ts`, `src/modules/lsp/hook.ts` |
 | LSP schemas/actions | `src/modules/lsp/schemas.ts` |
+| Report viewer panel | `src/modules/commands/report-viewer.ts` |
 | Web registration/tools | `src/modules/web/register.ts` |
 | Web schemas | `src/modules/web/schemas.ts` |
 | Toolkit activity logs / Web stats | `src/shared/activity.ts`, `src/modules/web/observability.ts`, `src/modules/convert/observability.ts` |

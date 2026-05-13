@@ -10,6 +10,7 @@ import {
   RESULTS_DIR,
   type ResolvedToolkitConfig,
   type ResolvedWebConfig,
+  type ToolkitConfig,
 } from "../../../shared/types.ts";
 import {
   getProviderApiKeyEnv,
@@ -203,13 +204,18 @@ export async function runDoctorChecks(
   }
 
   // 3. Provider checks
-  const config = resolvedConfig ?? mergeConfig(loadConfig());
+  const { config } = (
+    resolvedConfig
+      ? { config: resolvedConfig as ToolkitConfig, errors: [] as string[] }
+      : loadConfig()
+  ) as { config: ToolkitConfig; errors: string[] };
+  const resolved = mergeConfig(config);
 
   // Check ddgs first (always available if installed)
   const ddgsProvider = getSearchProvider("ddgs");
   try {
     if (ddgsProvider.isAvailable) {
-      const available = await ddgsProvider.isAvailable(config.web);
+      const available = await ddgsProvider.isAvailable(resolved.web);
       items.push({
         status: available ? "pass" : "warn",
         category: "provider",
@@ -231,7 +237,7 @@ export async function runDoctorChecks(
   const providerNames = SEARCH_PROVIDER_NAMES.filter((name) => name !== "ddgs");
   for (const name of providerNames) {
     const provider = getSearchProvider(name);
-    const result = await checkProvider(name, provider, config.web);
+    const result = await checkProvider(name, provider, resolved.web);
     items.push(result);
   }
 
@@ -260,16 +266,16 @@ export async function runDoctorChecks(
 
   // 5. Web tools enabled check
   items.push({
-    status: config.web.enabled ? "pass" : "warn",
+    status: resolved.web.enabled ? "pass" : "warn",
     category: "web-tools",
-    message: config.web.enabled ? "Web tools enabled" : "Web tools disabled",
-    details: config.web.enabled
-      ? `Provider: ${config.web.provider}, Debug: ${config.web.debug}`
+    message: resolved.web.enabled ? "Web tools enabled" : "Web tools disabled",
+    details: resolved.web.enabled
+      ? `Provider: ${resolved.web.provider}, Debug: ${resolved.web.debug}`
       : "Enable web.enabled in config to use web_search and fetch_content",
   });
 
   // 6. LSP diagnostics/tool status
-  if (!config.lsp.enabled) {
+  if (!resolved.lsp.enabled) {
     items.push({
       status: "warn",
       category: "lsp",
@@ -278,19 +284,19 @@ export async function runDoctorChecks(
     });
   } else {
     items.push({
-      status: config.lsp.tool.enabled ? "pass" : "warn",
+      status: resolved.lsp.tool.enabled ? "pass" : "warn",
       category: "lsp",
-      message: config.lsp.tool.enabled ? "LSP tool enabled" : "LSP tool disabled",
-      details: config.lsp.tool.allowMutatingActions
+      message: resolved.lsp.tool.enabled ? "LSP tool enabled" : "LSP tool disabled",
+      details: resolved.lsp.tool.allowMutatingActions
         ? "Mutating actions allowed in main process"
         : "Mutating actions blocked by default",
     });
 
     items.push({
-      status: config.lsp.hook.enabled ? "pass" : "info",
+      status: resolved.lsp.hook.enabled ? "pass" : "info",
       category: "lsp",
-      message: config.lsp.hook.enabled
-        ? `LSP diagnostics hook enabled (${config.lsp.hook.mode})`
+      message: resolved.lsp.hook.enabled
+        ? `LSP diagnostics hook enabled (${resolved.lsp.hook.mode})`
         : "LSP diagnostics hook disabled",
     });
   }

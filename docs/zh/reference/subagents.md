@@ -38,7 +38,7 @@ Subagents 模块让主代理把一个聚焦任务委派给一个专职 child pi 
 | Built-in agents | 5 个预置 readonly 专职 agents | `explorer` / `researcher` / `reviewer` / `implementer` / `tester` | agent prompt 与工具白名单 | prompt 文本可迭代；能力取决于可用 tools | `agents/*.md` |
 | Custom agent definitions | user/project markdown agents | `~/.pi/agent/agents/`、`.pi/agents/`、`.agents/` | 被 discovery 合并进 agent list | 只支持简单 frontmatter；project > user > builtin 去重 | `src/modules/subagents/agents.ts`, `frontmatter.ts` |
 | Delegation policy injection | 给主代理提示何时委派 | 默认 `subagents.injectDelegationPolicy=true` | system prompt 追加 policy/examples | 是提示策略，不是强制调度器 | `src/shared/delegation-policy.ts` |
-| `/toolkit agents` | 查看已发现 agents | 手动运行 command | console agent list | 不启动子代理 | `src/modules/subagents/commands/list.ts` |
+| `/toolkit agents` | 查看已发现 agents | 手动运行 command | TUI report panel | 不启动子代理 | `src/modules/subagents/commands/list.ts` |
 | `/toolkit doctor` | 诊断配置、agents、providers、权限、LSP 等 | 手动运行 command | doctor report | report fail/warn 是诊断项，不是 command failure | `src/modules/subagents/commands/doctor.ts` |
 | `/toolkit logs` / `/toolkit activity` | 查看 toolkit activity logs/stats | 手动运行 command | text log / TUI panel | 主要面向 Web/convert tool observability，不是 subagent execution log | `src/modules/subagents/commands/logs.ts`, `activity.ts` |
 | Output collection | 从 child pi JSONL/stdout 收集最终结果、usage、错误 | 自动内部执行 | `details.results[]`、`content[0].text` | 内部 helper，不是 public tool | `src/modules/subagents/collect-output.ts`, `execution.ts` |

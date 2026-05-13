@@ -31,6 +31,9 @@ export class ToolkitReportPanel implements Component {
   private scrollOffset = 0;
   private cachedWidth?: number;
   private cachedLines?: string[];
+  private cachedContent?: string;
+  private cachedBodyLines?: string[];
+  private cachedBodyHeight?: number;
 
   constructor(options: ToolkitReportOptions & { done: () => void; maxVisibleLines?: number }) {
     this.title = options.title;
@@ -45,17 +48,29 @@ export class ToolkitReportPanel implements Component {
 
     const innerWidth = Math.max(1, safeWidth - 4);
     const bodyHeight = Math.max(1, this.maxVisibleLines - 5);
-    const bodyLines = this.buildBodyLines(innerWidth);
+
+    if (this.cachedContent === this.content && this.cachedBodyHeight === bodyHeight) {
+      // Content and height unchanged: reuse body lines, skip buildBodyLines call.
+    } else {
+      this.cachedContent = this.content;
+      this.cachedBodyLines = this.buildBodyLines(innerWidth);
+      this.cachedBodyHeight = bodyHeight;
+    }
+
+    const bodyLines = this.cachedBodyLines!;
     const maxScroll = Math.max(0, bodyLines.length - bodyHeight);
     this.scrollOffset = Math.min(this.scrollOffset, maxScroll);
 
     const visible = bodyLines.slice(this.scrollOffset, this.scrollOffset + bodyHeight);
-    while (visible.length < bodyHeight) visible.push("");
+    const bodyContent = visible.filter((l) => l !== "");
+    const isEmpty = bodyContent.length === 0;
 
     const lines = [
       this.borderLine(safeWidth, this.title),
-      ...visible.map((line) => this.contentLine(line, innerWidth)),
-      this.separatorLine(safeWidth),
+      this.statusLine(safeWidth, bodyLines.length, bodyHeight),
+      this.headerLine(safeWidth),
+      ...this.bodyLines(visible, innerWidth, isEmpty),
+      this.footerLine(safeWidth),
       this.contentLine(this.helpText(bodyLines.length, bodyHeight), innerWidth),
       this.bottomLine(safeWidth),
     ].map((line) => truncateToWidth(line, safeWidth, ""));
@@ -91,6 +106,37 @@ export class ToolkitReportPanel implements Component {
   invalidate(): void {
     this.cachedWidth = undefined;
     this.cachedLines = undefined;
+    this.cachedContent = undefined;
+    this.cachedBodyLines = undefined;
+    this.cachedBodyHeight = undefined;
+  }
+
+  dispose(): void {
+    this.invalidate();
+  }
+
+  private headerLine(width: number): string {
+    if (width <= 2) return "─".repeat(width);
+    return `├${"─".repeat(width - 2)}┤`;
+  }
+
+  private footerLine(width: number): string {
+    if (width <= 2) return "─".repeat(width);
+    return `├${"─".repeat(width - 2)}┤`;
+  }
+
+  private statusLine(width: number, totalLines: number, bodyHeight: number): string {
+    if (width <= 2) return "─".repeat(width);
+    const scrollInfo = totalLines > bodyHeight ? `  ${this.scrollOffset + 1} / ${totalLines}` : "";
+    const label = `│${scrollInfo.padStart(width - 1)}│`;
+    return truncateToWidth(label, width, "");
+  }
+
+  private bodyLines(lines: string[], innerWidth: number, isEmpty: boolean): string[] {
+    if (isEmpty) {
+      return [this.contentLine("(empty report)", innerWidth)];
+    }
+    return lines.map((line) => this.contentLine(line, innerWidth));
   }
 
   private buildBodyLines(width: number): string[] {
@@ -117,11 +163,6 @@ export class ToolkitReportPanel implements Component {
     return `┌${visibleLabel}${"─".repeat(Math.max(0, width - 2 - visibleLabel.length))}┐`;
   }
 
-  private separatorLine(width: number): string {
-    if (width <= 2) return "─".repeat(width);
-    return `├${"─".repeat(width - 2)}┤`;
-  }
-
   private bottomLine(width: number): string {
     if (width <= 2) return "─".repeat(width);
     return `└${"─".repeat(width - 2)}┘`;
@@ -133,8 +174,9 @@ export class ToolkitReportPanel implements Component {
   }
 
   private helpText(totalLines: number, bodyHeight: number): string {
-    const scrollInfo = totalLines > bodyHeight ? ` · ${this.scrollOffset + 1}/${totalLines}` : "";
-    return `↑/↓ scroll · PgUp/PgDn page · q/Esc close${scrollInfo}`;
+    const scrollInfo = totalLines > bodyHeight ? `  ${this.scrollOffset + 1} / ${totalLines}` : "";
+    const keys = "↑↓·PgUp/PgDn·Home/End·q/Esc close";
+    return `${keys}${scrollInfo}`;
   }
 }
 

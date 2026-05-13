@@ -145,9 +145,16 @@ export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolki
         }
 
         if (subcommand === "activity") {
+          if (!ctx.hasUI) {
+            console.error(
+              "Toolkit activity panel requires interactive UI; use /toolkit logs for a text report."
+            );
+            return;
+          }
+
           const panel = createActivityPanel({ maxEntries: 15, autoRefresh: true });
-          await ctx.ui.custom<void>((tui, _theme, _keybindings, done) => {
-            panel.setOnClose(() => done());
+          const result = await ctx.ui.custom<"closed">((tui, _theme, _keybindings, done) => {
+            panel.setOnClose(() => done("closed"));
 
             return {
               render: (width: number) => panel.render(width),
@@ -160,7 +167,11 @@ export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolki
             };
           });
 
-          ctx.ui.notify("Activity panel closed", "info");
+          if (result === "closed") {
+            ctx.ui.notify("Activity panel closed", "info");
+          } else {
+            ctx.ui.notify("Toolkit activity panel is not available in this pi mode", "warning");
+          }
           return;
         }
 

@@ -20,7 +20,12 @@ import { registerSubagentsModule } from "./modules/subagents/register.ts";
 import { registerWebTools } from "./modules/web/register.ts";
 
 export default function registerExtension(pi: ExtensionAPI): void {
-  const config = loadConfig();
+  const { config, errors } = loadConfig();
+  if (errors.length > 0) {
+    for (const msg of errors) {
+      console.error(msg);
+    }
+  }
   const effectiveConfig = mergeConfig(config);
 
   if (!effectiveConfig.enabled) return;

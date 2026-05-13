@@ -267,10 +267,8 @@ export function registerLspHook(pi: ExtensionAPI, config: RequiredLspHookConfig)
 
       const report = buildDiagnosticsOutput(absPath, diagnostics, ctx.cwd, includeFileHeader);
       const output = hint ? `${report.output}\n${hint}\n` : report.output;
-      if (notify) {
-        if (ctx.hasUI)
-          ctx.ui.notify(report.notification, report.errorCount > 0 ? "error" : "warning");
-        else console.error(report.notification);
+      if (notify && ctx.hasUI) {
+        ctx.ui.notify(report.notification, report.errorCount > 0 ? "error" : "warning");
       }
       return output;
     } catch {

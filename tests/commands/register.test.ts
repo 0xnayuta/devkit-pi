@@ -27,7 +27,7 @@ function createPiMock() {
           custom: async (factory: any) => {
             const component = await factory({ requestRender() {} }, {}, {}, () => {});
             reports.push(component.render(100).join("\n"));
-            return options.customResult ?? "closed";
+            return Object.hasOwn(options, "customResult") ? options.customResult : "closed";
           },
         },
       };
@@ -38,11 +38,13 @@ function createPiMock() {
 describe("commands module", () => {
   const originalChild = process.env[PI_SUBAGENT_CHILD];
   const originalLog = console.log;
+  const originalError = console.error;
 
   afterEach(() => {
     if (originalChild === undefined) delete process.env[PI_SUBAGENT_CHILD];
     else process.env[PI_SUBAGENT_CHILD] = originalChild;
     console.log = originalLog;
+    console.error = originalError;
   });
 
   it("registers unified toolkit command in main process", () => {
@@ -105,5 +107,34 @@ describe("commands module", () => {
 
     assert.match(pi.reports.join("\n"), /LSP module/);
     assert.match(pi.reports.join("\n"), /tool\.actions:/);
+  });
+
+  it("toolkit activity reports unavailable when UI is absent", async () => {
+    const pi = createPiMock();
+    registerToolkitCommands(pi as any, mergeConfig({}));
+
+    const errors: string[] = [];
+    console.error = (value?: unknown) => {
+      errors.push(String(value ?? ""));
+    };
+
+    await pi.commands[0].handler("activity", pi.createCtx({ hasUI: false }));
+
+    assert.equal(pi.reports.length, 0);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /requires interactive UI/);
+  });
+
+  it("toolkit activity warns when custom UI is degraded", async () => {
+    const pi = createPiMock();
+    registerToolkitCommands(pi as any, mergeConfig({}));
+
+    await pi.commands[0].handler("activity", pi.createCtx({ customResult: undefined }));
+
+    assert.equal(pi.notifications.length, 1);
+    assert.deepEqual(pi.notifications[0], {
+      message: "Toolkit activity panel is not available in this pi mode",
+      level: "warning",
+    });
   });
 });

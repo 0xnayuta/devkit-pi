@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: implemented
 audience: maintainer
 last_verified: 2026-05-13
 language: chinese
@@ -400,29 +400,37 @@ docs/zh/reference/toolkit-commands.md
 
 ## 实施顺序
 
-### Step 1：修复 `/toolkit` 主问题
+### Step 1：修复 `/toolkit` 主问题 ✅ 已完成
 
 目标：解决当前可复现的 TUI 污染。
 
 内容：
 
-1. 新增最小 `showToolkitReport()`。
-2. 替换 `src/modules/commands/register.ts` 中 `/toolkit` 相关 `console.log()`。
-3. 更新命令测试。
-4. 更新中英文 `/toolkit` 命令参考文档。
+1. 新增最小 `showToolkitReport()`。 ✅
+2. 替换 `src/modules/commands/register.ts` 中 `/toolkit` 相关 `console.log()`。 ✅
+3. 更新命令测试。 ✅
+4. 更新中英文 `/toolkit` 命令参考文档。 ✅
 
-建议将 Step 1 作为一个独立提交或 PR。
-
-### Step 2：增强报告面板体验
+### Step 2：增强报告面板体验 ✅ 已完成
 
 目标：让报告查看更适合长内容。
 
 内容：
 
-1. 完善滚动快捷键。
-2. 加入标题、分隔线、底部帮助。
-3. 处理超窄宽度和超长行裁剪。
-4. 视需要加入搜索或复制提示。
+1. 完善滚动快捷键。 ✅ 已支持 ↑↓/jk、PgUp/PgDn、Home/End、Ctrl+B/Ctrl+F
+2. 加入标题、分隔线、底部帮助。 ✅ 边框标题行、header/footer 分隔线、状态栏、底部快捷键提示
+3. 处理超窄宽度和超长行裁剪。 ✅ 宽度 ≤ 2 时退化渲染；`truncateToWidth()` 裁剪每行；`wrapTextWithAnsi()` 处理超长内容
+4. 视觉增强：✅ 边框 box-drawing（┌─┐├─┤└─┘）、右对齐状态栏（当前行 / 总行数）、紧凑底部帮助文本
+
+已新增内容：
+
+
+- `statusLine(width, total, height)` — 右上角滚动位置状态栏（如 `  5 / 30`）
+- `headerLine` / `footerLine` — body 上下分隔线
+- 主体行末尾自动填充空白行（维持固定高度）
+- 空内容时显示 `(empty report)` 占位符
+- `dispose()` 方法（支持 `ctx.ui.custom()` 的 `dispose` 生命周期回调）
+- 滚动时复用 `cachedBodyLines`，避免重复 `buildBodyLines()` 调用
 
 ### Step 3：治理其他 direct console 输出
 
@@ -431,10 +439,17 @@ docs/zh/reference/toolkit-commands.md
 内容：
 
 1. 将 `webDebugLog()` 接入 activity log、diagnostics 或可配置 debug sink。
-2. 将配置加载错误改为结构化诊断或延迟在 `/toolkit doctor` 中展示。
+   → 推迟：需要更多架构设计，当前 debug log 已有 `web.debug` 配置 gate，在 TUI 环境中用户不会开启。
+2. 将配置加载错误改为结构化诊断或延迟在 `/toolkit doctor` 中展示。 ✅ 已重构
+   - `loadConfig()` 返回 `{ config, errors }` 而非直接 `console.error`
+   - `registerExtension()` 在启动时统一打印 config load errors
 3. 删除或改造 `Subagent extension is disabled in config` 的 stdout 日志。
-4. 复查 LSP hook fallback 的 stderr 路径。
+   → 推迟：属于注册期一次性通知，影响有限，删除可能造成调试困难。
+4. 复查 LSP hook fallback 的 stderr 路径。 ✅ 已修复
+   - `collectDiagnostics()` 中移除 `else console.error(report.notification)`
+   - 无 UI 时不再输出诊断通知到 stderr，避免破坏 TUI
 5. 可选：增加测试或 lint 规则，避免交互式路径重新引入 direct console 输出。
+   → 推迟：可作为后续 lint rules 工作的一部分
 
 ## 风险与注意事项
 
@@ -445,9 +460,11 @@ docs/zh/reference/toolkit-commands.md
 
 ## 验收标准
 
-1. 在交互式 pi TUI 中执行 `/toolkit` 和各子命令，不再覆盖输入框、边框、cwd/git footer 或命令补全面板。
-2. `/toolkit` 报告内容仍完整可读。
-3. 长报告可滚动查看。
-4. 非 TUI、非协议 stdout 场景仍可获得文本输出；RPC/JSON 协议场景不会被裸文本 stdout 污染。
-5. 测试不再要求 `/toolkit` 在 TUI 路径使用 `console.log()`。
-6. 文档不再将 console 输出描述为 `/toolkit` 的主要用户可见行为。
+1. 在交互式 pi TUI 中执行 `/toolkit` 和各子命令，不再覆盖输入框、边框、cwd/git footer 或命令补全面板。 ✅
+2. `/toolkit` 报告内容仍完整可读。 ✅
+3. 长报告可滚动查看。 ✅ 快捷键：↑↓、PgUp/PgDn、Home、End
+4. 非 TUI、非协议 stdout 场景仍可获得文本输出；RPC/JSON 协议场景不会被裸文本 stdout 污染。 ✅
+5. 测试不再要求 `/toolkit` 在 TUI 路径使用 `console.log()`。 ✅
+6. 文档不再将 console 输出描述为 `/toolkit` 的主要用户可见行为。 ✅
+7. 超窄宽度（≤ 2）和超长行有适当降级处理。 ✅
+8. 空内容报告有明确占位符显示。 ✅
