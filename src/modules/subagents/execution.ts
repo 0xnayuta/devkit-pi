@@ -51,6 +51,8 @@ export interface RunSyncResult {
   final: boolean;
   lastEventType?: string;
   timedOut?: boolean;
+  /** Why the execution was terminated. Present when timedOut === true. */
+  timeoutReason?: "runtime" | "idle";
   cancelled?: boolean;
   terminationSignal?: NodeJS.Signals;
   /**
@@ -68,6 +70,8 @@ export type DisplayItem =
 interface RunSyncOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Maximum idle time (ms) since the last valid activity event before terminating. */
+  idleTimeoutMs?: number;
   env?: Record<string, string | undefined>;
   /** Called each time a new message is received from the subprocess. */
   onStreamingUpdate?: (state: StreamingState) => void;
@@ -78,7 +82,7 @@ export async function runSync(
   args: string[],
   options: RunSyncOptions = {}
 ): Promise<RunSyncResult> {
-  const { signal, timeoutMs, env, onStreamingUpdate } = options;
+  const { signal, timeoutMs, idleTimeoutMs, env, onStreamingUpdate } = options;
   const { command, args: spawnArgs } = getPiSpawnCommand(args);
 
   return new Promise((resolve) => {
@@ -86,9 +90,38 @@ export async function runSync(
     let stderr = "";
     let exitCode = 0;
     let timedOut = false;
+    let timeoutReason: "runtime" | "idle" | undefined;
     let cancelled = false;
-    let timeoutHandle: NodeJS.Timeout | undefined;
+    let runtimeTimeoutHandle: NodeJS.Timeout | undefined;
+    let idleTimeoutHandle: NodeJS.Timeout | undefined;
     let forceKillHandle: NodeJS.Timeout | undefined;
+
+    // --- Activity event types that reset the idle timer ---
+    const ACTIVITY_EVENT_TYPES = new Set([
+      "message_end",
+      "tool_result_end",
+      "turn_end",
+      // NOTE: tool_call_start / tool_call_end are not currently emitted by pi runtime.
+      // Add them here if pi adds support for tool-call lifecycle events.
+    ]);
+
+    /** Mark the execution as timed out with a specific reason. */
+    const markTimedOut = (reason: "runtime" | "idle") => {
+      if (timedOut || cancelled) return;
+      timedOut = true;
+      timeoutReason = reason;
+      terminateChild();
+    };
+
+    /** Reset the idle timeout. Called on startup and each valid activity event. */
+    const resetIdleTimeout = () => {
+      if (idleTimeoutMs === undefined) return;
+      if (idleTimeoutHandle) clearTimeout(idleTimeoutHandle);
+      idleTimeoutHandle = setTimeout(() => {
+        markTimedOut("idle");
+      }, idleTimeoutMs);
+      idleTimeoutHandle.unref?.();
+    };
 
     const child = spawn(command, spawnArgs, {
       cwd,
@@ -117,12 +150,14 @@ export async function runSync(
     signal?.addEventListener("abort", handleAbort, { once: true });
 
     if (timeoutMs !== undefined) {
-      timeoutHandle = setTimeout(() => {
-        timedOut = true;
-        terminateChild();
+      runtimeTimeoutHandle = setTimeout(() => {
+        markTimedOut("runtime");
       }, timeoutMs);
-      timeoutHandle.unref?.();
+      runtimeTimeoutHandle.unref?.();
     }
+
+    // Start the idle timer immediately after the process starts
+    resetIdleTimeout();
 
     // Streaming state accumulation
     const streamMessages: unknown[] = [];
@@ -186,6 +221,11 @@ export async function runSync(
           }
         }
 
+        // Reset idle timeout if this event type is considered valid activity
+        if (ACTIVITY_EVENT_TYPES.has(eventType)) {
+          resetIdleTimeout();
+        }
+
         onStreamingUpdate?.({
           messages: [...streamMessages],
           usage: { ...streamUsage },
@@ -198,6 +238,11 @@ export async function runSync(
       // --- tool_result_end: tool output finalized ---
       if (eventType === "tool_result_end" && isRecord(event.message)) {
         streamMessages.push(event.message);
+
+        // Reset idle timeout if this event type is considered valid activity
+        if (ACTIVITY_EVENT_TYPES.has(eventType)) {
+          resetIdleTimeout();
+        }
 
         onStreamingUpdate?.({
           messages: [...streamMessages],
@@ -229,7 +274,8 @@ export async function runSync(
 
     child.on("close", (code, closeSignal) => {
       signal?.removeEventListener("abort", handleAbort);
-      if (timeoutHandle) clearTimeout(timeoutHandle);
+      if (runtimeTimeoutHandle) clearTimeout(runtimeTimeoutHandle);
+      if (idleTimeoutHandle) clearTimeout(idleTimeoutHandle);
       if (forceKillHandle) clearTimeout(forceKillHandle);
       cleanup();
 
@@ -266,6 +312,7 @@ export async function runSync(
         lastEventType: collected.lastEventType,
         displayItems,
         timedOut,
+        timeoutReason,
         cancelled,
         terminationSignal: closeSignal ?? undefined,
       });
@@ -273,7 +320,8 @@ export async function runSync(
 
     child.on("error", (error) => {
       signal?.removeEventListener("abort", handleAbort);
-      if (timeoutHandle) clearTimeout(timeoutHandle);
+      if (runtimeTimeoutHandle) clearTimeout(runtimeTimeoutHandle);
+      if (idleTimeoutHandle) clearTimeout(idleTimeoutHandle);
       if (forceKillHandle) clearTimeout(forceKillHandle);
       cleanup();
 

@@ -187,7 +187,7 @@ export class ActivityPanel {
     const th = this.theme;
 
     // Helper: apply color or return plain string
-    const color = (colorName: any, text: string) => th ? th.fg(colorName, text) : text;
+    const color = (colorName: any, text: string) => (th ? th.fg(colorName, text) : text);
     const border = (text: string) => color("borderMuted", text);
     const accent = (text: string) => color("accent", th ? th.bold(text) : text);
     const dim = (text: string) => color("dim", text);
@@ -200,7 +200,7 @@ export class ActivityPanel {
     const rightInfo = ` ${statsLine} `;
     const middleWidth = Math.max(0, width - 4);
     const fixedTextWidth = titleText.length + rightInfo.length;
-    
+
     if (width <= 2) {
       lines.push(border("─".repeat(width)));
     } else if (fixedTextWidth > middleWidth) {
@@ -217,7 +217,9 @@ export class ActivityPanel {
     // 2. Entries
     let bodyCount = 0;
     if (entries.length === 0) {
-      lines.push(`${border("│")} ${padVisible(dim("(no recent activity)"), width - 4)} ${border("│")}`);
+      lines.push(
+        `${border("│")} ${padVisible(dim("(no recent activity)"), width - 4)} ${border("│")}`
+      );
       bodyCount++;
     } else {
       const visibleEntries = entries.slice(
@@ -249,7 +251,7 @@ export class ActivityPanel {
     const bottomMiddleWidth = Math.max(0, width - 4);
     const help = truncateToWidth(helpText, bottomMiddleWidth, "", false);
     const botFiller = "─".repeat(Math.max(0, bottomMiddleWidth - visibleWidth(help)));
-    
+
     if (width <= 2) {
       lines.push(border("─".repeat(width)));
     } else {
@@ -273,9 +275,9 @@ export class ActivityPanel {
 
   private formatEntry(entry: ActivityEntry, maxWidth: number, isSelected: boolean): string {
     const th = this.theme;
-    const color = (colorName: any, text: string) => th ? th.fg(colorName, text) : text;
-    const dim = (text: string) => th ? th.fg("dim", text) : text;
-    
+    const color = (colorName: any, text: string) => (th ? th.fg(colorName, text) : text);
+    const dim = (text: string) => (th ? th.fg("dim", text) : text);
+
     const time = dim(formatTimestamp(entry.timestamp));
     const typeTagRaw =
       entry.type === "search"
@@ -285,8 +287,9 @@ export class ActivityPanel {
           : entry.type === "convert"
             ? "CONVERT"
             : "CONTENT";
-            
-    const typeTag = entry.type === "search" ? color("accent", typeTagRaw) : color("warning", typeTagRaw);
+
+    const typeTag =
+      entry.type === "search" ? color("accent", typeTagRaw) : color("warning", typeTagRaw);
     const provider = dim(entry.provider ?? "-");
     const statusRaw =
       entry.status === "success"
@@ -296,18 +299,25 @@ export class ActivityPanel {
           : entry.status === "error"
             ? "ERR"
             : "---";
-            
-    const status = entry.status === "success" 
-        ? color("success", statusRaw) 
-        : entry.status === "error" 
-            ? color("error", statusRaw) 
-            : color("warning", statusRaw);
-            
+
+    const status =
+      entry.status === "success"
+        ? color("success", statusRaw)
+        : entry.status === "error"
+          ? color("error", statusRaw)
+          : color("warning", statusRaw);
+
     const duration = dim(entry.duration !== undefined ? `${entry.duration}ms` : "-");
 
     const parts = [time, typeTag, provider, status, duration];
-    const rawLen = formatTimestamp(entry.timestamp).length + typeTagRaw.length + (entry.provider ?? "-").length + statusRaw.length + (entry.duration !== undefined ? `${entry.duration}ms` : "-").length + 8;
-    
+    const rawLen =
+      formatTimestamp(entry.timestamp).length +
+      typeTagRaw.length +
+      (entry.provider ?? "-").length +
+      statusRaw.length +
+      (entry.duration !== undefined ? `${entry.duration}ms` : "-").length +
+      8;
+
     let line = parts.join("  ");
 
     if (rawLen > maxWidth) {

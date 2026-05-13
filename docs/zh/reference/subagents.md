@@ -294,7 +294,8 @@ Focus only on the delegated task. Do not call other subagents.
   "subagents": {
     "enabled": true,
     "maxDepth": 1,
-    "timeoutMs": 300000,
+    "timeoutMs": 900000,
+    "idleTimeoutMs": 180000,
     "allowWrite": false,
     "allowLspTools": true,
     "allowedLspActions": [
@@ -314,7 +315,8 @@ Focus only on the delegated task. Do not call other subagents.
 
 - `subagents.enabled=false`：`registerSubagentsModule()` 不注册 `subagent` tool。
 - `subagents.maxDepth=1`：默认禁止 nested subagents。
-- `subagents.timeoutMs`：单次 child execution timeout。
+- `subagents.timeoutMs`：单次 child execution 的最大总运行时长（hard cap），从子进程启动时开始计时，不会因子代理活动而重置。达到上限无论子代理是否活跃都会被终止。
+- `subagents.idleTimeoutMs`：子代理自最后一次有效活动后的最大空闲时间。有效活动指结构化 JSONL 运行事件（如 `message_end`、`tool_result_end`、`turn_end`）；普通 stdout 文本不会重置该计时器。超过上限但子代理仍有活跃输出则不会被终止。默认 180000ms。
 - `subagents.allowWrite`：实验性/高级/不安全开关；只影响非 readonly 自定义 agent 的工具过滤，不改变内置 agents 的 readonly 定义，也不提供完整权限沙箱、审计日志、自动回滚或稳定写入能力契约。
 - `subagents.allowLspTools` / `allowedLspActions`：控制子代理是否可用 readonly LSP actions。
 - `subagents.injectDelegationPolicy`：控制是否向主代理 prompt 注入 delegation policy。
@@ -333,7 +335,7 @@ Custom agents discovery 路径当前不是配置项，固定为 user/project 目
 | `UNKNOWN_AGENT` | 找不到指定 agent；返回可用 agent 名称 |
 | `SUBAGENT_DISABLED` | 已定义但当前没有直接返回路径；保留给未来 per-agent disable 语义 |
 | `SUBAGENT_DEPTH_EXCEEDED` | depth 超限；子代理不能继续调用子代理 |
-| `SUBAGENT_TIMEOUT` | child execution 超时 |
+| `SUBAGENT_TIMEOUT` | 执行超时；可能是 hard cap（`timeoutMs`）耗尽或 idle 超时（`idleTimeoutMs`）触发；可通过 `timeoutReason` 字段进一步区分 |
 | `SUBAGENT_FAILED` | spawn、session directory、child process 或 provider/runtime failure 等未分类失败 |
 | `SUBAGENT_OUTPUT_TRUNCATED` | 输出过长被截断；可与成功执行同时出现 |
 

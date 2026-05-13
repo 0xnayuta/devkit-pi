@@ -82,6 +82,8 @@ language: chinese
     | { type: "text"; text: string }
     | { type: "toolCall"; name: string; args: Record<string, unknown> }
   >;
+  /** Present when exitCode === 124 (timeout). Distinguishes hard cap vs idle timeout. */
+  timeoutReason?: "runtime" | "idle";
 }
 ```
 
@@ -93,6 +95,7 @@ language: chinese
 - `sessionFile`：child session JSONL 文件路径，用于调试；不建议作为稳定外部 API 强依赖。
 - `output`：脱敏后的子代理输出。
 - `displayItems`：从 assistant messages 提取的文本和 tool calls，用于 rich rendering；格式细节可能变化。
+- `timeoutReason`：当 `exitCode === 124` 时存在，表示超时原因。`"runtime"` 表示达到 `timeoutMs`（最大总运行时间）上限；`"idle"` 表示超过 `idleTimeoutMs`（最大空闲时间）且无有效活动。重试场景下以最后一次执行为准。
 
 ## 成功示例
 

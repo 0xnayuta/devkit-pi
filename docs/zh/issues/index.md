@@ -7,6 +7,10 @@ language: chinese
 
 # 问题日志
 
+## 待实施
+
+- **子代理超时问题**：引入双超时模型（`timeoutMs` 作为 hard cap，`idleTimeoutMs` 作为空闲超时），将默认 5 分钟改为 15 分钟最大运行时长 + 3 分钟空闲超时，避免子代理长任务被机械终止。详见 [子代理超时问题：双超时模型改造计划](./subagent-timeout-idle-model.md)。
+
 ## 最近修复
 
 ### v0.2.0

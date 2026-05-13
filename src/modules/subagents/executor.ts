@@ -306,6 +306,7 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
 
     const maxAttempts = deps.config.retry.enabled ? deps.config.retry.maxAttempts : 1;
     const timeoutMs = deps.config.timeoutMs;
+    const idleTimeoutMs = deps.config.idleTimeoutMs;
 
     let exitCode = 1;
     let output = "";
@@ -315,6 +316,7 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
     let sessionFile = path.join(sessionDir, "session.jsonl");
     let attemptsUsed = 0;
     let finalDisplayItems: DisplayItem[] | undefined;
+    let finalTimeoutReason: "runtime" | "idle" | undefined;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       attemptsUsed = attempt;
@@ -338,6 +340,7 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
         const result: RunSyncResult = await runSync(cwd, piArgs.args, {
           signal,
           timeoutMs,
+          idleTimeoutMs,
           env: piArgs.env,
           onStreamingUpdate: (state: StreamingState) => {
             if (!onUpdate) return;
@@ -367,8 +370,13 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
         providerError = result.error;
         partialOutput = result.partialOutput;
         finalDisplayItems = result.displayItems;
+        finalTimeoutReason = result.timeoutReason;
         if (result.timedOut) {
-          output = `Subagent timed out after ${timeoutMs}ms.`;
+          if (result.timeoutReason === "idle") {
+            output = `Subagent timed out after ${idleTimeoutMs}ms without activity.`;
+          } else {
+            output = `Subagent exceeded maximum runtime after ${timeoutMs}ms.`;
+          }
           providerError = output;
         } else if (result.cancelled && signal.aborted) {
           output = "Subagent execution was cancelled by user.";
@@ -447,6 +455,7 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
       sessionFile,
       output: sanitizedOutput,
       displayItems: finalDisplayItems,
+      timeoutReason: finalTimeoutReason,
     };
 
     // Determine if truncation occurred

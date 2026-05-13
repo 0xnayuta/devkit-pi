@@ -14,7 +14,8 @@ describe("Devkit Config Loading", () => {
 			assert.equal(DEFAULT_CONFIG.enabled, true);
 			assert.equal(DEFAULT_CONFIG.subagents.enabled, true);
 			assert.equal(DEFAULT_CONFIG.subagents.maxDepth, 1);
-			assert.equal(DEFAULT_CONFIG.subagents.timeoutMs, 300_000);
+			assert.equal(DEFAULT_CONFIG.subagents.timeoutMs, 900_000);
+			assert.equal(DEFAULT_CONFIG.subagents.idleTimeoutMs, 180_000);
 			assert.equal(DEFAULT_CONFIG.subagents.allowWrite, false);
 			assert.equal(DEFAULT_CONFIG.subagents.allowLspTools, true);
 			assert.deepEqual(DEFAULT_CONFIG.subagents.allowedLspActions, [

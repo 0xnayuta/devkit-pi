@@ -129,7 +129,10 @@ export class ToolkitReportPanel implements Component {
     if (fixedTextWidth > middleWidth) {
       return (
         th.fg("borderMuted", "╭─") +
-        th.fg("accent", th.bold(truncateToWidth(`${titleText}${scrollInfo}`, middleWidth, "", true))) +
+        th.fg(
+          "accent",
+          th.bold(truncateToWidth(`${titleText}${scrollInfo}`, middleWidth, "", true))
+        ) +
         th.fg("borderMuted", "─╮")
       );
     }

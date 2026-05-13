@@ -92,6 +92,8 @@ export interface SingleResult {
     | { type: "text"; text: string }
     | { type: "toolCall"; name: string; args: Record<string, unknown> }
   >;
+  /** Why the execution was terminated. Present when timedOut === true. */
+  timeoutReason?: "runtime" | "idle";
 }
 
 // ---------------------------------------------------------------------------
@@ -243,6 +245,8 @@ export interface SubagentsConfig {
   enabled?: boolean;
   maxDepth?: number;
   timeoutMs?: number;
+  /** Maximum idle time (ms) since the last valid activity event before the child is terminated. */
+  idleTimeoutMs?: number;
   allowWrite?: boolean;
   allowLspTools?: boolean;
   allowedLspActions?: LspReadonlyAction[];

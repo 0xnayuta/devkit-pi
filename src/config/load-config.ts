@@ -97,7 +97,8 @@ export const DEFAULT_CONVERT_CONTENT_CONFIG: ResolvedConvertContentConfig = {
 export const DEFAULT_SUBAGENTS_CONFIG: ResolvedSubagentsConfig = {
   enabled: true,
   maxDepth: 1,
-  timeoutMs: 300000,
+  timeoutMs: 900000,
+  idleTimeoutMs: 180000,
   allowWrite: false,
   allowLspTools: true,
   allowedLspActions: DEFAULT_SUBAGENT_LSP_ACTIONS,
@@ -333,6 +334,7 @@ function normalizeSubagentsConfig(base: SubagentsConfig | undefined): ResolvedSu
     enabled: booleanValue(base?.enabled, DEFAULT_SUBAGENTS_CONFIG.enabled),
     maxDepth: nonNegativeInteger(base?.maxDepth, DEFAULT_SUBAGENTS_CONFIG.maxDepth),
     timeoutMs: positiveInteger(base?.timeoutMs, DEFAULT_SUBAGENTS_CONFIG.timeoutMs),
+    idleTimeoutMs: positiveInteger(base?.idleTimeoutMs, DEFAULT_SUBAGENTS_CONFIG.idleTimeoutMs),
     allowWrite: booleanValue(base?.allowWrite, DEFAULT_SUBAGENTS_CONFIG.allowWrite),
     allowLspTools: booleanValue(base?.allowLspTools, DEFAULT_SUBAGENTS_CONFIG.allowLspTools),
     allowedLspActions: normalizeLspReadonlyActions(base?.allowedLspActions),
