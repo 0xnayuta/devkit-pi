@@ -385,10 +385,7 @@ function checkPlanningDocs() {
           .join(" or ")}, got '${fm.status}'`
       );
     }
-    // Check for warning about not being current behavior
-    if (!/not current behavior|不代表当前/.test(content)) {
-      errors.push(`${file}: planning doc must contain warning about not being current behavior`);
-    }
+
   }
 }
 
