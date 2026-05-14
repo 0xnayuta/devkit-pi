@@ -15,6 +15,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { loadConfig, mergeConfig } from "./config/load-config.ts";
 import { registerToolkitCommands } from "./modules/commands/register.ts";
 import { registerConvertTools } from "./modules/convert/index.ts";
+import { registerGuardsModule } from "./modules/guards/index.ts";
 import { registerLspModule } from "./modules/lsp/register.ts";
 import { registerSubagentsModule } from "./modules/subagents/register.ts";
 import { registerWebTools } from "./modules/web/register.ts";
@@ -50,6 +51,9 @@ export default function registerExtension(pi: ExtensionAPI): void {
 
   // Convert tool is available in both parent and child processes.
   registerConvertTools(pi, effectiveConfig.convertContent);
+
+  // Guards are main-process-only soft notices; they do not block tool calls.
+  registerGuardsModule(pi, effectiveConfig.guards);
 
   // Commands module is main-process only and controlled by commands.enabled.
   registerToolkitCommands(pi, effectiveConfig);

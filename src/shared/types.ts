@@ -283,6 +283,13 @@ export interface CommandsConfig {
   enabled?: boolean;
 }
 
+export interface GuardsConfig {
+  enabled?: boolean;
+  gitContextNotice?: boolean;
+  firstWriteReminder?: boolean;
+  verificationReminder?: boolean;
+}
+
 export interface ConvertContentConfig {
   enabled?: boolean;
   provider?: "markitdown";
@@ -299,6 +306,7 @@ export interface ToolkitConfig {
   web?: WebConfig;
   lsp?: LspConfig;
   commands?: CommandsConfig;
+  guards?: GuardsConfig;
   convertContent?: ConvertContentConfig;
 }
 
@@ -333,6 +341,8 @@ export type RequiredLspHookConfig = Required<LspHookConfig>;
 
 export type ResolvedConvertContentConfig = Required<ConvertContentConfig>;
 
+export type ResolvedGuardsConfig = Required<GuardsConfig>;
+
 export type ResolvedLspConfig = Required<Omit<LspConfig, "tool" | "hook">> & {
   tool: Required<LspToolConfig>;
   hook: RequiredLspHookConfig;
@@ -344,6 +354,7 @@ export interface ResolvedToolkitConfig {
   web: ResolvedWebConfig;
   lsp: ResolvedLspConfig;
   commands: Required<CommandsConfig>;
+  guards: ResolvedGuardsConfig;
   convertContent: ResolvedConvertContentConfig;
 }
 

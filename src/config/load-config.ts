@@ -5,6 +5,7 @@ import type {
   CommandsConfig,
   ConvertContentConfig,
   DebugLevel,
+  GuardsConfig,
   LspConfig,
   LspReadonlyAction,
   ResolvedConvertContentConfig,
@@ -94,6 +95,13 @@ export const DEFAULT_CONVERT_CONTENT_CONFIG: ResolvedConvertContentConfig = {
   allowPrivateNetwork: false,
 };
 
+export const DEFAULT_GUARDS_CONFIG = {
+  enabled: true,
+  gitContextNotice: true,
+  firstWriteReminder: true,
+  verificationReminder: true,
+};
+
 export const DEFAULT_SUBAGENTS_CONFIG: ResolvedSubagentsConfig = {
   enabled: true,
   maxDepth: 1,
@@ -127,6 +135,7 @@ export const DEFAULT_CONFIG: ResolvedToolkitConfig = {
   commands: {
     enabled: true,
   },
+  guards: DEFAULT_GUARDS_CONFIG,
   convertContent: DEFAULT_CONVERT_CONTENT_CONFIG,
 };
 
@@ -385,6 +394,21 @@ function normalizeCommandsConfig(
   };
 }
 
+function normalizeGuardsConfig(base: GuardsConfig | undefined): ResolvedToolkitConfig["guards"] {
+  return {
+    enabled: booleanValue(base?.enabled, DEFAULT_GUARDS_CONFIG.enabled),
+    gitContextNotice: booleanValue(base?.gitContextNotice, DEFAULT_GUARDS_CONFIG.gitContextNotice),
+    firstWriteReminder: booleanValue(
+      base?.firstWriteReminder,
+      DEFAULT_GUARDS_CONFIG.firstWriteReminder
+    ),
+    verificationReminder: booleanValue(
+      base?.verificationReminder,
+      DEFAULT_GUARDS_CONFIG.verificationReminder
+    ),
+  };
+}
+
 function normalizeConvertContentConfig(
   base: ConvertContentConfig | undefined
 ): ResolvedConvertContentConfig {
@@ -415,6 +439,7 @@ export function mergeConfig(base: ToolkitConfig): ResolvedToolkitConfig {
     web: normalizeWebConfig(base.web),
     lsp: normalizeLspConfig(base.lsp),
     commands: normalizeCommandsConfig(base.commands),
+    guards: normalizeGuardsConfig(base.guards),
     convertContent: normalizeConvertContentConfig(base.convertContent),
   };
 }

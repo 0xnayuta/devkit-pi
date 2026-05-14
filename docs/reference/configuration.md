@@ -128,6 +128,12 @@ Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG`, `DEF
   },
   "commands": {
     "enabled": true
+  },
+  "guards": {
+    "enabled": true,
+    "gitContextNotice": true,
+    "firstWriteReminder": true,
+    "verificationReminder": true
   }
 }
 ```
@@ -163,6 +169,7 @@ Source: `DEFAULT_CONFIG`, `mergeConfig()`.
 | `lsp` | object | See below | No | `lsp` tool and automatic diagnostics hook | `src/modules/lsp/*` |
 | `convertContent` | object | See below | No | `convert_content` document conversion tool configuration. Local `path` and remote `url` conversion use MarkItDown provider after safe source handling | `src/modules/convert/*` |
 | `commands` | object | See below | No | Unified `/toolkit` developer command | `src/modules/commands/register.ts` |
+| `guards` | object | See below | No | Lightweight user-visible session notices; soft reminders only, no hard gates | `src/modules/guards/*` |
 
 Example: disable entire extension.
 
@@ -577,6 +584,31 @@ Example:
 {
   "commands": {
     "enabled": false
+  }
+}
+```
+
+## Guards configuration
+
+Source: `DEFAULT_CONFIG.guards`, `normalizeGuardsConfig()`, `src/modules/guards/*`.
+
+Guards are lightweight session notices. They use UI notification/status channels when available, do not block tool calls, and do not trigger follow-up agent turns.
+
+| Key | Type | Default | Required | Purpose | Related source |
+|---|---|---:|---|---|---|
+| `guards.enabled` | boolean | `true` | No | Whether to register lightweight session guard notices in the main agent process | `src/modules/guards/index.ts` |
+| `guards.gitContextNotice` | boolean | `true` | No | After the first tool result in a session, show repo/branch/worktree context once when the current cwd is inside a git worktree | `src/modules/guards/git-context.ts` |
+| `guards.firstWriteReminder` | boolean | `true` | No | Before the first likely write tool call in a session, show current branch/worktree context once | `src/modules/guards/index.ts`, `src/modules/guards/tool-classifier.ts` |
+| `guards.verificationReminder` | boolean | `true` | No | At agent end, if the current turn appears to have modified files but no verification command was detected, show a soft reminder | `src/modules/guards/index.ts`, `src/modules/guards/command-classifier.ts` |
+
+Current behavior: `gitContextNotice`, `firstWriteReminder`, and `verificationReminder` are implemented. Git commands use a short timeout and silently degrade when git is unavailable, the cwd is not a git repo, or git commands fail. Write classification is conservative: explicit file-editing tools are treated as writes, and `bash`/`shell` are only treated as writes for obvious mutating commands such as redirection, `rm`, `mv`, `cp`, `sed -i`, `tee`, `apply_patch`, selected `git` mutating commands, or package installs. Verification classification is also conservative and recognizes common test/lint/typecheck/build commands such as `pnpm test`, `npm run lint`, `tsc --noEmit`, `cargo test`, `pytest`, `go test`, `cmake --build`, `ctest`, and `biome check`. Subagent child processes do not register guards.
+
+Example:
+
+```json
+{
+  "guards": {
+    "gitContextNotice": false
   }
 }
 ```

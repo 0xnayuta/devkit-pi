@@ -72,6 +72,13 @@ src/
 │  │  ├─ renderers.ts            # compact/expanded TUI renderers
 │  │  ├─ observability.ts        # toolkit-level convert activity 记录
 │  │  └─ tool.ts                 # path/URL 编排和错误映射
+│  ├─ guards/                    # lightweight session notices，不做 hard gate
+│  │  ├─ index.ts                # guards hooks 注册与 session/turn 状态编排
+│  │  ├─ git-context.ts          # git repo/branch/worktree context helpers
+│  │  ├─ tool-classifier.ts      # 保守写入工具分类
+│  │  ├─ command-classifier.ts   # 保守验证命令分类
+│  │  ├─ state.ts                # session state factory
+│  │  └─ types.ts                # guards 类型
 │  └─ ...
 └─ shared/
    ├─ types.ts                   # 共享类型、配置类型、subagent 错误码
@@ -104,6 +111,7 @@ loadConfig()
   → registerLspModule(pi, config.lsp)
   → registerSubagentsModule(pi, effectiveSubagentsConfig)
   → registerConvertTools(pi, config.convertContent)
+  → registerGuardsModule(pi, config.guards)
   → registerToolkitCommands(pi, config)
 ```
 
@@ -113,8 +121,9 @@ loadConfig()
 2. `lsp` tool 可在主代理和子代理进程注册，但 privileged actions 在子代理进程中始终被阻止。
 3. `subagents` 模块内部检查 `PI_SUBAGENT_CHILD`，子代理进程不会注册 `subagent` 工具。
 4. `convert_content` 可在主代理和子代理进程注册；本地 `path` 和远程 `url` 转换在本地校验或安全 URL 下载后使用 MarkItDown CLI provider。
-5. `/toolkit` commands 只在主代理进程注册。
-6. `subagents.allowLspTools` 会与 `lsp.enabled`、`lsp.tool.enabled` 合并后生效。
+5. `guards` 只在主代理进程注册，输出 user-visible soft notices，不阻止工具调用，不触发 follow-up turn。
+6. `/toolkit` commands 只在主代理进程注册。
+7. `subagents.allowLspTools` 会与 `lsp.enabled`、`lsp.tool.enabled` 合并后生效。
 
 ## 模块职责
 
@@ -209,6 +218,25 @@ loadConfig()
 - 提供 `convert_content` calls/results 的 compact/expanded TUI renderers。
 - 将 convert success/error entries 记录到共享 toolkit-level activity log。
 - `path` 是 canonical 本地文件输入字段；不使用 `file_path`。
+
+### `src/modules/guards/`
+
+当前已实现：
+
+- 添加 `guards` 配置 namespace：`enabled`、`gitContextNotice`、`firstWriteReminder`、`verificationReminder`。
+- 在主代理进程注册 lightweight session guards；子代理进程不注册。
+- `gitContextNotice`：session 第一次 `tool_result` 后读取 git repo、branch、worktree dirty/clean、detached HEAD 状态，并通过 UI notice/status 显示一次。
+- `firstWriteReminder`：session 第一次疑似写入 `tool_call` 前显示当前 branch/worktree soft reminder。
+- `verificationReminder`：每个 agent turn 记录潜在写入和验证命令；`agent_end` 时如果本 turn 有写入但未检测到验证命令，则显示验证状态提醒。
+- `tool-classifier.ts` 对显式写入工具直接识别，并对 `bash`/`shell` 只保守匹配明显 mutating commands。
+- `command-classifier.ts` 保守识别常见 test/lint/typecheck/build 命令。
+
+当前边界：
+
+- guards 只做 user-visible notice，不做 hard gate、确认弹窗、Plan Tracker、phase state 或 workflow monitor。
+- guards 不调用 `pi.sendMessage()`，不触发 follow-up agent turn。
+- git 命令失败、git 不可用或 cwd 不在 git repo 中时静默降级。
+- 当前不写 activity log，不引入 guard-specific logger。
 
 ### `src/modules/commands/`
 

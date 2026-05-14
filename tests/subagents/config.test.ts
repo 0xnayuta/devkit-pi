@@ -36,6 +36,10 @@ describe("Devkit Config Loading", () => {
 			assert.equal(DEFAULT_CONFIG.lsp.hook.enabled, true);
 			assert.equal(DEFAULT_CONFIG.lsp.hook.mode, "agent_end");
 			assert.equal(DEFAULT_CONFIG.commands.enabled, true);
+			assert.equal(DEFAULT_CONFIG.guards.enabled, true);
+			assert.equal(DEFAULT_CONFIG.guards.gitContextNotice, true);
+			assert.equal(DEFAULT_CONFIG.guards.firstWriteReminder, true);
+			assert.equal(DEFAULT_CONFIG.guards.verificationReminder, true);
 		});
 
 		it("has correct web providerPriority", () => {
@@ -106,6 +110,27 @@ describe("Devkit Config Loading", () => {
 			const invalid = mergeConfig({ lsp: { hook: { enabled: true, mode: "turn_end" as any } } });
 			assert.equal(invalid.lsp.hook.enabled, true);
 			assert.equal(invalid.lsp.hook.mode, DEFAULT_CONFIG.lsp.hook.mode);
+		});
+
+		it("normalizes guards config", () => {
+			const config = mergeConfig({
+				guards: {
+					enabled: false,
+					gitContextNotice: false,
+					firstWriteReminder: false,
+					verificationReminder: false,
+				},
+			});
+
+			assert.deepEqual(config.guards, {
+				enabled: false,
+				gitContextNotice: false,
+				firstWriteReminder: false,
+				verificationReminder: false,
+			});
+
+			const invalid = mergeConfig({ guards: { enabled: "no" as any } });
+			assert.equal(invalid.guards.enabled, DEFAULT_CONFIG.guards.enabled);
 		});
 
 		it("normalizes invalid subagent fields through mergeConfig", () => {

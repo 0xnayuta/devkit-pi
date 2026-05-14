@@ -15,6 +15,7 @@ language: chinese
 - web：provider 选择、fetch 安全限制、缓存、并发、connection pool、observability、storage、renderers
 - lsp：模块注册、`servers` action、privileged action gating、hook 注册/禁用/子进程隔离
 - convert：`convert_content` schema、注册、本地/URL 安全边界、provider、renderers
+- guards：git context notice、first write notice、verification status notice、工具/命令分类、子进程隔离
 - shared：外部命令 runner 等跨模块 helper
 - config：namespace 配置 merge、错误码、package manifest
 
@@ -28,6 +29,7 @@ tests/commands/           # unified toolkit command registration
 tests/web/                # web module
 tests/lsp/                # lsp module
 tests/convert/            # convert_content module
+tests/guards/             # lightweight session guards
 tests/shared/             # shared helpers, e.g. external command runner
 tests/package-manifest.test.ts
 ```
