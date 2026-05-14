@@ -337,7 +337,7 @@ Custom agents discovery 路径当前不是配置项，固定为 user/project 目
 | `SUBAGENT_DEPTH_EXCEEDED` | depth 超限；子代理不能继续调用子代理 |
 | `SUBAGENT_TIMEOUT` | 执行超时；可能是 hard cap（`timeoutMs`）耗尽或 idle 超时（`idleTimeoutMs`）触发；可通过 `timeoutReason` 字段进一步区分 |
 | `SUBAGENT_FAILED` | spawn、session directory、child process 或 provider/runtime failure 等未分类失败 |
-| `SUBAGENT_OUTPUT_TRUNCATED` | 输出过长被截断；可与成功执行同时出现 |
+| `SUBAGENT_OUTPUT_TRUNCATED` | 输出过长被截断；也用于 child stdout/stderr/JSONL 输出超过执行硬上限并被停止的情况 |
 
 失败表现：
 

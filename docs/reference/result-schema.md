@@ -186,7 +186,7 @@ Canonical source: `SUBAGENT_ERROR_CODES` in `src/shared/types.ts`.
 | `SUBAGENT_DEPTH_EXCEEDED` | Recursion depth exceeded; subagents cannot call further subagents |
 | `SUBAGENT_TIMEOUT` | Execution timed out |
 | `SUBAGENT_FAILED` | Subagent execution failed, including spawn/session/runtime/provider uncategorized failures |
-| `SUBAGENT_OUTPUT_TRUNCATED` | Output was truncated |
+| `SUBAGENT_OUTPUT_TRUNCATED` | Output was truncated, or child stdout/stderr/JSONL output exceeded the execution hard limit and was stopped |
 
 ## Output collection
 
@@ -205,13 +205,14 @@ If there is no final assistant text, a short diagnostic is returned instead of e
 Before returning, the following are executed:
 
 - `sanitizeOutput()`: masks common API keys, tokens, Authorization headers, GitHub tokens, user paths, and overly long stack traces.
+- child output hard limits in `src/modules/subagents/execution.ts`: stop abnormal child stdout/stderr/JSONL output before it can grow without bound.
 - `truncateOutput()`: truncates long output per default output limits.
 
 Therefore:
 
 - `details.results[0].output` is the sanitized output.
 - `content[0].text` may be the truncated text.
-- When truncated, `details.error.code` may be `SUBAGENT_OUTPUT_TRUNCATED`.
+- When truncated or stopped by child output hard limits, `details.error.code` may be `SUBAGENT_OUTPUT_TRUNCATED`.
 
 ## Logs and activity
 

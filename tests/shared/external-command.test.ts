@@ -86,6 +86,32 @@ describe("external command runner", () => {
     assert.equal(path.normalize(result.stdout.trim()), path.normalize(tempDir));
   });
 
+  it("caps stdout and marks the stream truncated", async () => {
+    const runner = new NodeExternalCommandRunner();
+
+    const result = await runner.run(
+      { executable: process.execPath, args: ["-e", "process.stdout.write('x'.repeat(200000))"] },
+      { timeoutMs: 1000, maxStdoutBytes: 1024 }
+    );
+
+    assert.equal(Buffer.byteLength(result.stdout), 1024);
+    assert.equal(result.outputTruncated.stdout, true);
+    assert.equal(result.outputTruncated.stderr, false);
+  });
+
+  it("caps stderr and marks the stream truncated", async () => {
+    const runner = new NodeExternalCommandRunner();
+
+    const result = await runner.run(
+      { executable: process.execPath, args: ["-e", "process.stderr.write('e'.repeat(200000))"] },
+      { timeoutMs: 1000, maxStderrBytes: 1024 }
+    );
+
+    assert.equal(Buffer.byteLength(result.stderr), 1024);
+    assert.equal(result.outputTruncated.stdout, false);
+    assert.equal(result.outputTruncated.stderr, true);
+  });
+
   it("reports timeout without shell interpolation", async () => {
     const runner = new NodeExternalCommandRunner();
 

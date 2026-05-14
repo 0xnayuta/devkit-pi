@@ -200,6 +200,38 @@ describe("ddgs provider", () => {
 	});
 });
 
+describe("provider response body limits", () => {
+	it("rejects oversized ddgs HTML before parsing", async () => {
+		globalThis.fetch = (() => Promise.resolve(new Response(`${"x".repeat(128)}${mockDdgHtml([{ title: "Late", url: "https://example.com/late" }])}`, { status: 200 }))) as typeof fetch;
+
+		await assert.rejects(
+			() => ddgsProvider.search({ query: "test", numResults: 1 }, webConfig({ maxResponseBytes: 32 })),
+			/response body exceeded the configured maxResponseBytes limit \(32 bytes\)/,
+		);
+	});
+
+	it("rejects oversized JSON provider responses before parsing", async () => {
+		const providers = [
+			{ provider: braveProvider, env: ENV.brave, config: webConfig({ brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV.brave }, maxResponseBytes: 8 }) },
+			{ provider: openserpProvider, env: ENV.openserp, config: webConfig({ openserp: { enabled: true, baseUrl: "https://api.openserp.com", apiKeyEnv: ENV.openserp }, maxResponseBytes: 8 }) },
+			{ provider: searxngProvider, config: webConfig({ searxng: { enabled: true, baseUrl: "http://localhost:8888", defaultEngine: "google" }, maxResponseBytes: 8 }) },
+			{ provider: serperProvider, env: ENV.serper, config: webConfig({ serper: { enabled: true, baseUrl: "https://google.serper.dev/search", apiKeyEnv: ENV.serper }, maxResponseBytes: 8 }) },
+			{ provider: tavilyProvider, env: ENV.tavily, config: webConfig({ tavily: { enabled: true, baseUrl: "https://api.tavily.com/search", apiKeyEnv: ENV.tavily }, maxResponseBytes: 8 }) },
+		];
+
+		for (const item of providers) {
+			clearApiKeys();
+			if (item.env) setApiKey(item.env);
+			globalThis.fetch = (() => Promise.resolve(jsonResponse({ results: [], web: { results: [] }, organic: [], organic_results: [] }))) as typeof fetch;
+			await assert.rejects(
+				() => item.provider.search({ query: "test", numResults: 1 }, item.config),
+				/response body exceeded the configured maxResponseBytes limit \(8 bytes\)/,
+				`${item.provider.name} should reject oversized responses`,
+			);
+		}
+	});
+});
+
 describe("keyed provider availability", () => {
 	it("validates API keys and base URLs consistently", () => {
 		const cases = [

@@ -150,7 +150,7 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 - `NETWORK_ERROR`
 - `INVALID_INPUT`（provider 配置/选择错误）
 
-provider JSON parse 或 response shape 异常当前继续归入 `WEB_SEARCH_FAILED`，不直接返回 reserved code `PARSE_ERROR`。
+provider JSON parse、response shape 异常或 provider 响应体超过 `web.maxResponseBytes` 当前继续归入 `WEB_SEARCH_FAILED`，不直接返回 reserved code `PARSE_ERROR`。
 
 ### 示例
 
@@ -226,6 +226,8 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 - 重定向到上述目标的 URL
 
 安全策略拒绝当前归入 `CONTENT_FETCH_FAILED`，不会新增独立 blocked 错误码。若确需抓取本地开发服务，可在配置中设置 `web.allowPrivateNetwork=true`。
+
+DNS rebinding / TOCTOU 限制：URL validation 当前在 `fetch` 前执行 DNS 检查，并重新校验 redirect 目标，但不会把已检查 IP 固定到实际连接。攻击者控制的 DNS 仍可能造成 time-of-check/time-of-use 窗口。高风险环境应禁用远程抓取，或保持 private-network access 关闭，直到完成 connection-stage IP pinning 设计与实现。
 
 ### 内容提取行为
 
@@ -463,7 +465,7 @@ Internal implementation：
 
 - reserved error codes 不代表当前会直接返回。
 - provider 行为可能因第三方服务、API key、rate limit、HTML/JSON 返回格式变化而异。
-- search provider response shape 异常当前继续归入 `WEB_SEARCH_FAILED`。
+- search provider response shape 异常以及 provider 响应体超过 `web.maxResponseBytes` 当前继续归入 `WEB_SEARCH_FAILED`。
 - fetch truncation 当前是成功语义，不返回 `CONTENT_FETCH_TOO_LARGE`。
 - 安全策略拒绝当前归入 `CONTENT_FETCH_FAILED`。
 
@@ -483,6 +485,7 @@ Internal implementation：
 | Search cache | `src/modules/web/cache.ts` |
 | Concurrency throttling | `src/modules/web/concurrency.ts` |
 | HTTP connection pool | `src/modules/web/http-pool.ts` |
+| 有限响应读取 | `src/modules/web/read-limited.ts` |
 | Observability/activity | `src/modules/web/observability.ts` |
 | Renderers | `src/modules/web/renderers.ts` |
 | Errors | `src/modules/web/errors.ts` |

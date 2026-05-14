@@ -150,7 +150,7 @@ Common active codes:
 - `NETWORK_ERROR`
 - `INVALID_INPUT` (provider configuration/selection error)
 
-Provider JSON parse or response shape anomalies currently continue to be classified as `WEB_SEARCH_FAILED`, not directly returning reserved code `PARSE_ERROR`.
+Provider JSON parse, response shape anomalies, or provider response bodies exceeding `web.maxResponseBytes` currently continue to be classified as `WEB_SEARCH_FAILED`, not directly returning reserved code `PARSE_ERROR`.
 
 ### Examples
 
@@ -226,6 +226,8 @@ Default `web.allowPrivateNetwork=false`. `fetch_content` will reject via `src/mo
 - URLs redirecting to the above targets
 
 Security policy rejection is currently classified as `CONTENT_FETCH_FAILED`, not a new independent blocked error code. If local development server access is needed, set `web.allowPrivateNetwork=true` in configuration.
+
+DNS rebinding / TOCTOU limitation: URL validation currently performs DNS checks before `fetch` and revalidates redirect targets, but it does not pin the checked IP address to the actual connection. Attacker-controlled DNS can still create a time-of-check/time-of-use gap. High-risk environments should disable remote fetching or keep private-network access disabled until connection-stage IP pinning is designed and implemented.
 
 ### Content extraction behavior
 
@@ -463,7 +465,7 @@ Boundary notes:
 
 - Reserved error codes do not represent current direct returns.
 - Provider behavior may vary due to third-party services, API keys, rate limits, HTML/JSON return format changes.
-- Search provider response shape anomalies currently continue to be classified as `WEB_SEARCH_FAILED`.
+- Search provider response shape anomalies and provider response bodies exceeding `web.maxResponseBytes` currently continue to be classified as `WEB_SEARCH_FAILED`.
 - Fetch truncation is currently success semantics, not returning `CONTENT_FETCH_TOO_LARGE`.
 - Security policy rejection is currently classified as `CONTENT_FETCH_FAILED`.
 
@@ -483,6 +485,7 @@ Boundary notes:
 | Search cache | `src/modules/web/cache.ts` |
 | Concurrency throttling | `src/modules/web/concurrency.ts` |
 | HTTP connection pool | `src/modules/web/http-pool.ts` |
+| Limited response readers | `src/modules/web/read-limited.ts` |
 | Observability/activity | `src/modules/web/observability.ts` |
 | Renderers | `src/modules/web/renderers.ts` |
 | Errors | `src/modules/web/errors.ts` |

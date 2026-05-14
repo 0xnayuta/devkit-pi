@@ -31,7 +31,8 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配�
   "subagents": {
     "enabled": true,
     "maxDepth": 1,
-    "timeoutMs": 300000,
+    "timeoutMs": 900000,
+    "idleTimeoutMs": 180000,
     "allowWrite": false,
     "allowLspTools": true,
     "allowedLspActions": [
@@ -181,7 +182,8 @@ Public overview、tool API、agent definition 与 result schema 见 [`subagents.
 |---|---|---:|---|---|---|
 | `subagents.enabled` | boolean | `true` | 否 | 是否注册 `subagent` tool | `src/modules/subagents/register.ts` |
 | `subagents.maxDepth` | number | `1` | 否 | 子代理最大深度；默认禁止 nested subagents。接受非负整数 | `src/shared/types.ts`, `src/modules/subagents/register.ts` |
-| `subagents.timeoutMs` | number | `300000` | 否 | 单次子代理执行超时，单位 ms | `src/modules/subagents/executor.ts` |
+| `subagents.timeoutMs` | number | `900000` | 否 | 单次 child execution 的最大总运行时长（hard cap），从子进程启动时开始计时，不会因子代理活动而重置 | `src/modules/subagents/executor.ts` |
+| `subagents.idleTimeoutMs` | number | `180000` | 否 | 子代理自最后一次有效结构化活动后的最大空闲时间，单位 ms；普通 stdout 文本不会重置该计时器 | `src/modules/subagents/executor.ts`, `src/modules/subagents/collect-output.ts` |
 | `subagents.allowWrite` | boolean | `false` | 否 | 实验性/高级/不安全开关。放宽非 readonly 自定义 agent 的工具过滤策略；不代表完整权限沙箱、审计日志、自动回滚或稳定写入能力契约 | `src/config/load-config.ts`, `src/modules/subagents/*` |
 | `subagents.allowLspTools` | boolean | `true` | 否 | 是否允许子代理使用 readonly LSP tool；还会受 `lsp.enabled` 与 `lsp.tool.enabled` 共同限制 | `src/index.ts`, `src/modules/subagents/*` |
 | `subagents.allowedLspActions` | string[] | 见下方 | 否 | 子代理可用 LSP action 白名单；非法值会被丢弃 | `src/config/load-config.ts` |
@@ -307,7 +309,7 @@ rename, codeAction, restart
 | `web.provider` | string | `ddgs` | 否 | 搜索 provider：`auto` / `brave` / `ddgs` / `openserp` / `searxng` / `tavily` / `serper` | `src/config/load-config.ts`, `src/modules/web/providers/select-provider.ts` |
 | `web.providerPriority` | string[] | `['tavily','serper','brave','openserp','searxng','ddgs']` | 否 | `provider="auto"` 时的候选顺序。源码会按 commercial / self-host-or-open / zero-config 分层后应用该优先级 | `src/modules/web/providers/select-provider.ts` |
 | `web.timeoutMs` | number | `10000` | 否 | web/provider/fetch 请求超时，单位 ms | `src/modules/web/abort.ts`, providers |
-| `web.maxResponseBytes` | number | `1048576` | 否 | fetch 下载响应体最大字节数 | `src/modules/web/fetch.ts` |
+| `web.maxResponseBytes` | number | `1048576` | 否 | `fetch_content` 下载与 search provider 响应体最大字节数 | `src/modules/web/fetch.ts`, `src/modules/web/read-limited.ts` |
 | `web.maxContentChars` | number | `30000` | 否 | tool 返回内容最大字符数 | `src/modules/web/fetch.ts`, `src/modules/web/storage.ts` |
 | `web.maxResults` | number | `5` | 否 | 默认搜索结果数量 | `src/modules/web/search.ts` |
 | `web.maxStoredResults` | number | `100` | 否 | responseId storage 最多保留结果条目数 | `src/modules/web/storage.ts`, `src/modules/web/register.ts` |

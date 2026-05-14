@@ -67,15 +67,14 @@ export class HttpConnectionPool {
       scheduling: this.config.scheduling,
     });
 
-    // Create HTTPS agent with same settings
+    // Create HTTPS agent with same settings. Do not override Node's
+    // default TLS certificate validation.
     this.httpsAgent = new https.Agent({
       keepAlive: true,
       maxSockets: this.config.maxSockets,
       maxFreeSockets: this.config.maxFreeSockets,
       timeout: this.config.timeout,
       scheduling: this.config.scheduling,
-      // Allow self-signed certificates for flexibility
-      rejectUnauthorized: false,
     });
   }
 
@@ -179,7 +178,6 @@ export class HttpConnectionPool {
         maxFreeSockets: this.config.maxFreeSockets,
         timeout: this.config.timeout,
         scheduling: this.config.scheduling,
-        rejectUnauthorized: false,
       });
     } else {
       this.config = newConfig;

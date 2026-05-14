@@ -141,6 +141,9 @@ export async function validatePublicHttpUrl(
     return parsed;
   }
 
+  // DNS rebinding / TOCTOU limitation: this validates pre-fetch DNS results but
+  // does not pin the actual socket connection to one of these IPs. Future
+  // hardening should add connection-stage IP pinning for fetch/download paths.
   const addresses = await lookup(hostForIp, { all: true, verbatim: true });
   if (addresses.length === 0) {
     throw new Error(`Unable to resolve hostname: ${parsed.hostname}`);

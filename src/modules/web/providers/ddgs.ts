@@ -2,6 +2,7 @@ import type { ResolvedWebConfig } from "../../../shared/types.ts";
 import { withTimeoutSignal } from "../abort.ts";
 import { normalizeWhitespace } from "../extract.ts";
 import { pooledFetch } from "../http-pool.ts";
+import { readLimitedText, readLimitedTextOrThrow } from "../read-limited.ts";
 import type { SearchResultItem } from "../types.ts";
 import type { ProviderSearchParams, SearchProviderAdapter } from "./types.ts";
 
@@ -117,11 +118,21 @@ async function search(
     });
 
     if (!response.ok) {
-      const responseText = await response.text().catch(() => "");
-      throw createSearchHttpError(response.status, response.statusText, responseText.slice(0, 300));
+      const responseText = await readLimitedText(response, {
+        maxBytes: config.maxResponseBytes,
+        context: "ddgs search error",
+      }).catch(() => ({ text: "" }));
+      throw createSearchHttpError(
+        response.status,
+        response.statusText,
+        responseText.text.slice(0, 300)
+      );
     }
 
-    const html = await response.text();
+    const html = await readLimitedTextOrThrow(response, {
+      maxBytes: config.maxResponseBytes,
+      context: "ddgs search",
+    });
     const results = parseLiteResults(html, Math.min(params.numResults, DDGS_MAX_RESULTS));
     return results;
   } catch (error) {

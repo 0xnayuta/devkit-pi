@@ -126,6 +126,7 @@ Cancelled returns:
 - `diagnostics` returning `No diagnostics.` means the language server responded successfully with no matching diagnostics.
 - `diagnostics` `Unsupported: ...` or `Timeout: ...` are action-level success return text/detail semantics, not equivalent to tool failure.
 - Results are truncated: text maximum ~60,000 characters, list results maximum 200 items.
+- Source files opened for LSP requests are size-limited internally to 2 MiB before synchronous reads / didOpen content transfer. Oversized source files fail with a clear "LSP source file is too large" message instead of being fully read.
 
 ### Failure semantics
 
@@ -134,6 +135,7 @@ The following are usually tool failures:
 - Missing action-required fields, e.g., missing `file`, `files`, `line/column`, or `newName`
 - `workspace-diagnostics.files` exceeds 64
 - File path resolves outside workspace
+- Source file exceeds the internal LSP source-read size limit
 - Privileged action called when not allowed
 - Subagent calling action not allowed by allowlist
 - `restart` specifying unknown server id

@@ -207,14 +207,16 @@ docs/zh/reference/configuration.md（如涉及配置说明）
 
 ### 问题
 
-源码与文档存在默认值不一致：
+修复前源码与文档存在默认值不一致：
 
 ```text
 源码：subagents.timeoutMs = 900000
-文档：subagents.timeoutMs = 300000
+旧文档：subagents.timeoutMs = 300000
 源码：idleTimeoutMs = 180000
-文档完整示例未列出 idleTimeoutMs
+旧文档完整示例未列出 idleTimeoutMs
 ```
+
+当前执行本任务时，应确保 reference 文档已更新为源码默认值，并通过 `pnpm docs:check` 锁定关键默认值。
 
 ### 推荐改法
 
@@ -550,6 +552,10 @@ src/modules/lsp/
 - 如不拆分，应在本计划或后续 maintenance issue 中明确拆分边界；
 - 不因重构引入新行为。
 
+### 执行记录
+
+阶段 0 未进行 LSP core 全面拆分；拆分边界已记录在 `internal-docs/issues/lsp-core-split-boundaries.md`，作为后续 maintenance issue / implementation plan 的设计入口。
+
 ---
 
 ## 0.11 阶段 0 验收清单
@@ -565,15 +571,15 @@ pnpm docs:check ✅
 
 并满足：
 
-- [ ] HTTPS 默认不关闭证书校验；
-- [ ] 配置文档默认值与源码一致；
-- [ ] external command stdout/stderr 有硬上限；
-- [ ] subagent child 输出有硬上限；
-- [ ] web provider 不直接无限 `response.text()`；
-- [ ] LSP 大文件读取有上限；
-- [ ] DNS rebinding 限制已文档化；
-- [ ] abort listener remove 修复；
-- [ ] LSP core 拆分边界已记录；如实际提取 helper，现有 LSP 行为不变。
+- [x] HTTPS 默认不关闭证书校验；
+- [x] 配置文档默认值与源码一致；
+- [x] external command stdout/stderr 有硬上限；
+- [x] subagent child 输出有硬上限；
+- [x] web provider 不直接无限 `response.text()`；
+- [x] LSP 大文件读取有上限；
+- [x] DNS rebinding 限制已文档化；
+- [x] abort listener remove 修复；
+- [x] LSP core 拆分边界已记录；如实际提取 helper，现有 LSP 行为不变。
 
 ---
 

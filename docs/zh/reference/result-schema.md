@@ -189,7 +189,7 @@ Canonical source：`src/shared/types.ts` 中的 `SUBAGENT_ERROR_CODES`。
 | `SUBAGENT_DEPTH_EXCEEDED` | 递归深度超限；子代理不能再调子代理 |
 | `SUBAGENT_TIMEOUT` | 执行超时 |
 | `SUBAGENT_FAILED` | 子代理执行失败，含 spawn/session/runtime/provider 等未分类失败 |
-| `SUBAGENT_OUTPUT_TRUNCATED` | 输出被截断 |
+| `SUBAGENT_OUTPUT_TRUNCATED` | 输出被截断，或 child stdout/stderr/JSONL 输出超过执行硬上限并被停止 |
 
 ## 输出收集
 
@@ -208,13 +208,14 @@ Canonical source：`src/shared/types.ts` 中的 `SUBAGENT_ERROR_CODES`。
 返回前会执行：
 
 - `sanitizeOutput()`：遮蔽常见 API key、token、Authorization header、GitHub token、用户路径和过长 stack trace。
+- `src/modules/subagents/execution.ts` 中的 child 输出硬上限：在异常 child stdout/stderr/JSONL 输出无限增长前停止执行。
 - `truncateOutput()`：按默认输出限制截断长输出。
 
 因此：
 
 - `details.results[0].output` 是脱敏后的输出。
 - `content[0].text` 可能是截断后的文本。
-- 截断时 `details.error.code` 可能是 `SUBAGENT_OUTPUT_TRUNCATED`。
+- 截断或被 child 输出硬上限停止时，`details.error.code` 可能是 `SUBAGENT_OUTPUT_TRUNCATED`。
 
 ## 日志和 activity
 

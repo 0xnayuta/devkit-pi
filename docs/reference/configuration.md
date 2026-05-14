@@ -31,7 +31,8 @@ Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG`, `DEF
   "subagents": {
     "enabled": true,
     "maxDepth": 1,
-    "timeoutMs": 300000,
+    "timeoutMs": 900000,
+    "idleTimeoutMs": 180000,
     "allowWrite": false,
     "allowLspTools": true,
     "allowedLspActions": [
@@ -181,7 +182,8 @@ Source: `DEFAULT_SUBAGENTS_CONFIG`, `normalizeSubagentsConfig()`, `src/modules/s
 |---|---|---:|---|---|---|
 | `subagents.enabled` | boolean | `true` | No | Whether to register `subagent` tool | `src/modules/subagents/register.ts` |
 | `subagents.maxDepth` | number | `1` | No | Maximum subagent depth; default prohibits nested subagents. Accepts non-negative integer | `src/shared/types.ts`, `src/modules/subagents/register.ts` |
-| `subagents.timeoutMs` | number | `300000` | No | Single subagent execution timeout in ms | `src/modules/subagents/executor.ts` |
+| `subagents.timeoutMs` | number | `900000` | No | Single child execution hard cap in ms; starts when the child process is spawned and does not reset on activity | `src/modules/subagents/executor.ts` |
+| `subagents.idleTimeoutMs` | number | `180000` | No | Maximum idle time in ms since the last valid structured child activity event; plain stdout text does not reset this timer | `src/modules/subagents/executor.ts`, `src/modules/subagents/collect-output.ts` |
 | `subagents.allowWrite` | boolean | `false` | No | Experimental/advanced/unsafe switch. Relaxes non-readonly custom agent tool filtering policy; does not imply complete permission sandbox, audit log, automatic rollback, or stable write-capability contract | `src/config/load-config.ts`, `src/modules/subagents/*` |
 | `subagents.allowLspTools` | boolean | `true` | No | Whether to allow subagents to use readonly LSP tool; also constrained by `lsp.enabled` and `lsp.tool.enabled` | `src/index.ts`, `src/modules/subagents/*` |
 | `subagents.allowedLspActions` | string[] | See below | No | Subagent LSP action allowlist; invalid values are discarded | `src/config/load-config.ts` |
@@ -307,7 +309,7 @@ Source: `DEFAULT_WEB_CONFIG`, `normalizeWebConfig()`, `src/modules/web/register.
 | `web.provider` | string | `ddgs` | No | Search provider: `auto` / `brave` / `ddgs` / `openserp` / `searxng` / `tavily` / `serper` | `src/config/load-config.ts`, `src/modules/web/providers/select-provider.ts` |
 | `web.providerPriority` | string[] | `['tavily','serper','brave','openserp','searxng','ddgs']` | No | Candidate order for `provider="auto"`. Source code applies this priority after layering by commercial / self-host-or-open / zero-config | `src/modules/web/providers/select-provider.ts` |
 | `web.timeoutMs` | number | `10000` | No | web/provider/fetch request timeout in ms | `src/modules/web/abort.ts`, providers |
-| `web.maxResponseBytes` | number | `1048576` | No | Max fetch download response body bytes | `src/modules/web/fetch.ts` |
+| `web.maxResponseBytes` | number | `1048576` | No | Max response body bytes for `fetch_content` downloads and search provider responses | `src/modules/web/fetch.ts`, `src/modules/web/read-limited.ts` |
 | `web.maxContentChars` | number | `30000` | No | Max tool return content characters | `src/modules/web/fetch.ts`, `src/modules/web/storage.ts` |
 | `web.maxResults` | number | `5` | No | Default search result count | `src/modules/web/search.ts` |
 | `web.maxStoredResults` | number | `100` | No | Max responseId storage retained result entries | `src/modules/web/storage.ts`, `src/modules/web/register.ts` |

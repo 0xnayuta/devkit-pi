@@ -42,6 +42,12 @@ language: chinese
 - 设置最大响应体大小与最大输出字符数
 - 不写项目文件；responseId storage 随 session lifecycle restore/clear，并受配置限制
 
+### DNS rebinding / TOCTOU 限制
+
+当前 URL 安全检查会在 fetch/download 之前校验 protocol、hostname/IP、DNS 解析结果和 redirect 目标。这可以阻止常见 localhost/private-network 目标，并且每个 redirect hop 都会重新校验。
+
+但当前实现不提供强 DNS rebinding 防护。对于攻击者控制的域名，DNS 校验与底层 `fetch` 实际建立连接之间仍可能存在 time-of-check/time-of-use（TOCTOU）窗口。高风险环境应禁用远程 URL 抓取/转换，保持 `web.allowPrivateNetwork=false` 和 `convertContent.allowPrivateNetwork=false`，或等待后续 connection-stage IP pinning 设计。
+
 当前 provider、Jina fallback、storage 和 URL 安全边界以 [Web tools reference](../reference/web-tools.md)、[Web providers reference](../reference/web-providers.md) 与 [Configuration reference](../reference/configuration.md) 为准。历史设计背景保存在 `internal-docs/adr/0004-bundled-readonly-web-tools.md`。
 
 ## LSP 安全边界

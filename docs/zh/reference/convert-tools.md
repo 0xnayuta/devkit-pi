@@ -38,12 +38,13 @@ Canonical source：`src/modules/convert/` 和 `src/config/load-config.ts`。
 - `url` 必须使用 `http:` 或 `https:`。其他协议会返回 `UNSUPPORTED_PROTOCOL`。
 - 远程 URL 会在下载前经过 private-network protection 校验。
 - 每个 redirect hop 都会在 follow 前用相同的 private-network policy 重新校验。
-- 当前 DNS 校验发生在 `fetch` 之前；这会阻止常见 private-network 目标，但不声称可以消除所有 DNS rebinding / DNS TOCTOU 风险。
+- 当前 DNS 校验发生在 `fetch` 之前；这会阻止常见 private-network 目标，但不声称可以消除所有 DNS rebinding / DNS TOCTOU 风险。由于已检查 IP 不会固定到实际连接，攻击者控制的 DNS 仍可能造成 time-of-check/time-of-use 窗口。高风险环境应禁用远程 URL 转换，或保持 `convertContent.allowPrivateNetwork=false`，直到完成 connection-stage IP pinning 设计与实现。
 - 大于 `convertContent.maxResponseBytes` 的远程响应会在 provider 执行前返回 `FILE_TOO_LARGE`。
 - 临时下载文件会在转换成功或失败后被删除。
 - 本地文件和下载文件的转换都会调用已配置的 MarkItDown CLI provider。
 - 单次调用的 `timeoutMs` 和 `maxContentChars` 如果是正整数，会覆盖配置默认值。
-- Provider 输出超过 `maxContentChars` 时会被截断，并返回 `truncated=true`。
+- Provider 输出超过 `maxContentChars` 时会在外部命令结束后被截断，并返回 `truncated=true`。
+- 外部命令 stdout/stderr 还会受到 `src/shared/external-command.ts` 中的硬字节上限保护；超过上限会停止命令，并以带输出大小说明的 `CONVERT_FAILED` 返回。
 - Tool calls 包含用于调用/结果展示的 compact/expanded TUI renderers。
 - 成功和失败的转换都会以 `type="convert"` 记录到共享 toolkit activity log。
 - `allowPrivateNetwork=false` 默认阻止 localhost、loopback、private、link-local、metadata-style 和 internal hostnames/IPs。仅在可信环境中设置 `convertContent.allowPrivateNetwork=true`。
@@ -57,8 +58,8 @@ Canonical source：`src/modules/convert/` 和 `src/config/load-config.ts`。
 - 将输入文件作为结构化参数传给已配置 executable，不使用 shell interpolation。
 - 通过 shared external command runner 应用转换 timeout。
 - 在 convert provider 内根据 `maxResponseBytes` 于执行前检查输入文件大小。
-- 从 shared runner 接收 stdout/stderr。
-- 将命令缺失、timeout、非零退出和文件过大失败映射到 convert error codes。
+- 从 shared runner 接收 stdout/stderr，且这些输出受到 runner 的 stdout/stderr 硬字节上限保护。
+- 将命令缺失、timeout、输出大小超限、非零退出和文件过大失败映射到 convert error codes。
 - 将 stdout 截断到 `maxContentChars`，并返回 `truncated=true`。
 
 `src/shared/external-command.ts` 只负责基础设施：解析/运行短生命周期外部命令并收集 stdout/stderr。MarkItDown-specific 行为、convert 错误映射、文件大小检查、metadata 和输出截断仍保留在 `src/modules/convert/provider.ts`。

@@ -4,6 +4,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/load-config.ts";
+import {
+  DEFAULT_LSP_MAX_SOURCE_FILE_BYTES,
+  LspFileTooLargeError,
+  readTextFileLimited,
+} from "../../src/modules/lsp/core.ts";
 import { registerLspModule } from "../../src/modules/lsp/register.ts";
 import { LSP_ACTIONS } from "../../src/modules/lsp/tool.ts";
 import {
@@ -165,6 +170,28 @@ describe("lsp module", () => {
         ),
       /outside workspace is not allowed/
     );
+  });
+
+  it("limits source file reads by byte size", () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-limit-"));
+    const small = path.join(workspace, "small.ts");
+    const large = path.join(workspace, "large.ts");
+    fs.writeFileSync(small, "export const ok = true;\n");
+    fs.writeFileSync(large, "x".repeat(33));
+
+    assert.equal(readTextFileLimited(small, 32), "export const ok = true;\n");
+    assert.throws(
+      () => readTextFileLimited(large, 32),
+      (error: unknown) => {
+        assert.ok(error instanceof LspFileTooLargeError);
+        assert.equal(error.maxBytes, 32);
+        assert.equal(error.sizeBytes, 33);
+        assert.equal(error.filePath, large);
+        assert.match(error.message, /LSP source file is too large/);
+        return true;
+      }
+    );
+    assert.equal(DEFAULT_LSP_MAX_SOURCE_FILE_BYTES, 2 * 1024 * 1024);
   });
 
   it("caps workspace-diagnostics file input", async () => {

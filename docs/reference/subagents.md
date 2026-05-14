@@ -294,7 +294,8 @@ Default configuration summary:
   "subagents": {
     "enabled": true,
     "maxDepth": 1,
-    "timeoutMs": 300000,
+    "timeoutMs": 900000,
+    "idleTimeoutMs": 180000,
     "allowWrite": false,
     "allowLspTools": true,
     "allowedLspActions": [
@@ -314,7 +315,8 @@ Configuration effects:
 
 - `subagents.enabled=false`: `registerSubagentsModule()` does not register `subagent` tool.
 - `subagents.maxDepth=1`: default prohibits nested subagents.
-- `subagents.timeoutMs`: single child execution timeout.
+- `subagents.timeoutMs`: single child execution hard cap. It starts when the child process is spawned and does not reset on activity.
+- `subagents.idleTimeoutMs`: maximum idle time since the last valid structured child activity event, such as `message_end`, `tool_result_end`, or `turn_end`. Plain stdout text does not reset this timer. Default: 180000ms.
 - `subagents.allowWrite`: experimental/advanced/unsafe switch; only affects tool filtering for non-readonly custom agents, does not change built-in agents' readonly definition, does not provide complete permission sandbox, audit log, automatic rollback, or stable write-capability contract.
 - `subagents.allowLspTools` / `allowedLspActions`: controls whether subagents can use readonly LSP actions.
 - `subagents.injectDelegationPolicy`: controls whether to inject delegation policy into main agent prompt.
@@ -333,9 +335,9 @@ Current subagent error code canonical source is `SUBAGENT_ERROR_CODES` in `src/s
 | `UNKNOWN_AGENT` | Cannot find specified agent; returns available agent names |
 | `SUBAGENT_DISABLED` | Defined but currently has no direct return path; reserved for future per-agent disable semantics |
 | `SUBAGENT_DEPTH_EXCEEDED` | Depth exceeded; subagents cannot continue calling subagents |
-| `SUBAGENT_TIMEOUT` | Child execution timed out |
+| `SUBAGENT_TIMEOUT` | Child execution timed out; may be caused by the hard cap (`timeoutMs`) or idle timeout (`idleTimeoutMs`). Use `timeoutReason` in details to distinguish them when present |
 | `SUBAGENT_FAILED` | spawn, session directory, child process, or provider/runtime failure, uncategorized failures |
-| `SUBAGENT_OUTPUT_TRUNCATED` | Output too long, truncated; can co-occur with successful execution |
+| `SUBAGENT_OUTPUT_TRUNCATED` | Output too long, truncated; also used when child stdout/stderr/JSONL output exceeds execution hard limits and the child is stopped |
 
 Failure behavior:
 

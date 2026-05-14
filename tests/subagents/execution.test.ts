@@ -257,4 +257,123 @@ describe("subagent execution timeout normalization", () => {
 		assert.equal(firstContent?.type, "text");
 		assert.match(firstContent.text, /without activity/);
 	});
+
+	itPosix("terminates child when stdout exceeds the hard byte limit", async () => {
+		const { dir } = makeTempPiScript();
+		const scriptPath = path.join(dir, "pi");
+		fs.writeFileSync(
+			scriptPath,
+			[
+				"#!/usr/bin/env bash",
+				"printf '%*s' 200000 '' | tr ' ' x",
+				"sleep 5",
+				"",
+			].join("\n"),
+			"utf-8",
+		);
+		fs.chmodSync(scriptPath, 0o755);
+
+		const result = await runSync(path.dirname(dir), [], {
+			timeoutMs: 3000,
+			maxStdoutBytes: 1024,
+			env: {
+				PATH: `${dir}${path.delimiter}${process.env.PATH ?? ""}`,
+			},
+		});
+
+		assert.equal(result.outputLimitExceeded, "stdout");
+		assert.equal(result.exitCode, 1);
+		assert.match(result.output, /stdout hard limit/);
+		assert.ok(Buffer.byteLength(result.partialOutput ?? "") <= 1024);
+	});
+
+	itPosix("terminates child when stderr exceeds the hard byte limit", async () => {
+		const { dir } = makeTempPiScript();
+		const scriptPath = path.join(dir, "pi");
+		fs.writeFileSync(
+			scriptPath,
+			[
+				"#!/usr/bin/env bash",
+				"printf '%*s' 200000 '' | tr ' ' e >&2",
+				"sleep 5",
+				"",
+			].join("\n"),
+			"utf-8",
+		);
+		fs.chmodSync(scriptPath, 0o755);
+
+		const result = await runSync(path.dirname(dir), [], {
+			timeoutMs: 3000,
+			maxStderrBytes: 1024,
+			env: {
+				PATH: `${dir}${path.delimiter}${process.env.PATH ?? ""}`,
+			},
+		});
+
+		assert.equal(result.outputLimitExceeded, "stderr");
+		assert.equal(result.exitCode, 1);
+		assert.match(result.output, /stderr hard limit/);
+		assert.ok(Buffer.byteLength(result.partialOutput ?? "") <= 1024);
+	});
+
+	itPosix("maps child output hard limit to SUBAGENT_OUTPUT_TRUNCATED at the executor layer", async () => {
+		const { dir } = makeTempPiScript();
+		const scriptPath = path.join(dir, "pi");
+		fs.writeFileSync(
+			scriptPath,
+			[
+				"#!/usr/bin/env bash",
+				"printf '%*s' 200000 '' | tr ' ' x",
+				"sleep 5",
+				"",
+			].join("\n"),
+			"utf-8",
+		);
+		fs.chmodSync(scriptPath, 0o755);
+		process.env.PATH = `${dir}${path.delimiter}${process.env.PATH ?? ""}`;
+
+		const sessionRoot = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-output-limit-executor-"));
+		tempDirs.push(sessionRoot);
+		const config = mergeConfig({
+			subagents: {
+				retry: { enabled: false, maxAttempts: 1 },
+			},
+		}).subagents;
+		const executor = createSubagentExecutor({
+			pi: {} as any,
+			state: { baseCwd: process.cwd(), currentSessionId: null, lastUiContext: null },
+			config,
+			getSubagentSessionRoot: () => sessionRoot,
+			discoverAgents: () => ({
+				agents: [
+					{
+						name: "noisy-agent",
+						description: "Output limit test agent",
+						readonly: true,
+						tools: [],
+						systemPrompt: "You are intentionally noisy.",
+						source: "builtin",
+						filePath: "agents/noisy-agent.md",
+					},
+				],
+			}),
+		});
+
+		const result = await executor.execute(
+			"output-limit-test",
+			{ agent: "noisy-agent", task: "Emit too much output" },
+			new AbortController().signal,
+			undefined,
+			{
+				cwd: process.cwd(),
+				sessionManager: { getSessionFile: () => null },
+			} as any,
+		);
+
+		assert.equal(result.details.error?.code, SUBAGENT_ERROR_CODES.SUBAGENT_OUTPUT_TRUNCATED);
+		assert.equal(result.details.results[0]?.exitCode, 1);
+		const firstContent = result.content[0];
+		assert.equal(firstContent?.type, "text");
+		assert.match(firstContent.text, /stdout hard limit/);
+	});
 });

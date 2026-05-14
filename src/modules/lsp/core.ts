@@ -53,6 +53,7 @@ const IDLE_TIMEOUT_MS = 60_000;
 const CLEANUP_INTERVAL_MS = 30_000;
 const DIAGNOSTICS_WAIT_MS_DEFAULT = 3000;
 const LSP_EXTERNAL_COMMAND_TIMEOUT_MS = 120_000;
+export const DEFAULT_LSP_MAX_SOURCE_FILE_BYTES = 2 * 1024 * 1024;
 
 export function diagnosticsWaitMsForFile(filePath: string): number {
   const ext = path.extname(filePath).toLowerCase();
@@ -147,6 +148,31 @@ const lspExternalCommandRunner = new NodeExternalCommandRunner();
 
 function which(cmd: string): string | undefined {
   return resolveExternalExecutable(cmd, { extraSearchPaths: LSP_EXTRA_SEARCH_PATHS });
+}
+
+export class LspFileTooLargeError extends Error {
+  readonly filePath: string;
+  readonly maxBytes: number;
+  readonly sizeBytes: number;
+
+  constructor(filePath: string, maxBytes: number, sizeBytes: number) {
+    super(`LSP source file is too large (${sizeBytes} bytes; max ${maxBytes} bytes): ${filePath}`);
+    this.name = "LspFileTooLargeError";
+    this.filePath = filePath;
+    this.maxBytes = maxBytes;
+    this.sizeBytes = sizeBytes;
+  }
+}
+
+export function readTextFileLimited(
+  filePath: string,
+  maxBytes = DEFAULT_LSP_MAX_SOURCE_FILE_BYTES
+): string {
+  const stat = fs.statSync(filePath);
+  if (stat.size > maxBytes) {
+    throw new LspFileTooLargeError(filePath, maxBytes, stat.size);
+  }
+  return fs.readFileSync(filePath, "utf-8");
 }
 
 function normalizeFsPath(p: string): string {
@@ -964,8 +990,9 @@ export class LSPManager {
   }
   private readFile(fp: string): string | null {
     try {
-      return fs.readFileSync(fp, "utf-8");
-    } catch {
+      return readTextFileLimited(fp);
+    } catch (error) {
+      if (error instanceof LspFileTooLargeError) throw error;
       return null;
     }
   }
@@ -1103,10 +1130,10 @@ export class LSPManager {
 
   private async loadFile(filePath: string) {
     const absPath = this.resolve(filePath);
-    const clients = await this.getClientsForFile(absPath);
-    if (!clients.length) return null;
     const content = this.readFile(absPath);
     if (content === null) return null;
+    const clients = await this.getClientsForFile(absPath);
+    if (!clients.length) return null;
     return {
       clients,
       absPath,
@@ -1243,16 +1270,6 @@ export class LSPManager {
       };
     }
 
-    const clients = await this.getClientsForFile(absPath);
-    if (!clients.length) {
-      return {
-        diagnostics: [],
-        receivedResponse: false,
-        unsupported: true,
-        error: this.explainNoLsp(absPath),
-      };
-    }
-
     const content = this.readFile(absPath);
     if (content === null) {
       return {
@@ -1260,6 +1277,16 @@ export class LSPManager {
         receivedResponse: false,
         unsupported: true,
         error: "Could not read file",
+      };
+    }
+
+    const clients = await this.getClientsForFile(absPath);
+    if (!clients.length) {
+      return {
+        diagnostics: [],
+        receivedResponse: false,
+        unsupported: true,
+        error: this.explainNoLsp(absPath),
       };
     }
 
@@ -1309,6 +1336,31 @@ export class LSPManager {
         continue;
       }
 
+      let content: string | null;
+      try {
+        content = this.readFile(absPath);
+      } catch (error) {
+        if (error instanceof LspFileTooLargeError) {
+          results.push({
+            file: absPath,
+            diagnostics: [],
+            status: "error",
+            error: error.message,
+          });
+          continue;
+        }
+        throw error;
+      }
+      if (!content) {
+        results.push({
+          file: absPath,
+          diagnostics: [],
+          status: "error",
+          error: "Could not read file",
+        });
+        continue;
+      }
+
       let clients: LSPClient[];
       try {
         clients = await this.getClientsForFile(absPath);
@@ -1323,17 +1375,6 @@ export class LSPManager {
           diagnostics: [],
           status: "unsupported",
           error: this.explainNoLsp(absPath),
-        });
-        continue;
-      }
-
-      const content = this.readFile(absPath);
-      if (!content) {
-        results.push({
-          file: absPath,
-          diagnostics: [],
-          status: "error",
-          error: "Could not read file",
         });
         continue;
       }
@@ -1811,7 +1852,7 @@ function refineSymbolPositionFromSource(
   symbolName: string
 ): { line: number; character: number } | null {
   try {
-    const content = fs.readFileSync(filePath, "utf-8");
+    const content = readTextFileLimited(filePath);
     const lines = content.split(/\r?\n/);
     const token = new RegExp(`\\b${escapeRegExp(symbolName)}\\b`);
 

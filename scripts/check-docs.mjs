@@ -438,6 +438,78 @@ function checkDocsReadmeSections() {
   }
 }
 
+function extractObjectBlock(source, exportName) {
+  const start = source.indexOf(`export const ${exportName}`);
+  if (start === -1) {
+    errors.push(`src/config/load-config.ts: missing ${exportName}`);
+    return "";
+  }
+  const open = source.indexOf("{", start);
+  if (open === -1) return "";
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === "{") depth++;
+    if (source[i] === "}") depth--;
+    if (depth === 0) return source.slice(open, i + 1);
+  }
+  return "";
+}
+
+function extractDefaultValue(block, key) {
+  const match = block.match(new RegExp(`\\n\\s*${key}:\\s*([^,\\n]+)`));
+  return match?.[1]?.trim();
+}
+
+function checkConfigDefaultDrift() {
+  const source = read("src/config/load-config.ts");
+  const subagents = extractObjectBlock(source, "DEFAULT_SUBAGENTS_CONFIG");
+  const web = extractObjectBlock(source, "DEFAULT_WEB_CONFIG");
+  const convert = extractObjectBlock(source, "DEFAULT_CONVERT_CONTENT_CONFIG");
+  const lsp = extractObjectBlock(source, "DEFAULT_CONFIG");
+
+  const defaults = {
+    subagentsTimeoutMs: extractDefaultValue(subagents, "timeoutMs"),
+    subagentsIdleTimeoutMs: extractDefaultValue(subagents, "idleTimeoutMs"),
+    webMaxResponseBytes: extractDefaultValue(web, "maxResponseBytes"),
+    convertMaxContentChars: extractDefaultValue(convert, "maxContentChars"),
+    lspHookEnabled: extractDefaultValue(lsp, "enabled"),
+    lspHookMode: lsp.match(/hook:\s*\{[\s\S]*?mode:\s*"([^"]+)"/)?.[1],
+  };
+
+  for (const [name, value] of Object.entries(defaults)) {
+    if (!value) errors.push(`src/config/load-config.ts: could not extract default ${name}`);
+  }
+
+  const configDocs = ["docs/reference/configuration.md", "docs/zh/reference/configuration.md"];
+  for (const file of configDocs) {
+    const doc = read(file);
+    const requiredSnippets = [
+      [`"timeoutMs": ${defaults.subagentsTimeoutMs}`, "subagents.timeoutMs default example"],
+      [`"idleTimeoutMs": ${defaults.subagentsIdleTimeoutMs}`, "subagents.idleTimeoutMs default example"],
+      [`| \`subagents.timeoutMs\` | number | \`${defaults.subagentsTimeoutMs}\``, "subagents.timeoutMs table default"],
+      [`| \`subagents.idleTimeoutMs\` | number | \`${defaults.subagentsIdleTimeoutMs}\``, "subagents.idleTimeoutMs table default"],
+      [`| \`web.maxResponseBytes\` | number | \`${defaults.webMaxResponseBytes}\``, "web.maxResponseBytes table default"],
+      [`| \`convertContent.maxContentChars\` | number | \`${defaults.convertMaxContentChars}\``, "convertContent.maxContentChars table default"],
+      [`| \`lsp.hook.enabled\` | boolean | \`${defaults.lspHookEnabled}\``, "lsp.hook.enabled table default"],
+      [`| \`lsp.hook.mode\` | \`agent_end\` / \`edit_write\` / \`disabled\` | \`${defaults.lspHookMode}\``, "lsp.hook.mode table default"],
+    ];
+    for (const [snippet, label] of requiredSnippets) {
+      if (!doc.includes(snippet)) errors.push(`${file}: missing or stale ${label}`);
+    }
+  }
+
+  const subagentDocs = ["docs/reference/subagents.md", "docs/zh/reference/subagents.md"];
+  for (const file of subagentDocs) {
+    const doc = read(file);
+    for (const [snippet, label] of [
+      [`"timeoutMs": ${defaults.subagentsTimeoutMs}`, "subagents.timeoutMs default summary"],
+      [`"idleTimeoutMs": ${defaults.subagentsIdleTimeoutMs}`, "subagents.idleTimeoutMs default summary"],
+    ]) {
+      if (!doc.includes(snippet)) errors.push(`${file}: missing or stale ${label}`);
+    }
+  }
+}
+
 function checkPublicAssets() {
   const requiredAssets = [
     "docs/public/favicon.png",
@@ -485,6 +557,7 @@ checkPlanningDocs();
 checkPlanningNotInMainSidebar();
 checkAdr0005Title();
 checkDocsReadmeSections();
+checkConfigDefaultDrift();
 
 if (errors.length > 0) {
   console.error(errors.join("\n"));

@@ -132,6 +132,19 @@ export class MarkItDownProvider implements ConvertProvider {
       );
     }
 
+    if (result.outputTruncated.stdout || result.outputTruncated.stderr) {
+      const streams = [
+        result.outputTruncated.stdout ? "stdout" : undefined,
+        result.outputTruncated.stderr ? "stderr" : undefined,
+      ]
+        .filter(Boolean)
+        .join(" and ");
+      throw new ConvertProviderError(
+        CONVERT_ERROR_CODES.CONVERT_FAILED,
+        `MarkItDown conversion output exceeded the ${streams} size limit and was stopped. Reduce input size or use a converter configuration that emits less output.`
+      );
+    }
+
     if (result.exitCode !== 0) {
       const stderrSummary = summarizeStderr(result.stderr);
       throw new ConvertProviderError(

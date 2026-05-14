@@ -126,6 +126,7 @@ LSP 模块包含两个公开集成面：
 - `diagnostics` 返回 `No diagnostics.` 表示语言服务器成功响应且没有匹配诊断。
 - `diagnostics` 的 `Unsupported: ...` 或 `Timeout: ...` 是 action 的成功返回文本/详情语义，不等同于 tool failure。
 - 结果会被截断：文本最多约 60,000 字符，列表类结果最多 200 项。
+- LSP 请求打开的 source file 在同步读取 / didOpen 内容传输前会先执行内部 2 MiB 大小限制。超大 source file 会以明确的 “LSP source file is too large” 信息失败，而不是完整读入。
 
 ### 失败语义
 
@@ -134,6 +135,7 @@ LSP 模块包含两个公开集成面：
 - 缺少 action 必需字段，例如缺少 `file`、`files`、`line/column` 或 `newName`
 - `workspace-diagnostics.files` 超过 64 个
 - 文件路径解析到 workspace 之外
+- source file 超过内部 LSP source-read 大小限制
 - privileged action 在未允许时调用
 - 子代理调用未被白名单允许的 action
 - `restart` 指定未知 server id

@@ -7,6 +7,10 @@ language: chinese
 
 # 问题日志
 
+## 后续维护设计记录
+
+- [LSP core 拆分边界设计记录](./lsp-core-split-boundaries.md)：阶段 0 仅记录拆分边界，不在 hardening 阶段执行大规模重构。
+
 ## 最近修复
 
 ### v0.2.1

@@ -28,6 +28,17 @@ function writeInput(name = "input.pdf", content = "input"): string {
   return filePath;
 }
 
+function commandResult(overrides: Partial<ExternalCommandResult> = {}): ExternalCommandResult {
+  return {
+    exitCode: 0,
+    stdout: "# Converted\n",
+    stderr: "",
+    timedOut: false,
+    outputTruncated: { stdout: false, stderr: false },
+    ...overrides,
+  };
+}
+
 function createRunner(options: {
   available?: boolean;
   result?: ExternalCommandResult;
@@ -45,14 +56,7 @@ function createRunner(options: {
     async run(command, runOptions) {
       runCalls.push({ command, options: runOptions });
       if (options.error) throw options.error;
-      return (
-        options.result ?? {
-          exitCode: 0,
-          stdout: "# Converted\n",
-          stderr: "",
-          timedOut: false,
-        }
-      );
+      return options.result ?? commandResult();
     },
   };
 }
@@ -95,7 +99,7 @@ describe("MarkItDownProvider", () => {
 
   it("converts a file by invoking the configured command and returns metadata", async () => {
     const runner = createRunner({
-      result: { exitCode: 0, stdout: "# Converted\ndoc.pdf\n", stderr: "", timedOut: false },
+      result: commandResult({ stdout: "# Converted\ndoc.pdf\n" }),
     });
     const input = writeInput("doc.pdf", "pdf bytes");
 
@@ -157,7 +161,7 @@ describe("MarkItDownProvider", () => {
 
   it("throws CONVERT_TIMEOUT when the CLI exceeds timeout", async () => {
     const runner = createRunner({
-      result: { exitCode: null, stdout: "", stderr: "", timedOut: true },
+      result: commandResult({ exitCode: null, stdout: "", timedOut: true }),
     });
     const input = writeInput();
 
@@ -175,12 +179,11 @@ describe("MarkItDownProvider", () => {
 
   it("throws CONVERT_FAILED with stderr summary on non-zero exit", async () => {
     const runner = createRunner({
-      result: {
+      result: commandResult({
         exitCode: 7,
         stdout: "",
         stderr: "very bad conversion failure",
-        timedOut: false,
-      },
+      }),
     });
     const input = writeInput();
 
@@ -200,14 +203,33 @@ describe("MarkItDownProvider", () => {
     );
   });
 
+  it("throws CONVERT_FAILED when external command output hits the hard byte limit", async () => {
+    const runner = createRunner({
+      result: commandResult({
+        exitCode: null,
+        stdout: "partial output",
+        outputTruncated: { stdout: true, stderr: false },
+      }),
+    });
+    const input = writeInput();
+
+    await assert.rejects(
+      () =>
+        provider(runner).convertFile(input, {
+          maxResponseBytes: 1024,
+          timeoutMs: 1000,
+          maxContentChars: 1000,
+        }),
+      (error: unknown) =>
+        error instanceof ConvertProviderError &&
+        error.code === CONVERT_ERROR_CODES.CONVERT_FAILED &&
+        /stdout size limit/.test(error.message)
+    );
+  });
+
   it("truncates stdout to maxContentChars", async () => {
     const runner = createRunner({
-      result: {
-        exitCode: 0,
-        stdout: "abcdefghijklmnopqrstuvwxyz",
-        stderr: "",
-        timedOut: false,
-      },
+      result: commandResult({ stdout: "abcdefghijklmnopqrstuvwxyz" }),
     });
     const input = writeInput();
 

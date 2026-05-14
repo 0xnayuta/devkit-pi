@@ -317,6 +317,7 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
     let attemptsUsed = 0;
     let finalDisplayItems: DisplayItem[] | undefined;
     let finalTimeoutReason: "runtime" | "idle" | undefined;
+    let outputLimitExceeded: RunSyncResult["outputLimitExceeded"];
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       attemptsUsed = attempt;
@@ -371,7 +372,13 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
         partialOutput = result.partialOutput;
         finalDisplayItems = result.displayItems;
         finalTimeoutReason = result.timeoutReason;
-        if (result.timedOut) {
+        outputLimitExceeded = result.outputLimitExceeded;
+        if (result.outputLimitExceeded) {
+          output =
+            result.output ||
+            "Subagent child output exceeded the configured hard limit and was stopped.";
+          providerError = output;
+        } else if (result.timedOut) {
           if (result.timeoutReason === "idle") {
             output = `Subagent timed out after ${idleTimeoutMs}ms without activity.`;
           } else {
@@ -433,7 +440,9 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
 
     // Determine error code if execution failed
     let errorCode: SubagentErrorCode | undefined;
-    if (exitCode === 124) {
+    if (outputLimitExceeded) {
+      errorCode = SUBAGENT_ERROR_CODES.SUBAGENT_OUTPUT_TRUNCATED;
+    } else if (exitCode === 124) {
       errorCode = SUBAGENT_ERROR_CODES.SUBAGENT_TIMEOUT;
     } else if (exitCode !== 0) {
       errorCode = SUBAGENT_ERROR_CODES.SUBAGENT_FAILED;

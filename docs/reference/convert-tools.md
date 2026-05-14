@@ -38,12 +38,13 @@ Execution validates that exactly one of `path` or `url` is provided. Providing b
 - `url` must use `http:` or `https:`. Other protocols return `UNSUPPORTED_PROTOCOL`.
 - Remote URLs are validated with private-network protection before download.
 - Every redirect hop is revalidated with the same private-network policy before being followed.
-- Current DNS validation happens before `fetch`; this blocks common private-network targets but does not claim to eliminate all DNS rebinding / DNS TOCTOU risks.
+- Current DNS validation happens before `fetch`; this blocks common private-network targets but does not claim to eliminate all DNS rebinding / DNS TOCTOU risks. Attacker-controlled DNS can still create a time-of-check/time-of-use gap because the checked IP is not pinned to the actual connection. High-risk environments should disable remote URL conversion or keep `convertContent.allowPrivateNetwork=false` until connection-stage IP pinning is designed and implemented.
 - Remote responses larger than `convertContent.maxResponseBytes` return `FILE_TOO_LARGE` before provider execution.
 - Temporary downloaded files are removed after conversion succeeds or fails.
 - Local and downloaded file conversion invokes the configured MarkItDown CLI provider.
 - Per-call `timeoutMs` and `maxContentChars` override config defaults when they are positive integers.
-- Provider output beyond `maxContentChars` is truncated with `truncated=true`.
+- Provider output beyond `maxContentChars` is truncated with `truncated=true` after the external command finishes.
+- External command stdout/stderr also have hard byte limits in `src/shared/external-command.ts`; exceeding them stops the command and maps to `CONVERT_FAILED` with an output-size message.
 - Tool calls include compact/expanded TUI renderers for call/result display.
 - Successful and failed conversions are recorded in the shared toolkit activity log with `type="convert"`.
 - `allowPrivateNetwork=false` blocks localhost, loopback, private, link-local, metadata-style, and internal hostnames/IPs by default. Set `convertContent.allowPrivateNetwork=true` only for trusted environments.
@@ -57,8 +58,8 @@ Execution validates that exactly one of `path` or `url` is provided. Providing b
 - Invokes the configured executable with the input file as a structured argument, without shell interpolation.
 - Applies conversion timeout through the shared external command runner.
 - Checks input file size against `maxResponseBytes` in the convert provider before execution.
-- Receives stdout/stderr from the shared runner.
-- Maps missing command, timeout, non-zero exit, and file-too-large failures to convert error codes.
+- Receives stdout/stderr from the shared runner, capped by the runner's stdout/stderr hard byte limits.
+- Maps missing command, timeout, output-size limit, non-zero exit, and file-too-large failures to convert error codes.
 - Truncates stdout to `maxContentChars` and returns `truncated=true`.
 
 `src/shared/external-command.ts` is infrastructure only: it resolves/runs short external commands and collects stdout/stderr. MarkItDown-specific behavior, convert error mapping, file-size checks, metadata, and output truncation remain in `src/modules/convert/provider.ts`.

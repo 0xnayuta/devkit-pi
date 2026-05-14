@@ -22,6 +22,13 @@ export interface ExternalCommandRunOptions extends ExternalCommandResolveOptions
   timeoutMs: number;
   signal?: AbortSignal;
   cwd?: string;
+  maxStdoutBytes?: number;
+  maxStderrBytes?: number;
+}
+
+export interface ExternalCommandOutputTruncation {
+  stdout: boolean;
+  stderr: boolean;
 }
 
 export interface ExternalCommandResult {
@@ -29,7 +36,11 @@ export interface ExternalCommandResult {
   stdout: string;
   stderr: string;
   timedOut: boolean;
+  outputTruncated: ExternalCommandOutputTruncation;
 }
+
+export const DEFAULT_MAX_STDOUT_BYTES = 8 * 1024 * 1024;
+export const DEFAULT_MAX_STDERR_BYTES = 1 * 1024 * 1024;
 
 export interface ExternalCommandRunner {
   isAvailable(
@@ -102,6 +113,36 @@ export function resolveExternalCommand(
   return { executable: resolvedExecutable, args: command.args ?? [] };
 }
 
+interface LimitedOutputBuffer {
+  chunks: Buffer[];
+  bytes: number;
+  truncated: boolean;
+}
+
+function appendLimitedOutput(buffer: LimitedOutputBuffer, chunk: Buffer, maxBytes: number): void {
+  if (buffer.truncated) return;
+
+  const remaining = maxBytes - buffer.bytes;
+  if (remaining <= 0) {
+    buffer.truncated = true;
+    return;
+  }
+
+  if (chunk.byteLength > remaining) {
+    buffer.chunks.push(chunk.subarray(0, remaining));
+    buffer.bytes += remaining;
+    buffer.truncated = true;
+    return;
+  }
+
+  buffer.chunks.push(chunk);
+  buffer.bytes += chunk.byteLength;
+}
+
+function decodeLimitedOutput(buffer: LimitedOutputBuffer): string {
+  return Buffer.concat(buffer.chunks, buffer.bytes).toString("utf8");
+}
+
 export class NodeExternalCommandRunner implements ExternalCommandRunner {
   async isAvailable(
     command: ExternalCommandSpec,
@@ -123,9 +164,12 @@ export class NodeExternalCommandRunner implements ExternalCommandRunner {
     }
 
     return new Promise((resolve, reject) => {
-      let stdout = "";
-      let stderr = "";
+      const maxStdoutBytes = options.maxStdoutBytes ?? DEFAULT_MAX_STDOUT_BYTES;
+      const maxStderrBytes = options.maxStderrBytes ?? DEFAULT_MAX_STDERR_BYTES;
+      const stdoutBuffer: LimitedOutputBuffer = { chunks: [], bytes: 0, truncated: false };
+      const stderrBuffer: LimitedOutputBuffer = { chunks: [], bytes: 0, truncated: false };
       let timedOut = false;
+      let killedForOutputLimit = false;
       const signal = withTimeoutSignal(options.timeoutMs, options.signal);
 
       const onAbort = () => {
@@ -140,19 +184,34 @@ export class NodeExternalCommandRunner implements ExternalCommandRunner {
         stdio: ["ignore", "pipe", "pipe"],
       });
 
-      child.stdout.setEncoding("utf8");
-      child.stderr.setEncoding("utf8");
-      child.stdout.on("data", (chunk: string) => {
-        stdout += chunk;
+      const killForOutputLimit = () => {
+        if (killedForOutputLimit) return;
+        killedForOutputLimit = true;
+        child.kill();
+      };
+
+      child.stdout.on("data", (chunk: Buffer) => {
+        appendLimitedOutput(stdoutBuffer, chunk, maxStdoutBytes);
+        if (stdoutBuffer.truncated) killForOutputLimit();
       });
-      child.stderr.on("data", (chunk: string) => {
-        stderr += chunk;
+      child.stderr.on("data", (chunk: Buffer) => {
+        appendLimitedOutput(stderrBuffer, chunk, maxStderrBytes);
+        if (stderrBuffer.truncated) killForOutputLimit();
       });
 
       child.on("error", (error: NodeJS.ErrnoException) => {
         signal.removeEventListener("abort", onAbort);
         if (error.name === "AbortError" || timedOut) {
-          resolve({ exitCode: null, stdout, stderr, timedOut: true });
+          resolve({
+            exitCode: null,
+            stdout: decodeLimitedOutput(stdoutBuffer),
+            stderr: decodeLimitedOutput(stderrBuffer),
+            timedOut: true,
+            outputTruncated: {
+              stdout: stdoutBuffer.truncated,
+              stderr: stderrBuffer.truncated,
+            },
+          });
           return;
         }
         reject(error);
@@ -160,7 +219,16 @@ export class NodeExternalCommandRunner implements ExternalCommandRunner {
 
       child.on("close", (exitCode) => {
         signal.removeEventListener("abort", onAbort);
-        resolve({ exitCode, stdout, stderr, timedOut });
+        resolve({
+          exitCode,
+          stdout: decodeLimitedOutput(stdoutBuffer),
+          stderr: decodeLimitedOutput(stderrBuffer),
+          timedOut,
+          outputTruncated: {
+            stdout: stdoutBuffer.truncated,
+            stderr: stderrBuffer.truncated,
+          },
+        });
       });
     });
   }
