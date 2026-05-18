@@ -1,7 +1,7 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-13
+last_verified: 2026-05-18
 language: chinese
 ---
 
@@ -12,6 +12,13 @@ language: chinese
 - [LSP core 拆分边界设计记录](./lsp-core-split-boundaries.md)：阶段 0 仅记录拆分边界，不在 hardening 阶段执行大规模重构。
 
 ## 最近修复
+
+### v0.2.2
+
+- 子代理 JSON stream O(N²) stdout 膨胀改造方案与 upstream compact JSON stream PR 草案已完成，并在 fork 分支完成 patch 验证：<https://github.com/0xnayuta/pi/tree/patch/json-stream-compact>。
+- `devkit-pi` 已完成 compact/full 偏好与 fallback 对接，子代理最终结果提取继续依赖生命周期事件（`message_end` / `turn_end` 等）。详见：
+  - [子代理 JSON streaming stdout O(N²) 膨胀问题改造方案](./subagent-json-stream-o-n2-protocol-plan.md)
+  - [pi upstream compact JSON stream PR 草案](./subagent-json-stream-o-n2-upstream-pr-draft.md)
 
 ### v0.2.1
 

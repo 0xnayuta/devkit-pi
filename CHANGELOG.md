@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.2.2 — 2026-05-18
+
+### Subagent JSON stream compact patch alignment
+
+- Completed the subagent JSON streaming O(N²) stdout growth mitigation plan and upstream PR draft documentation.
+- Verified and aligned with the fork patch branch: <https://github.com/0xnayuta/pi/tree/patch/json-stream-compact>.
+- `devkit-pi` subagent integration now documents compact/full preference handling with fallback behavior and lifecycle-event-based final output extraction.
+- Synced internal issue records for implementation status and maintenance tracking.
+
 ## 0.1.0 — 2026-05-11
 
 ### Initial Release

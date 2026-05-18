@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: implemented
 audience: maintainer
 last_verified: 2026-05-18
 language: chinese
@@ -9,7 +9,7 @@ language: chinese
 
 日期：2026-05-18
 
-> **更新 (2026-05-18)**：本 PR 草案所描述的 compact profile 已在私有 fork 中实现并通过验证。
+> **更新 (2026-05-18)**：本 PR 草案所描述的 compact profile 已在 fork 分支中实现并通过验证。当前实现分支：<https://github.com/0xnayuta/pi/tree/patch/json-stream-compact>。
 
 关联文档：
 
@@ -28,10 +28,10 @@ language: chinese
 
 ### 位置
 
-```textn../pi                          # 与 devkit-pi 同级的私有 fork 仓库
-└─ branch: patch/json-stream-compact
-   ├─ 2 commits ahead of upstream main
-   └─ 已推送至 origin/patch/json-stream-compact
+```text
+fork: https://github.com/0xnayuta/pi
+branch: patch/json-stream-compact
+status: 已推送并完成验证
 ```
 
 ### 已实现的文件
@@ -68,10 +68,11 @@ E2E 验证（2026-05-18）确认：
 - `message_end` / `turn_end` 事件完整保留
 - devkit-pi unit tests 全部通过
 
-### 后续计划
+### 后续计划（当前）
 
-- 若 upstream 接受 PR 合并：删除私有 fork，改用官方版本
-- 若 upstream 不接受：维护私有 fork，并考虑设置本地 version tag scheme（如 `v0.75.1-jsoncompact.1`）
+- 继续基于 fork 分支维护 patch，等待 upstream PR 评审/合并窗口
+- 若 upstream 接受 PR 合并：切回官方版本并移除 fork 依赖
+- 若 upstream 暂不接受：继续维护 fork，并按需使用本地 version tag scheme（如 `v0.75.1-jsoncompact.1`）
 
 ### 本地验证命令
 
