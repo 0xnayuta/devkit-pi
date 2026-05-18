@@ -8,6 +8,19 @@ import { classifyChildJsonlEvent } from "../../src/modules/subagents/child-event
 import { ChildStdoutCollector } from "../../src/modules/subagents/child-output-buffer.ts";
 import { collectOutput, extractFinalOutput, extractProviderError, extractUsage, parseJsonLines } from "../../src/modules/subagents/collect-output.ts";
 import { filterToolsForReadonly } from "../../src/modules/subagents/executor.ts";
+import {
+	getPreferredPiJsonStreamProfiles,
+	notePiJsonStreamProfileSuccess,
+	notePiJsonStreamProfileUnsupported,
+	resetPiJsonStreamSupportForTests,
+	shouldFallbackFromCompactJsonStreamFailure,
+} from "../../src/modules/subagents/pi-json-stream.ts";
+import {
+	compactAgentSessionEvent,
+	compactAssistantMessageEvent,
+	serializePiJsonStreamEvent,
+} from "../../src/modules/subagents/pi-json-stream-serializer.ts";
+import { buildPiCommand } from "../../src/modules/subagents/pi-args.ts";
 import { getPiSpawnCommand, resolveWindowsPiCliScript, type PiSpawnDeps } from "../../src/modules/subagents/pi-spawn.ts";
 import registerSubagentPromptRuntime, {
 	CHILD_SUBAGENT_BOUNDARY_INSTRUCTIONS,
@@ -78,6 +91,7 @@ afterEach(() => {
 	else process.env.PI_SUBAGENT_INHERIT_PROJECT_CONTEXT = envSnapshot.PI_SUBAGENT_INHERIT_PROJECT_CONTEXT;
 	if (envSnapshot.PI_SUBAGENT_INHERIT_SKILLS === undefined) delete process.env.PI_SUBAGENT_INHERIT_SKILLS;
 	else process.env.PI_SUBAGENT_INHERIT_SKILLS = envSnapshot.PI_SUBAGENT_INHERIT_SKILLS;
+	resetPiJsonStreamSupportForTests();
 });
 
 describe("subagent runtime output collection", () => {
@@ -322,6 +336,114 @@ describe("subagent prompt runtime", () => {
 
 		const clean = [{ role: "user", content: "Task" }, { role: "toolResult", toolName: "read", content: "file" }];
 		assert.equal(contextHandler?.({ messages: clean }), undefined);
+	});
+});
+
+describe("subagent compact json stream serializer", () => {
+	it("returns full events unchanged for the full profile", () => {
+		const event = {
+			type: "message_update",
+			message: { role: "assistant", content: [{ type: "text", text: "partial" }] },
+			assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "x", partial: { role: "assistant" } },
+		};
+		assert.equal(serializePiJsonStreamEvent(event, "full"), event);
+	});
+
+	it("compacts message_update into assistant delta-only transport shape", () => {
+		const event = {
+			type: "message_update",
+			message: { role: "assistant", content: [{ type: "text", text: "partial" }] },
+			assistantMessageEvent: {
+				type: "text_delta",
+				contentIndex: 0,
+				delta: "x",
+				partial: { role: "assistant", content: [{ type: "text", text: "partial" }] },
+				provider: "anthropic",
+				model: "claude",
+				timestamp: 123,
+			},
+		};
+
+		assert.deepEqual(compactAgentSessionEvent(event), {
+			type: "message_update",
+			assistantMessageEvent: {
+				type: "text_delta",
+				contentIndex: 0,
+				delta: "x",
+			},
+		});
+	});
+
+	it("drops tool_execution_update in compact mode and preserves lifecycle events", () => {
+		assert.equal(
+			compactAgentSessionEvent({ type: "tool_execution_update", toolCallId: "1", partialResult: "huge" }),
+			undefined,
+		);
+		const lifecycle = { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "final" }] } };
+		assert.equal(compactAgentSessionEvent(lifecycle), lifecycle);
+	});
+
+	it("strips partial snapshots and zero usage from non-delta assistant events", () => {
+		assert.deepEqual(
+			compactAssistantMessageEvent({
+				type: "done",
+				reason: "stop",
+				partial: { role: "assistant" },
+				usage: {
+					input: 0,
+					output: 0,
+					cacheRead: 0,
+					cacheWrite: 0,
+					totalTokens: 0,
+					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+				},
+				provider: "anthropic",
+				model: "claude",
+				api: "messages",
+				timestamp: 123,
+			}),
+			{ type: "done", reason: "stop" },
+		);
+	});
+});
+
+describe("subagent pi json stream compatibility", () => {
+	it("builds compact json stream args when requested", () => {
+		assert.deepEqual(buildPiCommand("Task: hello", { mode: "json", jsonStreamProfile: "compact" }), [
+			"--mode",
+			"json",
+			"--json-stream",
+			"compact",
+			"Task: hello",
+		]);
+	});
+
+	it("prefers compact first, then caches support or fallback", () => {
+		assert.deepEqual(getPreferredPiJsonStreamProfiles(), ["compact", "full"]);
+		notePiJsonStreamProfileUnsupported("compact");
+		assert.deepEqual(getPreferredPiJsonStreamProfiles(), ["full"]);
+		resetPiJsonStreamSupportForTests();
+		notePiJsonStreamProfileSuccess("compact");
+		assert.deepEqual(getPreferredPiJsonStreamProfiles(), ["compact"]);
+	});
+
+	it("detects unknown compact json-stream option failures for fallback", () => {
+		assert.equal(
+			shouldFallbackFromCompactJsonStreamFailure({
+				exitCode: 1,
+				error: "error: unknown option '--json-stream'",
+				output: "",
+			}),
+			true,
+		);
+		assert.equal(
+			shouldFallbackFromCompactJsonStreamFailure({
+				exitCode: 1,
+				error: "provider timeout while using json-stream transport",
+				output: "",
+			}),
+			false,
+		);
 	});
 });
 

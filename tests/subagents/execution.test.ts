@@ -11,6 +11,7 @@ import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/load-config.ts";
 import { createSubagentExecutor } from "../../src/modules/subagents/executor.ts";
 import { runSync } from "../../src/modules/subagents/execution.ts";
+import { resetPiJsonStreamSupportForTests } from "../../src/modules/subagents/pi-json-stream.ts";
 import { SUBAGENT_ERROR_CODES } from "../../src/shared/types.ts";
 
 const tempDirs: string[] = [];
@@ -53,6 +54,7 @@ afterEach(() => {
 	for (const dir of tempDirs.splice(0)) {
 		fs.rmSync(dir, { recursive: true, force: true });
 	}
+	resetPiJsonStreamSupportForTests();
 });
 
 describe("subagent execution timeout normalization", () => {
@@ -137,6 +139,91 @@ setTimeout(() => {}, 5000);
 		assert.equal(result.exitCode, 1);
 		assert.match(result.output, /stdout hard limit/);
 		assert.ok(Buffer.byteLength(result.partialOutput ?? "") <= 1024);
+	});
+
+	it("falls back from compact json-stream args to full json mode when child pi does not support the option", async () => {
+		const calls: string[][] = [];
+		const config = mergeConfig({
+			subagents: {
+				retry: { enabled: false, maxAttempts: 1 },
+			},
+		}).subagents;
+		const executor = createSubagentExecutor({
+			pi: {} as any,
+			state: { baseCwd: process.cwd(), currentSessionId: null, lastUiContext: null },
+			config,
+			getSubagentSessionRoot: () => {
+				const dir = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-compact-fallback-"));
+				tempDirs.push(dir);
+				return dir;
+			},
+			discoverAgents: () => ({
+				agents: [
+					{
+						name: "compact-test-agent",
+						description: "compact fallback test",
+						readonly: true,
+						tools: ["read"],
+						systemPrompt: "You are a compact fallback test agent.",
+						source: "builtin",
+						filePath: "agents/compact-test-agent.md",
+					},
+				],
+			}),
+			runSyncImpl: async (_cwd, args) => {
+				calls.push(args);
+				if (args.includes("--json-stream")) {
+					return {
+						exitCode: 1,
+						output: "error: unknown option '--json-stream'",
+						error: "error: unknown option '--json-stream'",
+						final: false,
+					};
+				}
+				return {
+					exitCode: 0,
+					output: "fallback succeeded",
+					usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, cost: 0, turns: 1 },
+					final: true,
+					displayItems: [],
+				};
+			},
+		});
+
+		const result = await executor.execute(
+			"compact-fallback-test",
+			{ agent: "compact-test-agent", task: "Run fallback" },
+			new AbortController().signal,
+			undefined,
+			{
+				cwd: process.cwd(),
+				sessionManager: { getSessionFile: () => null },
+			} as any,
+		);
+
+		assert.equal(result.details.error, undefined);
+		assert.equal(result.details.results[0]?.exitCode, 0);
+		assert.equal(result.details.results[0]?.output, "fallback succeeded");
+		assert.equal(calls.length, 2);
+		assert.ok(calls[0]?.includes("--json-stream"));
+		assert.equal(calls[1]?.includes("--json-stream"), false);
+
+		calls.length = 0;
+		const second = await executor.execute(
+			"compact-fallback-test-2",
+			{ agent: "compact-test-agent", task: "Run cached full mode" },
+			new AbortController().signal,
+			undefined,
+			{
+				cwd: process.cwd(),
+				sessionManager: { getSessionFile: () => null },
+			} as any,
+		);
+
+		assert.equal(second.details.error, undefined);
+		assert.equal(second.details.results[0]?.exitCode, 0);
+		assert.equal(calls.length, 1);
+		assert.equal(calls[0]?.includes("--json-stream"), false);
 	});
 
 	itPosix("normalizes a timed-out long-running child process to exitCode 124", async () => {
