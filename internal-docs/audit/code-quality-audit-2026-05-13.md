@@ -657,11 +657,11 @@ pnpm test       ✅ 280 tests passed
 
 **目标**：补齐资源上限和安全缺口。
 
-1. 给 `ExternalCommandRunner` 增加 stdout/stderr byte cap。
-2. 给 subagent child 输出收集增加 hard cap 与结构化错误。
-3. search providers 改用统一有限 body reader。
-4. LSP 文件读取增加大小限制。
-5. 在安全文档中说明 DNS rebinding 限制，并设计连接阶段 pin IP 方案。
+1. ✅ 给 `ExternalCommandRunner` 增加 stdout/stderr byte cap。
+2. ✅ 给 subagent child 输出收集增加 hard cap 与结构化错误。
+3. ✅ search providers 改用统一有限 body reader。
+4. ✅ LSP 文件读取增加大小限制。
+5. 🟡 在安全文档中说明 DNS rebinding 限制，并设计连接阶段 pin IP 方案（前半已完成：文档限制说明；后半未完成：连接阶段 pin IP 设计/实现）。
 
 ### 第三阶段（维护性优化 · 1 周）
 
@@ -669,7 +669,7 @@ pnpm test       ✅ 280 tests passed
 
 1. 拆分 `src/modules/lsp/core.ts`。
 2. 补 LSP manager 级单测。
-3. 扩展 `docs:check` 默认值一致性检查。
+3. ✅ 扩展 `docs:check` 默认值一致性检查。
 4. 增加 coverage 报告。
 5. 建立统一 logger/diagnostics sink，减少裸 `console.*`。
 
@@ -751,37 +751,43 @@ src/shared/
 
 ## 十五、最终结论
 
+> **时效说明**：本章为 2026-05-13 原审计结论的归纳性文本。当前执行状态与优先级判断请以“十六、复审增量（2026-05-18）”和“十七、附录：问题总表（详细版）”为准。
+
 ### 当前阶段
 
-**成熟个人工具包 / 早期可发布扩展**。项目在模块化、测试、文档和配置规范方面做得较好，符合“轻量、模块化、主代理编排”的定位。
+**成熟个人工具包 / 早期可发布扩展**。项目在模块化、测试、文档和配置规范方面具备较好基础，符合“轻量、模块化、主代理编排”的定位。
 
-### 最大问题
+### 关键关注点（以十六/十七章状态为准）
 
-**安全默认与资源上限仍有关键缺口**：HTTPS pool 关闭证书校验、URL 私网防护存在 DNS rebinding 缺口、外部命令/子进程/provider 响应缺少硬性输出上限。这些问题不一定影响日常本地使用，但会影响项目作为通用扩展包的可信度。
+当前需要持续关注的重点已从“多项高优先级缺口并存”收敛为“少量已知边界与技术债”：
+
+- 安全边界：DNS rebinding / TOCTOU 目前为文档化缓解（Mitigated），连接阶段 pinning 尚未落地；
+- 架构维护性：`lsp/core.ts` 拆分仍待专门维护窗口执行（Deferred/Open 按总表为准）；
+- 工程化提升：Node engines、coverage 等工程项仍为后续优化项。
 
 ### 是否建议继续加功能
 
 - ☐ 是
-- ☑ **否，建议先完成第一/第二阶段加固**
+- ☑ **原则上先按问题总表清理 Open / Deferred 项，再评估新增功能节奏**
 
 ### 是否建议先重构
 
-- ☑ **是，但只做局部重构**：优先拆 `lsp/core.ts`，不要重排顶层结构。
+- ☑ **是，但只做局部重构**：优先按 `internal-docs/issues/lsp-core-split-boundaries.md` 分步拆分 `lsp/core.ts`，不重排顶层结构。
 
 ### 是否适合商业化
 
 - ☐ 是
-- ☑ **暂不适合直接商业化**：需要修复 TLS/SSRF/资源上限，补 LSP manager 测试和更强 release smoke test。
+- ☑ **需谨慎推进**：关键高优先级缺口多数已关闭，但仍应先完成剩余安全增强与维护性改进，再进入更高强度发布场景。
 
 ### 是否适合多人协作
 
-- ☑ **基本适合**：已有 CI、lint、typecheck、tests、docs；建议补 coverage、CONTRIBUTING 和更严格 docs contract 后更稳。
+- ☑ **基本适合**：已有 CI、lint、typecheck、tests、docs；后续按总表持续收敛 Open 项可进一步提升协作稳定性。
 
-### 下一步最优先执行的三件事
+### 下一步最优先执行的三件事（以十七章状态驱动）
 
-1. **修复安全默认**：删除 `rejectUnauthorized:false`，补测试，并更新安全文档。
-2. **补资源硬上限**：external command、subagent execution、web provider response 三条路径增加 byte cap。
-3. **修正文档漂移**：同步 `subagents.timeoutMs` / `idleTimeoutMs`，并让 `docs:check` 自动校验关键默认值。
+1. **推进安全增强剩余项**：评估并设计 DNS 校验到连接阶段的一致性方案（pinning）。
+2. **推进 LSP 维护性拆分**：按已记录边界分步拆分 `lsp/core.ts` 并补 manager 级测试。
+3. **补齐工程化可见性**：评估增加 `engines.node` 与轻量 coverage 报告。
 
 ---
 
