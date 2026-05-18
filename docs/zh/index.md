@@ -39,6 +39,7 @@ pnpm docs:preview
 
 - [目标与范围](./guides/goals-and-scope.md)：项目目标和当前能力边界。
 - [安全模型](./guides/security-model.md)：subagents、Web 工具、LSP、convert 和写入能力的安全边界。
+- [Agent Workflow Guide](./guides/agent-workflow.md)：覆盖 planning、debug、review 与 verification 说明的轻量流程指南。
 - [Subagents 参考](./reference/subagents.md)：subagent 模块 surface 和执行边界。
 - [Web 工具参考](./reference/web-tools.md)：`web_search`、`fetch_content` 和 `get_search_content`。
 - [LSP 工具参考](./reference/lsp-tools.md)：LSP tool actions 和 diagnostics hook 行为。

@@ -1238,6 +1238,19 @@ Guides
 
 如果阶段 2 只新增一个文档，则只加一个 nav item。
 
+### 执行记录
+
+已新增：
+
+- `docs/guides/agent-workflow.md`
+- `docs/zh/guides/agent-workflow.md`
+
+并已同步导航入口：
+
+- `docs/.vitepress/config.ts` guide sidebar
+- `docs/README.md` / `docs/zh/README.md`
+- `docs/index.md` / `docs/zh/index.md`
+
 ## 2.10 docs:check 增强
 
 建议 `docs:check` 增加:
@@ -1263,13 +1276,26 @@ pnpm test ✅(如 docs check 集成测试需要)
 
 并满足:
 
-- [ ] 新增 devkit-pi 风格 workflow guide;
-- [ ] 文档没有复制 `pi-superpowers-plus` 原文;
-- [ ] 明确 devkit-pi 不是强 workflow 框架;
-- [ ] 明确 subagent readonly-first 和主 agent orchestration;
-- [ ] 明确 completion 前验证说明格式;
-- [ ] VitePress sidebar/nav 已更新;
-- [ ] docs:check 能覆盖基本导航一致性。
+- [x] 新增 devkit-pi 风格 workflow guide;
+- [x] 文档没有复制 `pi-superpowers-plus` 原文;
+- [x] 明确 devkit-pi 不是强 workflow 框架;
+- [x] 明确 subagent readonly-first 和主 agent orchestration;
+- [x] 明确 completion 前验证说明格式;
+- [x] VitePress sidebar/nav 已更新;
+- [x] docs:check 能覆盖基本导航一致性。
+
+### 收尾审查记录
+
+阶段 2 已完成：
+
+- 新增 `docs/guides/agent-workflow.md` 与 `docs/zh/guides/agent-workflow.md`；
+- 内容明确 devkit-pi 是 lightweight workflow 指南，而非强约束 workflow 框架；
+- 明确 readonly-first subagent 边界与主代理 orchestration 职责；
+- 明确 completion 前 verification 说明格式；
+- 完成 VitePress guide 导航同步；
+- `scripts/check-docs.mjs` 已新增 guide sidebar 覆盖检查，确保新增 guide 必须被导航引用。
+
+阶段 2 文档与导航一致性已闭环。
 
 ---
 

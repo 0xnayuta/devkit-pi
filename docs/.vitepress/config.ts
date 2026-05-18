@@ -58,6 +58,7 @@ const guideSidebar = [
     items: [
       { text: "Overview", link: "/" },
       { text: "Goals and Scope", link: "/guides/goals-and-scope" },
+      { text: "Agent Workflow", link: "/guides/agent-workflow" },
       { text: "Security Model", link: "/guides/security-model" },
     ],
   },
@@ -69,6 +70,7 @@ const zhGuideSidebar = [
     items: [
       { text: "概览", link: "/zh/" },
       { text: "目标与范围", link: "/zh/guides/goals-and-scope" },
+      { text: "Agent Workflow", link: "/zh/guides/agent-workflow" },
       { text: "安全模型", link: "/zh/guides/security-model" },
     ],
   },

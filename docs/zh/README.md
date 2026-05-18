@@ -32,6 +32,7 @@ pnpm docs:preview
 ### 指南
 
 - [目标与范围](./guides/goals-and-scope.md)：项目目标、当前包含/不包含的能力和设计边界。
+- [Agent Workflow Guide](./guides/agent-workflow.md)：轻量 workflow 方法，覆盖 planning、implementation、debug、review 与 verification 说明。
 - [安全模型](./guides/security-model.md)：Subagents、Web tools、LSP、convert 和写入能力的安全边界。
 
 ### 参考
@@ -54,9 +55,10 @@ pnpm docs:preview
 ### 新用户
 
 1. [目标与范围](./guides/goals-and-scope.md)
-2. [安全模型](./guides/security-model.md)
-3. [配置参考](./reference/configuration.md)
-4. [Toolkit 命令参考](./reference/toolkit-commands.md)
+2. [Agent Workflow Guide](./guides/agent-workflow.md)
+3. [安全模型](./guides/security-model.md)
+4. [配置参考](./reference/configuration.md)
+5. [Toolkit 命令参考](./reference/toolkit-commands.md)
 
 ### 想使用 Subagents
 

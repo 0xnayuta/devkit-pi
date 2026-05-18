@@ -32,6 +32,7 @@ pnpm docs:preview
 ### Guides
 
 - [Goals and scope](./guides/goals-and-scope.md): project goals, included/excluded capabilities, and design boundaries.
+- [Agent workflow guide](./guides/agent-workflow.md): lightweight workflow methods for planning, implementation, debug, review, and verification reporting.
 - [Security model](./guides/security-model.md): security boundaries for subagents, Web tools, LSP, convert, and write capability.
 
 ### Reference
@@ -54,9 +55,10 @@ pnpm docs:preview
 ### New users
 
 1. [Goals and scope](./guides/goals-and-scope.md)
-2. [Security model](./guides/security-model.md)
-3. [Configuration reference](./reference/configuration.md)
-4. [Toolkit commands reference](./reference/toolkit-commands.md)
+2. [Agent workflow guide](./guides/agent-workflow.md)
+3. [Security model](./guides/security-model.md)
+4. [Configuration reference](./reference/configuration.md)
+5. [Toolkit commands reference](./reference/toolkit-commands.md)
 
 ### Using Subagents
 

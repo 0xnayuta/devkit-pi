@@ -39,6 +39,7 @@ pnpm docs:preview
 
 - [Goals and scope](./guides/goals-and-scope.md): project goals and current capability boundaries.
 - [Security model](./guides/security-model.md): security boundaries for subagents, Web tools, LSP, convert, and write capability.
+- [Agent workflow guide](./guides/agent-workflow.md): practical lightweight workflow patterns for planning, debug, review, and verification reporting.
 - [Subagents reference](./reference/subagents.md): subagent module surface and execution boundaries.
 - [Web tools reference](./reference/web-tools.md): `web_search`, `fetch_content`, and `get_search_content`.
 - [LSP tools reference](./reference/lsp-tools.md): LSP tool actions and diagnostics hook behavior.

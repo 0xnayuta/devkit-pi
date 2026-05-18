@@ -460,6 +460,32 @@ function extractDefaultValue(block, key) {
   return match?.[1]?.trim();
 }
 
+function checkGuideSidebarCoverage() {
+  const configFile = "docs/.vitepress/config.ts";
+  if (!fs.existsSync(path.join(root, configFile))) return;
+  const config = read(configFile);
+
+  const guideFiles = walk("docs/guides")
+    .filter((file) => file.endsWith(".md"))
+    .map((file) => file.replace(/^docs\/guides\//, "").replace(/\.md$/, ""));
+  for (const slug of guideFiles) {
+    const link = `link: "/guides/${slug}"`;
+    if (!config.includes(link)) {
+      errors.push(`${configFile}: missing guide sidebar link ${link}`);
+    }
+  }
+
+  const zhGuideFiles = walk("docs/zh/guides")
+    .filter((file) => file.endsWith(".md"))
+    .map((file) => file.replace(/^docs\/zh\/guides\//, "").replace(/\.md$/, ""));
+  for (const slug of zhGuideFiles) {
+    const link = `link: "/zh/guides/${slug}"`;
+    if (!config.includes(link)) {
+      errors.push(`${configFile}: missing zh guide sidebar link ${link}`);
+    }
+  }
+}
+
 function checkConfigDefaultDrift() {
   const source = read("src/config/load-config.ts");
   const subagents = extractObjectBlock(source, "DEFAULT_SUBAGENTS_CONFIG");
@@ -557,6 +583,7 @@ checkPlanningDocs();
 checkPlanningNotInMainSidebar();
 checkAdr0005Title();
 checkDocsReadmeSections();
+checkGuideSidebarCoverage();
 checkConfigDefaultDrift();
 
 if (errors.length > 0) {
