@@ -379,6 +379,10 @@ stdout collector parse 一次即可完成 filter 与 streaming update。
 
 ## 阶段 2A：pi upstream compact JSON mode（推荐长期方案）
 
+详细 PR 草案见：
+
+- `internal-docs/issues/subagent-json-stream-o-n2-upstream-pr-draft.md`
+
 ### 背景
 
 pi 原版 `print-mode.js` 当前：
