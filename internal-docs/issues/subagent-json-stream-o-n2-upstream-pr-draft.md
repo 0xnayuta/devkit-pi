@@ -1,5 +1,5 @@
 ---
-status: partially-implemented
+status: proposed
 audience: maintainer
 last_verified: 2026-05-18
 language: chinese
@@ -9,8 +9,7 @@ language: chinese
 
 日期：2026-05-18
 
-> **更新 (2026-05-18)**：本 PR 草案对应的实现已部署在私有 fork 中。
-> 详见本文档末尾「私有 Fork 实现」章节。
+> **更新 (2026-05-18)**：本 PR 草案所描述的 compact profile 已在私有 fork 中实现并通过验证。
 
 关联文档：
 
