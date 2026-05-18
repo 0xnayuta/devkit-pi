@@ -5,6 +5,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { getPiJsonModeArgs, type PiJsonStreamProfile } from "./pi-json-stream.ts";
 
 export const PI_SUBAGENT_CHILD = "PI_SUBAGENT_CHILD";
 export const PI_SUBAGENT_DEPTH = "PI_SUBAGENT_DEPTH";
@@ -28,6 +29,7 @@ export function applyThinkingSuffix(
  */
 export function buildSubagentChildArgs(input: {
   mode: "json" | "text";
+  jsonStreamProfile?: PiJsonStreamProfile;
   systemPrompt: string;
   task: string;
   cwd: string;
@@ -40,7 +42,7 @@ export function buildSubagentChildArgs(input: {
 
   // Set output mode
   if (input.mode === "json") {
-    args.push("--mode", "json");
+    args.push(...getPiJsonModeArgs(input.jsonStreamProfile ?? "full"));
   }
 
   // Session file
@@ -97,6 +99,7 @@ export function buildPiCommand(
   task: string,
   options: {
     mode?: "json" | "text";
+    jsonStreamProfile?: PiJsonStreamProfile;
     model?: string;
     tools?: string[];
     sessionFile?: string;
@@ -105,7 +108,7 @@ export function buildPiCommand(
   const args: string[] = [];
 
   if (options.mode === "json") {
-    args.push("--mode", "json");
+    args.push(...getPiJsonModeArgs(options.jsonStreamProfile ?? "full"));
   }
 
   if (options.sessionFile) {

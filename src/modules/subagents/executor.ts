@@ -29,6 +29,12 @@ import type { AgentConfig, AgentScope } from "./agents.ts";
 import { collectOutput } from "./collect-output.ts";
 import { type DisplayItem, type RunSyncResult, runSync, type StreamingState } from "./execution.ts";
 import { buildSubagentChildArgs, cleanupTempDir } from "./pi-args.ts";
+import {
+  getPreferredPiJsonStreamProfiles,
+  notePiJsonStreamProfileSuccess,
+  notePiJsonStreamProfileUnsupported,
+  shouldFallbackFromCompactJsonStreamFailure,
+} from "./pi-json-stream.ts";
 import { buildChildPrompt } from "./prompt-runtime.ts";
 import { sanitizeOutput } from "./sanitize.ts";
 
@@ -43,6 +49,7 @@ interface ExecutorDeps {
   config: ResolvedSubagentsConfig;
   getSubagentSessionRoot: (parentSessionFile: string | null) => string;
   discoverAgents: (cwd: string, scope: AgentScope) => { agents: AgentConfig[] };
+  runSyncImpl?: typeof runSync;
 }
 
 function findAgent(agents: AgentConfig[], name: string): AgentConfig | undefined {
@@ -307,6 +314,7 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
     const maxAttempts = deps.config.retry.enabled ? deps.config.retry.maxAttempts : 1;
     const timeoutMs = deps.config.timeoutMs;
     const idleTimeoutMs = deps.config.idleTimeoutMs;
+    const runSyncImpl = deps.runSyncImpl ?? runSync;
 
     let exitCode = 1;
     let output = "";
@@ -326,85 +334,109 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
         attempt === 1 ? "session.jsonl" : `session-attempt-${attempt}.jsonl`
       );
 
-      const piArgs = buildSubagentChildArgs({
-        mode: "json",
-        systemPrompt,
-        task: params.task,
-        cwd,
-        sessionFile,
-        model: agent.model,
-        tools,
-        env: childEnv,
-      });
+      const jsonStreamProfiles = getPreferredPiJsonStreamProfiles();
 
-      try {
-        const result: RunSyncResult = await runSync(cwd, piArgs.args, {
-          signal,
-          timeoutMs,
-          idleTimeoutMs,
-          env: piArgs.env,
-          onStreamingUpdate: (state: StreamingState) => {
-            if (!onUpdate) return;
-            onUpdate({
-              content: [
-                {
-                  type: "text",
-                  text: state.lastAssistantText || "(running...)",
-                },
-              ],
-              details: {
-                mode: "single",
-                results: [],
-                streaming: {
-                  displayItems: buildDisplayItems(state),
-                  usage: state.usage,
-                  turnCount: state.usage.turns,
-                },
-              },
-            });
-          },
+      for (const jsonStreamProfile of jsonStreamProfiles) {
+        const piArgs = buildSubagentChildArgs({
+          mode: "json",
+          jsonStreamProfile,
+          systemPrompt,
+          task: params.task,
+          cwd,
+          sessionFile,
+          model: agent.model,
+          tools,
+          env: childEnv,
         });
 
-        exitCode = result.exitCode;
-        output = result.output || "";
-        usage = result.usage;
-        providerError = result.error;
-        partialOutput = result.partialOutput;
-        finalDisplayItems = result.displayItems;
-        finalTimeoutReason = result.timeoutReason;
-        outputLimitExceeded = result.outputLimitExceeded;
-        if (result.outputLimitExceeded) {
-          output =
-            result.output ||
-            "Subagent child output exceeded the configured hard limit and was stopped.";
-          providerError = output;
-        } else if (result.timedOut) {
-          if (result.timeoutReason === "idle") {
-            output = `Subagent timed out after ${idleTimeoutMs}ms without activity.`;
-          } else {
-            output = `Subagent exceeded maximum runtime after ${timeoutMs}ms.`;
+        try {
+          const result: RunSyncResult = await runSyncImpl(cwd, piArgs.args, {
+            signal,
+            timeoutMs,
+            idleTimeoutMs,
+            env: piArgs.env,
+            onStreamingUpdate: (state: StreamingState) => {
+              if (!onUpdate) return;
+              onUpdate({
+                content: [
+                  {
+                    type: "text",
+                    text: state.lastAssistantText || "(running...)",
+                  },
+                ],
+                details: {
+                  mode: "single",
+                  results: [],
+                  streaming: {
+                    displayItems: buildDisplayItems(state),
+                    usage: state.usage,
+                    turnCount: state.usage.turns,
+                  },
+                },
+              });
+            },
+          });
+
+          if (
+            jsonStreamProfile === "compact" &&
+            shouldFallbackFromCompactJsonStreamFailure({
+              exitCode: result.exitCode,
+              output: result.output,
+              error: result.error,
+              partialOutput: result.partialOutput,
+            })
+          ) {
+            notePiJsonStreamProfileUnsupported(jsonStreamProfile);
+            continue;
           }
-          providerError = output;
-        } else if (result.cancelled && signal.aborted) {
-          output = "Subagent execution was cancelled by user.";
-          providerError = output;
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") {
-          if (signal.aborted) {
+
+          if (jsonStreamProfile === "compact") {
+            notePiJsonStreamProfileSuccess(jsonStreamProfile);
+          }
+
+          exitCode = result.exitCode;
+          output = result.output || "";
+          usage = result.usage;
+          providerError = result.error;
+          partialOutput = result.partialOutput;
+          finalDisplayItems = result.displayItems;
+          finalTimeoutReason = result.timeoutReason;
+          outputLimitExceeded = result.outputLimitExceeded;
+          if (result.outputLimitExceeded) {
+            output =
+              result.output ||
+              "Subagent child output exceeded the configured hard limit and was stopped.";
+            providerError = output;
+          } else if (result.timedOut) {
+            if (result.timeoutReason === "idle") {
+              output = `Subagent timed out after ${idleTimeoutMs}ms without activity.`;
+            } else {
+              output = `Subagent exceeded maximum runtime after ${timeoutMs}ms.`;
+            }
+            providerError = output;
+          } else if (result.cancelled && signal.aborted) {
             output = "Subagent execution was cancelled by user.";
-          } else {
-            exitCode = 124;
-            output = `Subagent timed out after ${timeoutMs}ms.`;
             providerError = output;
           }
-        } else {
-          const message = error instanceof Error ? error.message : String(error);
-          output = `Subagent execution failed: ${message}`;
-          providerError = output;
+          break;
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") {
+            if (signal.aborted) {
+              output = "Subagent execution was cancelled by user.";
+            } else {
+              exitCode = 124;
+              output = `Subagent timed out after ${timeoutMs}ms.`;
+              providerError = output;
+            }
+          } else {
+            const message = error instanceof Error ? error.message : String(error);
+            output = `Subagent execution failed: ${message}`;
+            providerError = output;
+          }
+          break;
+        } finally {
+          cleanupTempDir(piArgs.tempDir);
         }
-      } finally {
-        cleanupTempDir(piArgs.tempDir);
       }
 
       if (exitCode !== 0) {
