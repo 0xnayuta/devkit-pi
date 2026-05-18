@@ -39,3 +39,9 @@ test("direct @earendil-works runtime imports are declared for CI installs", () =
 	const missing = [...imported].filter((specifier) => !declared.has(specifier)).sort();
 	assert.deepEqual(missing, []);
 });
+
+test("package.json declares minimum supported Node.js runtime", () => {
+	const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf-8"));
+	assert.equal(typeof packageJson.engines?.node, "string");
+	assert.match(packageJson.engines.node, /^>=\d+\.\d+\.\d+$/);
+});

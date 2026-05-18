@@ -26,6 +26,10 @@ pi install devkit-pi
 
 npm 包：[https://www.npmjs.com/package/devkit-pi](https://www.npmjs.com/package/devkit-pi)
 
+### 运行时要求
+
+- Node.js `>=22.6.0`
+
 ### 或本地链接开发
 
 ```json

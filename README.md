@@ -26,6 +26,10 @@ pi install devkit-pi
 
 npm package: [https://www.npmjs.com/package/devkit-pi](https://www.npmjs.com/package/devkit-pi)
 
+### Runtime requirement
+
+- Node.js `>=22.6.0`
+
 ### Or link locally for development
 
 ```json
