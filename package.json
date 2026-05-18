@@ -55,10 +55,10 @@
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-agent-core": "^0.74.0",
-    "@earendil-works/pi-ai": "^0.74.0",
-    "@earendil-works/pi-coding-agent": "^0.74.0",
-    "@earendil-works/pi-tui": "^0.74.0"
+    "@earendil-works/pi-agent-core": ">=0.75.1",
+    "@earendil-works/pi-ai": ">=0.75.1",
+    "@earendil-works/pi-coding-agent": ">=0.75.1",
+    "@earendil-works/pi-tui": ">=0.75.1"
   },
   "peerDependenciesMeta": {
     "@earendil-works/pi-agent-core": {
@@ -81,10 +81,10 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
-    "@earendil-works/pi-agent-core": "^0.74.0",
-    "@earendil-works/pi-ai": "^0.74.0",
-    "@earendil-works/pi-coding-agent": "^0.74.0",
-    "@earendil-works/pi-tui": "^0.74.0",
+    "@earendil-works/pi-agent-core": ">=0.75.1",
+    "@earendil-works/pi-ai": ">=0.75.1",
+    "@earendil-works/pi-coding-agent": ">=0.75.1",
+    "@earendil-works/pi-tui": ">=0.75.1",
     "@types/node": "^25.6.2",
     "typescript": "^6.0.3",
     "vitepress": "^1.6.4"
