@@ -630,21 +630,6 @@ setTimeout(() => {}, 5000);
 	});
 
 	itPosix("maps child output hard limit to SUBAGENT_OUTPUT_TRUNCATED at the executor layer", async () => {
-		const { dir } = makeTempPiScript();
-		const scriptPath = path.join(dir, "pi");
-		fs.writeFileSync(
-			scriptPath,
-			[
-				"#!/usr/bin/env bash",
-				"printf '%*s' 200000 '' | tr ' ' x",
-				"sleep 5",
-				"",
-			].join("\n"),
-			"utf-8",
-		);
-		fs.chmodSync(scriptPath, 0o755);
-		process.env.PATH = `${dir}${path.delimiter}${process.env.PATH ?? ""}`;
-
 		const sessionRoot = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-output-limit-executor-"));
 		tempDirs.push(sessionRoot);
 		const config = mergeConfig({
@@ -652,6 +637,8 @@ setTimeout(() => {}, 5000);
 				retry: { enabled: false, maxAttempts: 1 },
 			},
 		}).subagents;
+		const outputLimitMessage =
+			"Subagent child output exceeded stdout hard limit (8388608 bytes) and was stopped.";
 		const executor = createSubagentExecutor({
 			pi: {} as any,
 			state: { baseCwd: process.cwd(), currentSessionId: null, lastUiContext: null },
@@ -669,6 +656,14 @@ setTimeout(() => {}, 5000);
 						filePath: "agents/noisy-agent.md",
 					},
 				],
+			}),
+			runSyncImpl: async () => ({
+				exitCode: 1,
+				output: outputLimitMessage,
+				error: outputLimitMessage,
+				partialOutput: "x".repeat(1024),
+				final: false,
+				outputLimitExceeded: "stdout",
 			}),
 		});
 
