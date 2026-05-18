@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/load-config.ts";
+import * as lspCore from "../../src/modules/lsp/core.ts";
 import {
   DEFAULT_LSP_MAX_SOURCE_FILE_BYTES,
   LspFileTooLargeError,
@@ -41,6 +42,44 @@ function createPiMock() {
       listeners[event].push(handler);
     },
   };
+}
+
+function createFakeLspClient() {
+  const calls = {
+    shutdownRequests: 0,
+    exitNotifications: 0,
+    connectionEnds: 0,
+    processKills: 0,
+  };
+
+  const client = {
+    connection: {
+      sendRequest(method: string) {
+        if (method === "shutdown") calls.shutdownRequests += 1;
+        return Promise.resolve(null);
+      },
+      sendNotification(method: string) {
+        if (method === "exit") calls.exitNotifications += 1;
+        return Promise.resolve();
+      },
+      end() {
+        calls.connectionEnds += 1;
+      },
+    },
+    process: {
+      kill() {
+        calls.processKills += 1;
+      },
+    },
+    diagnostics: new Map(),
+    openFiles: new Map(),
+    listeners: new Map(),
+    stderr: [],
+    root: "/fake-root",
+    closed: false,
+  };
+
+  return { client, calls };
 }
 
 describe("lsp module", () => {
@@ -134,6 +173,187 @@ describe("lsp module", () => {
     assert.ok(result.details.servers.includes("typescript"));
   });
 
+  it("deduplicates concurrent spawn for the same root", async () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-concurrency-"));
+    const file = path.join(workspace, "main.ts");
+    fs.writeFileSync(file, "export const x = 1;\n", "utf-8");
+    fs.writeFileSync(path.join(workspace, "package.json"), "{}\n", "utf-8");
+
+    const manager = new lspCore.LSPManager(workspace);
+    const originalServers = [...lspCore.LSP_SERVERS];
+
+    let initCalls = 0;
+    const fakeClient = { id: "fake-client" };
+
+    try {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, {
+        id: "typescript",
+        extensions: [".ts"],
+        findRoot: () => workspace,
+        spawn: async () => undefined,
+      });
+
+      (manager as any).initClient = async () => {
+        initCalls += 1;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return fakeClient;
+      };
+
+      const [clientsA, clientsB] = await Promise.all([
+        manager.getClientsForFile(file),
+        manager.getClientsForFile(file),
+      ]);
+
+      assert.equal(initCalls, 1);
+      assert.equal(clientsA.length, 1);
+      assert.equal(clientsB.length, 1);
+      assert.equal(clientsA[0], fakeClient);
+      assert.equal(clientsB[0], fakeClient);
+    } finally {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, ...originalServers);
+      await manager.shutdown();
+    }
+  });
+
+  it("does not write back client after shutdown during in-flight spawn", async () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-shutdown-race-"));
+    const file = path.join(workspace, "main.ts");
+    fs.writeFileSync(file, "export const x = 1;\n", "utf-8");
+    fs.writeFileSync(path.join(workspace, "package.json"), "{}\n", "utf-8");
+
+    const manager = new lspCore.LSPManager(workspace);
+    const originalServers = [...lspCore.LSP_SERVERS];
+
+    let resolveInit: (client: any) => void = () => {
+      throw new Error("init resolver was not captured");
+    };
+    const { client: fakeClient, calls } = createFakeLspClient();
+
+    try {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, {
+        id: "typescript",
+        extensions: [".ts"],
+        findRoot: () => workspace,
+        spawn: async () => undefined,
+      });
+
+      (manager as any).initClient = async () => {
+        const client = await new Promise<any>((resolve) => {
+          resolveInit = resolve;
+        });
+        return client;
+      };
+
+      const pending = manager.getClientsForFile(file);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      await manager.shutdown();
+      resolveInit(fakeClient);
+      await pending;
+
+      assert.equal((manager as any).clients.size, 0);
+      assert.equal(calls.shutdownRequests, 1);
+      assert.equal(calls.exitNotifications, 1);
+      assert.equal(calls.connectionEnds, 1);
+      assert.equal(calls.processKills, 1);
+    } finally {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, ...originalServers);
+      await manager.shutdown();
+    }
+  });
+
+  it("does not write back client after restart during in-flight spawn", async () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-restart-race-"));
+    const file = path.join(workspace, "main.ts");
+    fs.writeFileSync(file, "export const x = 1;\n", "utf-8");
+    fs.writeFileSync(path.join(workspace, "package.json"), "{}\n", "utf-8");
+
+    const manager = new lspCore.LSPManager(workspace);
+    const originalServers = [...lspCore.LSP_SERVERS];
+
+    let resolveInit: (client: any) => void = () => {
+      throw new Error("init resolver was not captured");
+    };
+    const { client: fakeClient, calls } = createFakeLspClient();
+
+    try {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, {
+        id: "typescript",
+        extensions: [".ts"],
+        findRoot: () => workspace,
+        spawn: async () => undefined,
+      });
+
+      (manager as any).initClient = async () => {
+        return await new Promise<any>((resolve) => {
+          resolveInit = resolve;
+        });
+      };
+
+      const pending = manager.getClientsForFile(file);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      await manager.restartServers(["typescript"]);
+      resolveInit(fakeClient);
+      await pending;
+
+      assert.equal((manager as any).clients.size, 0);
+      assert.equal(calls.shutdownRequests, 1);
+      assert.equal(calls.exitNotifications, 1);
+      assert.equal(calls.connectionEnds, 1);
+      assert.equal(calls.processKills, 1);
+    } finally {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, ...originalServers);
+      await manager.shutdown();
+    }
+  });
+
+  it("keeps broken state after failed in-flight spawn and retries only after restart", async () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-broken-retry-"));
+    const file = path.join(workspace, "main.ts");
+    fs.writeFileSync(file, "export const x = 1;\n", "utf-8");
+    fs.writeFileSync(path.join(workspace, "package.json"), "{}\n", "utf-8");
+
+    const manager = new lspCore.LSPManager(workspace);
+    const originalServers = [...lspCore.LSP_SERVERS];
+
+    let spawnCalls = 0;
+
+    try {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, {
+        id: "typescript",
+        extensions: [".ts"],
+        findRoot: () => workspace,
+        spawn: async () => {
+          spawnCalls += 1;
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          return undefined;
+        },
+      });
+
+      const [clientsA, clientsB] = await Promise.all([
+        manager.getClientsForFile(file),
+        manager.getClientsForFile(file),
+      ]);
+
+      assert.equal(spawnCalls, 1);
+      assert.deepEqual(clientsA, []);
+      assert.deepEqual(clientsB, []);
+
+      const clientsAfterBroken = await manager.getClientsForFile(file);
+      assert.deepEqual(clientsAfterBroken, []);
+      assert.equal(spawnCalls, 1);
+
+      await manager.restartServers(["typescript"]);
+      const clientsAfterRestart = await manager.getClientsForFile(file);
+      assert.deepEqual(clientsAfterRestart, []);
+      assert.equal(spawnCalls, 2);
+    } finally {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, ...originalServers);
+      await manager.shutdown();
+    }
+  });
+
   it("blocks privileged actions by default", async () => {
     const pi = createPiMock();
     registerLspModule(pi as any, mergeConfig({}).lsp);
@@ -192,6 +412,35 @@ describe("lsp module", () => {
       }
     );
     assert.equal(DEFAULT_LSP_MAX_SOURCE_FILE_BYTES, 2 * 1024 * 1024);
+  });
+
+  it("does not treat empty files as read failures in workspace diagnostics", async () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-empty-file-"));
+    const file = path.join(workspace, "empty.ts");
+    fs.writeFileSync(file, "", "utf-8");
+    fs.writeFileSync(path.join(workspace, "package.json"), "{}\n", "utf-8");
+
+    const manager = new lspCore.LSPManager(workspace);
+    const originalServers = [...lspCore.LSP_SERVERS];
+
+    try {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, {
+        id: "typescript",
+        extensions: [".ts"],
+        findRoot: () => workspace,
+        spawn: async () => undefined,
+      });
+
+      const result = await manager.getDiagnosticsForFiles([file], 1);
+
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].file, file);
+      assert.equal(result.items[0].status, "unsupported");
+      assert.notEqual(result.items[0].error, "Could not read file");
+    } finally {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, ...originalServers);
+      await manager.shutdown();
+    }
   });
 
   it("caps workspace-diagnostics file input", async () => {
@@ -270,6 +519,29 @@ describe("lsp module", () => {
         ),
       /disabled in subagent processes/
     );
+  });
+
+  it("keeps lsp core facade export contract stable", () => {
+    assert.equal(typeof lspCore.LSPManager, "function");
+    assert.equal(typeof lspCore.getOrCreateManager, "function");
+    assert.equal(typeof lspCore.shutdownManager, "function");
+
+    assert.equal(typeof lspCore.LSP_SERVERS, "object");
+    assert.equal(typeof lspCore.LANGUAGE_IDS, "object");
+
+    assert.equal(typeof lspCore.diagnosticsWaitMsForFile, "function");
+    assert.equal(typeof lspCore.filterDiagnosticsBySeverity, "function");
+    assert.equal(typeof lspCore.formatDiagnostic, "function");
+    assert.equal(typeof lspCore.collectSymbols, "function");
+
+    assert.equal(typeof lspCore.findSymbolPosition, "function");
+    assert.equal(typeof lspCore.resolvePosition, "function");
+    assert.equal(typeof lspCore.uriToPath, "function");
+    assert.equal(typeof lspCore.getCppCompilationDbHint, "function");
+
+    assert.equal(typeof lspCore.DEFAULT_LSP_MAX_SOURCE_FILE_BYTES, "number");
+    assert.equal(typeof lspCore.LspFileTooLargeError, "function");
+    assert.equal(typeof lspCore.readTextFileLimited, "function");
   });
 
   it("exposes expected readonly and privileged action names", () => {
