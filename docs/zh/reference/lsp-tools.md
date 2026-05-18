@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-18
 language: chinese
 ---
 
@@ -31,7 +31,7 @@ LSP 模块包含两个公开集成面：
 1. 显式 tool：`lsp`
 2. 自动 diagnostics hook：按配置在主代理进程中注册，用于在 agent turn 或 edit/write 后反馈诊断
 
-`src/modules/lsp/core.ts` 是内部 language server manager 与核心实现，不是额外 public tool。
+`src/modules/lsp/core.ts` 是内部 facade 与 `LSPManager` 编排层，不是额外 public tool。更底层的实现细节已拆分到聚焦模块中，分别负责 server registry、client lifecycle、diagnostics、actions、edits、source-file helpers、formatters 与 request orchestration。
 
 ## 公开接口
 
@@ -40,7 +40,7 @@ LSP 模块包含两个公开集成面：
 | `lsp` tool | 是 | 唯一公开 LSP tool，通过 `action` 字段区分操作 | `src/modules/lsp/tool.ts` |
 | LSP diagnostics hook | 是，作为配置化集成点 | 自动诊断，不是 agent 可直接调用的 tool | `src/modules/lsp/hook.ts` |
 | `/toolkit lsp` | 是，developer command | 展示 LSP tool/hook 配置与 action 列表 | `src/modules/commands/register.ts` |
-| `LSPManager` / helpers | 否 | 内部 server lifecycle、path、format、diagnostics 实现 | `src/modules/lsp/core.ts` |
+| `LSPManager` / helpers | 否 | 内部 facade 与 manager 编排；底层 helpers 拆分在 `src/modules/lsp/*` 中 | `src/modules/lsp/core.ts` |
 
 ## 公开工具列表
 
@@ -366,7 +366,7 @@ signature, rename, codeAction, restart, servers
 
 ## Language server 行为
 
-devkit-pi 不内置完整 language server，也不保证自动安装所有 server。LSP 模块根据文件扩展名和项目 root marker 选择源码中定义的 server adapter，并尝试从用户环境中启动对应 server binary。Binary lookup 使用 shared external command resolver 和 LSP-specific 额外搜索路径；长期运行的 language server JSON-RPC 进程生命周期仍由 `src/modules/lsp/core.ts` 管理。
+devkit-pi 不内置完整 language server，也不保证自动安装所有 server。LSP 模块根据文件扩展名和项目 root marker 选择源码中定义的 server adapter，并尝试从用户环境中启动对应 server binary。Binary lookup 使用 shared external command resolver 和 LSP-specific 额外搜索路径。`src/modules/lsp/core.ts` 保留 facade 与 manager 编排；JSON-RPC client 初始化 / 停止 helper 与 lifecycle 状态 helper 分别位于 `client-manager.ts` 和 `client-lifecycle.ts`。
 
 ### Server lifecycle
 
@@ -547,7 +547,16 @@ Internal implementation：
 | Module registration | `src/modules/lsp/register.ts` |
 | Tool implementation | `src/modules/lsp/tool.ts` |
 | Input schema / actions | `src/modules/lsp/schemas.ts` |
-| Core LSP logic / server manager | `src/modules/lsp/core.ts` |
+| LSP facade / manager orchestrator | `src/modules/lsp/core.ts` |
+| Server registry / root detection | `src/modules/lsp/server-registry.ts` |
+| Client init / stop helpers | `src/modules/lsp/client-manager.ts` |
+| Client lifecycle state helpers | `src/modules/lsp/client-lifecycle.ts` |
+| Diagnostics orchestration | `src/modules/lsp/diagnostics.ts` |
+| Readonly LSP actions | `src/modules/lsp/actions.ts` |
+| Mutating LSP actions | `src/modules/lsp/edits.ts` |
+| Source file helpers | `src/modules/lsp/source-files.ts` |
+| Format helpers | `src/modules/lsp/formatters.ts` |
+| Request preparation / sync boundary | `src/modules/lsp/request-orchestrator.ts` |
 | Hook integration | `src/modules/lsp/hook.ts` |
 | Shared LSP errors | `src/shared/errors.ts` |
 | Shared external command infrastructure | `src/shared/external-command.ts` |

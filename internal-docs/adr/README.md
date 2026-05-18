@@ -1,7 +1,7 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-12
+last_verified: 2026-05-18
 language: chinese
 ---
 
@@ -19,3 +19,4 @@ ADR 是历史决策记录。它们解释过去设计选择的背景和取舍，�
 | [0004](./0004-bundled-readonly-web-tools.md) | 内置极简 readonly web tools |
 | [0005](./0005-evolve-into-devkit-pi.md) | 从 pi-subagents 演进为 devkit-pi |
 | [0006](./0006-architecture-consistency-over-legacy-layout.md) | 架构一致性优先于 legacy layout |
+| [0007](./0007-lsp-load-sync-no-go.md) | LSP load/sync 实现迁移 NO-GO（当前阶段） |

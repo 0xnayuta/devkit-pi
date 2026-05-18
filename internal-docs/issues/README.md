@@ -9,9 +9,17 @@ language: chinese
 
 ## 后续维护设计记录
 
-- [LSP core 拆分边界设计记录](./lsp-core-split-boundaries.md)：阶段 0 仅记录拆分边界，不在 hardening 阶段执行大规模重构。
+- [LSP core 拆分边界设计记录](./lsp-core-split-boundaries.md)：拆分计划已执行完成，当前保留为边界与历史参考；实现下沉 go/no-go 结论见 [ADR 0007](../adr/0007-lsp-load-sync-no-go.md)。
 
 ## 最近修复
+
+### v0.2.3
+
+- LSP core 拆分（Phase 0~5）已完成：`formatters/source-files/server-registry/client-lifecycle/client-manager/diagnostics/actions/edits` 等模块已落地，`core.ts` 对外 facade 边界保持稳定。
+- request-orchestrator 收口已完成（Slice A/B/C/D）：diagnostics、readonly actions、mutating actions 的文件准备与同步入口已统一。
+- `loadFile/openOrUpdate` 已形成当前阶段 NO-GO 决策：暂不下沉具体实现，先维持“调用面统一、实现保留 core”边界。详见：
+  - [LSP core 拆分边界设计记录](./lsp-core-split-boundaries.md)
+  - [ADR 0007: LSP load/sync 实现迁移 NO-GO（当前阶段）](../adr/0007-lsp-load-sync-no-go.md)
 
 ### v0.2.2
 

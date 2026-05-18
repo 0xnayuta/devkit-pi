@@ -7,11 +7,11 @@ language: chinese
 
 # 子代理 JSON streaming stdout O(N²) 膨胀问题改造方案
 
+日期：2026-05-18
+
 > **状态**：本文档中的阶段计划已完成（devkit-pi 对接 + pi fork patch）。本文档保留为设计与实现背景记录。
 >
 > **fork 实现分支**：<https://github.com/0xnayuta/pi/tree/patch/json-stream-compact>。
-
-日期：2026-05-18
 
 ## 摘要
 

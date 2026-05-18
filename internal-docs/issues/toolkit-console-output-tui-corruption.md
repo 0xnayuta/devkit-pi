@@ -7,6 +7,8 @@ language: chinese
 
 # `/toolkit` 直接 console 输出破坏 TUI 界面
 
+> **状态**：本文档记录改造计划，代码实现已完成（见各改动文件的 git log）。本文档保留作为历史参考和背景说明。
+
 ## 摘要
 
 在 pi 交互式 TUI 中执行 `/toolkit` 或 `/toolkit help` 等命令后，命令输出会直接覆盖输入框、边框、项目路径和 footer 区域，造成界面错位或残留文本。

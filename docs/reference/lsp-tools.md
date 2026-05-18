@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-18
 language: english
 ---
 
@@ -31,7 +31,7 @@ The LSP module contains two public integration surfaces:
 1. Explicit tool: `lsp`
 2. Automatic diagnostics hook: registered in the main agent process per configuration, used to provide diagnostics feedback after agent turns or edit/write
 
-`src/modules/lsp/core.ts` is the internal language server manager and core implementation, not an additional public tool.
+`src/modules/lsp/core.ts` is the internal facade and `LSPManager` orchestrator, not an additional public tool. Lower-level implementation details are split into focused modules for server registry, client lifecycle, diagnostics, actions, edits, source-file helpers, formatters, and request orchestration.
 
 ## Public surface
 
@@ -40,7 +40,7 @@ The LSP module contains two public integration surfaces:
 | `lsp` tool | Yes | Only public LSP tool, uses `action` field to distinguish operations | `src/modules/lsp/tool.ts` |
 | LSP diagnostics hook | Yes, as configurable integration point | Automatic diagnostics, not a tool agents can directly call | `src/modules/lsp/hook.ts` |
 | `/toolkit lsp` | Yes, developer command | Shows LSP tool/hook configuration and action list | `src/modules/commands/register.ts` |
-| `LSPManager` / helpers | No | Internal server lifecycle, path, format, diagnostics implementation | `src/modules/lsp/core.ts` |
+| `LSPManager` / helpers | No | Internal facade and manager orchestration; lower-level helpers are split across `src/modules/lsp/*` | `src/modules/lsp/core.ts` |
 
 ## Public tool list
 
@@ -366,7 +366,7 @@ Do not interpret the above implementation as a complete cross-platform promise; 
 
 ## Language server behavior
 
-devkit-pi does not embed complete language servers, nor guarantees automatic installation of all servers. The LSP module selects source-defined server adapters based on file extension and project root markers, and attempts to start corresponding server binaries from the user environment. Binary lookup uses shared external command resolution with LSP-specific extra search paths, while long-running language server JSON-RPC process lifecycle remains in `src/modules/lsp/core.ts`.
+devkit-pi does not embed complete language servers, nor guarantees automatic installation of all servers. The LSP module selects source-defined server adapters based on file extension and project root markers, and attempts to start corresponding server binaries from the user environment. Binary lookup uses shared external command resolution with LSP-specific extra search paths. `src/modules/lsp/core.ts` keeps the facade and manager orchestration, while JSON-RPC client initialization/stop helpers and lifecycle state helpers live in `client-manager.ts` and `client-lifecycle.ts`.
 
 ### Server lifecycle
 
@@ -547,7 +547,16 @@ Boundary notes:
 | Module registration | `src/modules/lsp/register.ts` |
 | Tool implementation | `src/modules/lsp/tool.ts` |
 | Input schema / actions | `src/modules/lsp/schemas.ts` |
-| Core LSP logic / server manager | `src/modules/lsp/core.ts` |
+| LSP facade / manager orchestrator | `src/modules/lsp/core.ts` |
+| Server registry / root detection | `src/modules/lsp/server-registry.ts` |
+| Client init / stop helpers | `src/modules/lsp/client-manager.ts` |
+| Client lifecycle state helpers | `src/modules/lsp/client-lifecycle.ts` |
+| Diagnostics orchestration | `src/modules/lsp/diagnostics.ts` |
+| Readonly LSP actions | `src/modules/lsp/actions.ts` |
+| Mutating LSP actions | `src/modules/lsp/edits.ts` |
+| Source file helpers | `src/modules/lsp/source-files.ts` |
+| Format helpers | `src/modules/lsp/formatters.ts` |
+| Request preparation / sync boundary | `src/modules/lsp/request-orchestrator.ts` |
 | Hook integration | `src/modules/lsp/hook.ts` |
 | Shared LSP errors | `src/shared/errors.ts` |
 | Shared external command infrastructure | `src/shared/external-command.ts` |
