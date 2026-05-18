@@ -200,7 +200,7 @@ Canonical source: `SUBAGENT_ERROR_CODES` in `src/shared/types.ts`.
 
 If there is no final assistant text, a short diagnostic is returned instead of exposing the full raw JSONL.
 
-During child stdout processing, high-frequency pi streaming events such as `message_update` and `tool_execution_update` are treated as transient and are not persisted into the final stdout buffer. Final result extraction relies on lower-frequency lifecycle events such as `message_end`, `turn_end`, `tool_execution_end`, and error events. Persisted JSONL events and transient/drop JSONL events have separate line hard limits, so long streaming output does not consume the persisted JSONL budget; plain/non-JSON stdout remains persisted and protected by the stdout byte hard limit.
+During child stdout processing, high-frequency pi streaming events such as `message_update` and `tool_execution_update` are treated as transient and are not persisted into the final stdout buffer. Final result extraction relies on lower-frequency lifecycle events such as `message_end`, `turn_end`, `tool_execution_end`, and error events. Persisted JSONL events and transient/drop JSONL events have separate line hard limits, so long streaming output does not consume the persisted JSONL budget; plain/non-JSON stdout remains persisted and protected by the stdout byte hard limit. When supported by the child pi runtime, devkit-pi may request a compact JSON stream transport profile and fall back to full JSON mode if the option is unsupported.
 
 ## Sanitization and truncation
 

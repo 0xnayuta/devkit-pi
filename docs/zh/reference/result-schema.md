@@ -203,7 +203,7 @@ Canonical source：`src/shared/types.ts` 中的 `SUBAGENT_ERROR_CODES`。
 
 如果没有 final assistant text，会返回简短诊断，而不是暴露完整原始 JSONL。
 
-child stdout 处理期间，`message_update`、`tool_execution_update` 等高频 pi streaming events 会被视为 transient，不会持久化到最终 stdout buffer。最终结果提取依赖 `message_end`、`turn_end`、`tool_execution_end` 和 error events 等低频生命周期事件。持久化 JSONL events 与 transient/drop JSONL events 使用分离的 line hard limits，因此长 streaming 输出不会消耗持久化 JSONL 预算；普通/non-JSON stdout 仍会持久化并受 stdout byte hard limit 保护。
+child stdout 处理期间，`message_update`、`tool_execution_update` 等高频 pi streaming events 会被视为 transient，不会持久化到最终 stdout buffer。最终结果提取依赖 `message_end`、`turn_end`、`tool_execution_end` 和 error events 等低频生命周期事件。持久化 JSONL events 与 transient/drop JSONL events 使用分离的 line hard limits，因此长 streaming 输出不会消耗持久化 JSONL 预算；普通/non-JSON stdout 仍会持久化并受 stdout byte hard limit 保护。当 child pi runtime 支持时，devkit-pi 还可能请求 compact JSON stream transport profile；若该选项不受支持，则会回退到 full JSON mode。
 
 ## 脱敏和截断
 

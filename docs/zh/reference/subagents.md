@@ -345,6 +345,7 @@ Custom agents discovery 路径当前不是配置项，固定为 user/project 目
 - spawn 失败会被包装为 `SUBAGENT_FAILED`。
 - child 进程非 0 exit 会形成 failure summary，包含 exit code、error、partial output 和 session file。
 - child stdout JSONL 处理不会持久化 `message_update`、`tool_execution_update` 等高频 streaming events；最终输出从 `message_end`、`turn_end` 以及 tool/error completion events 等生命周期/最终事件中收集。持久化 JSONL 和 transient/drop JSONL lines 使用分离的 hard limits。
+- 当安装的 child pi runtime 支持未来的 compact JSON stream profile 时，devkit-pi 可能优先将其用于 subagent transport；若 child pi 拒绝 `--json-stream compact`，devkit-pi 会回退到 full JSON mode，并保留本地 stdout event filter 作为兼容层。
 - agent definition 解析失败或缺少 `name` 的文件会被静默跳过；`/toolkit doctor` 可能报告 user agents skipped。
 
 ## 稳定性说明
@@ -385,6 +386,7 @@ Internal implementation / 可能变化：
 | Output collection | `src/modules/subagents/collect-output.ts` |
 | Child JSONL event filtering | `src/modules/subagents/child-event-filter.ts` |
 | Child stdout buffering / output limits | `src/modules/subagents/child-output-buffer.ts` |
+| Child pi JSON stream profile preference / fallback | `src/modules/subagents/pi-json-stream.ts` |
 | Agent frontmatter parser | `src/modules/subagents/frontmatter.ts` |
 | Pi args / temp prompt/task files | `src/modules/subagents/pi-args.ts` |
 | Pi spawn command resolution | `src/modules/subagents/pi-spawn.ts` |

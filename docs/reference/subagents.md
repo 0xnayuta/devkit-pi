@@ -345,6 +345,7 @@ Failure behavior:
 - Spawn failure is wrapped as `SUBAGENT_FAILED`.
 - Child process non-0 exit forms failure summary including exit code, error, partial output, and session file.
 - Child stdout JSONL processing does not persist high-frequency streaming events such as `message_update` and `tool_execution_update`; final output is collected from lifecycle/final events such as `message_end`, `turn_end`, and tool/error completion events. Persisted JSONL and transient/drop JSONL lines have separate hard limits.
+- When the installed child pi runtime supports a future compact JSON stream profile, devkit-pi may prefer it for subagent transport. If the child pi rejects `--json-stream compact`, devkit-pi falls back to full JSON mode and retains the local stdout event filter as a compatibility layer.
 - Agent definition parse failure or files missing `name` are silently skipped; `/toolkit doctor` may report user agents skipped.
 
 ## Stability notes
@@ -385,6 +386,7 @@ External scripts should not strongly depend on natural language output, box/TUI 
 | Output collection | `src/modules/subagents/collect-output.ts` |
 | Child JSONL event filtering | `src/modules/subagents/child-event-filter.ts` |
 | Child stdout buffering / output limits | `src/modules/subagents/child-output-buffer.ts` |
+| Child pi JSON stream profile preference / fallback | `src/modules/subagents/pi-json-stream.ts` |
 | Agent frontmatter parser | `src/modules/subagents/frontmatter.ts` |
 | Pi args / temp prompt/task files | `src/modules/subagents/pi-args.ts` |
 | Pi spawn command resolution | `src/modules/subagents/pi-spawn.ts` |
