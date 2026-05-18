@@ -1,3 +1,10 @@
+---
+status: proposed
+audience: maintainer
+last_verified: 2026-05-18
+language: chinese
+---
+
 # 子代理 JSON streaming stdout O(N²) 膨胀问题改造方案
 
 日期：2026-05-18

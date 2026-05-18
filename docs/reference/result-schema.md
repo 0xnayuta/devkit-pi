@@ -200,12 +200,14 @@ Canonical source: `SUBAGENT_ERROR_CODES` in `src/shared/types.ts`.
 
 If there is no final assistant text, a short diagnostic is returned instead of exposing the full raw JSONL.
 
+During child stdout processing, high-frequency pi streaming events such as `message_update` and `tool_execution_update` are treated as transient and are not persisted into the final stdout buffer. Final result extraction relies on lower-frequency lifecycle events such as `message_end`, `turn_end`, `tool_execution_end`, and error events. Persisted JSONL events and transient/drop JSONL events have separate line hard limits, so long streaming output does not consume the persisted JSONL budget; plain/non-JSON stdout remains persisted and protected by the stdout byte hard limit.
+
 ## Sanitization and truncation
 
 Before returning, the following are executed:
 
 - `sanitizeOutput()`: masks common API keys, tokens, Authorization headers, GitHub tokens, user paths, and overly long stack traces.
-- child output hard limits in `src/modules/subagents/execution.ts`: stop abnormal child stdout/stderr/JSONL output before it can grow without bound.
+- child event filtering and output hard limits in `src/modules/subagents/execution.ts` and `src/modules/subagents/child-event-filter.ts`: avoid persisting high-frequency streaming snapshots and stop abnormal child stdout/stderr/JSONL output before it can grow without bound.
 - `truncateOutput()`: truncates long output per default output limits.
 
 Therefore:

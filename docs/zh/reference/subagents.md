@@ -41,7 +41,7 @@ Subagents 模块让主代理把一个聚焦任务委派给一个专职 child pi 
 | `/toolkit agents` | 查看已发现 agents | 手动运行 command | TUI report panel | 不启动子代理 | `src/modules/subagents/commands/list.ts` |
 | `/toolkit doctor` | 诊断配置、agents、providers、权限、LSP 等 | 手动运行 command | doctor report | report fail/warn 是诊断项，不是 command failure | `src/modules/subagents/commands/doctor.ts` |
 | `/toolkit logs` / `/toolkit activity` | 查看 toolkit activity logs/stats | 手动运行 command | text log / TUI panel | 主要面向 Web/convert tool observability，不是 subagent execution log | `src/modules/subagents/commands/logs.ts`, `activity.ts` |
-| Output collection | 从 child pi JSONL/stdout 收集最终结果、usage、错误 | 自动内部执行 | `details.results[]`、`content[0].text` | 内部 helper，不是 public tool | `src/modules/subagents/collect-output.ts`, `execution.ts` |
+| Output collection | 从 child pi JSONL/stdout 收集最终结果、usage、错误 | 自动内部执行 | `details.results[]`、`content[0].text` | 内部 helper，高频 streaming events 作为 transient 不持久化 | `src/modules/subagents/collect-output.ts`, `execution.ts`, `child-event-filter.ts` |
 
 ## 内置 agents
 
@@ -316,7 +316,7 @@ Focus only on the delegated task. Do not call other subagents.
 - `subagents.enabled=false`：`registerSubagentsModule()` 不注册 `subagent` tool。
 - `subagents.maxDepth=1`：默认禁止 nested subagents。
 - `subagents.timeoutMs`：单次 child execution 的最大总运行时长（hard cap），从子进程启动时开始计时，不会因子代理活动而重置。达到上限无论子代理是否活跃都会被终止。
-- `subagents.idleTimeoutMs`：子代理自最后一次有效活动后的最大空闲时间。有效活动指结构化 JSONL 运行事件（如 `message_end`、`tool_result_end`、`turn_end`）；普通 stdout 文本不会重置该计时器。超过上限但子代理仍有活跃输出则不会被终止。默认 180000ms。
+- `subagents.idleTimeoutMs`：子代理自最后一次有效活动后的最大空闲时间。有效活动指结构化 JSONL 运行事件（如 `message_end`、`tool_result_end`、`turn_end`）；普通 stdout 文本和 `message_update` 等 transient streaming events 不会重置该计时器。超过上限但子代理仍有活跃输出则不会被终止。默认 180000ms。
 - `subagents.allowWrite`：实验性/高级/不安全开关；只影响非 readonly 自定义 agent 的工具过滤，不改变内置 agents 的 readonly 定义，也不提供完整权限沙箱、审计日志、自动回滚或稳定写入能力契约。
 - `subagents.allowLspTools` / `allowedLspActions`：控制子代理是否可用 readonly LSP actions。
 - `subagents.injectDelegationPolicy`：控制是否向主代理 prompt 注入 delegation policy。
@@ -344,6 +344,7 @@ Custom agents discovery 路径当前不是配置项，固定为 user/project 目
 - invalid input / disabled / unknown agent / depth exceeded 通常以 `content[0].text` + `details.error` 返回，不一定抛出异常。
 - spawn 失败会被包装为 `SUBAGENT_FAILED`。
 - child 进程非 0 exit 会形成 failure summary，包含 exit code、error、partial output 和 session file。
+- child stdout JSONL 处理不会持久化 `message_update`、`tool_execution_update` 等高频 streaming events；最终输出从 `message_end`、`turn_end` 以及 tool/error completion events 等生命周期/最终事件中收集。持久化 JSONL 和 transient/drop JSONL lines 使用分离的 hard limits。
 - agent definition 解析失败或缺少 `name` 的文件会被静默跳过；`/toolkit doctor` 可能报告 user agents skipped。
 
 ## 稳定性说明
@@ -382,6 +383,8 @@ Internal implementation / 可能变化：
 | Foreground execution | `src/modules/subagents/execution.ts` |
 | Executor / tool filtering / retry / result assembly | `src/modules/subagents/executor.ts` |
 | Output collection | `src/modules/subagents/collect-output.ts` |
+| Child JSONL event filtering | `src/modules/subagents/child-event-filter.ts` |
+| Child stdout buffering / output limits | `src/modules/subagents/child-output-buffer.ts` |
 | Agent frontmatter parser | `src/modules/subagents/frontmatter.ts` |
 | Pi args / temp prompt/task files | `src/modules/subagents/pi-args.ts` |
 | Pi spawn command resolution | `src/modules/subagents/pi-spawn.ts` |

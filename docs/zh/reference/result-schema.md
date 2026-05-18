@@ -203,12 +203,14 @@ Canonical source：`src/shared/types.ts` 中的 `SUBAGENT_ERROR_CODES`。
 
 如果没有 final assistant text，会返回简短诊断，而不是暴露完整原始 JSONL。
 
+child stdout 处理期间，`message_update`、`tool_execution_update` 等高频 pi streaming events 会被视为 transient，不会持久化到最终 stdout buffer。最终结果提取依赖 `message_end`、`turn_end`、`tool_execution_end` 和 error events 等低频生命周期事件。持久化 JSONL events 与 transient/drop JSONL events 使用分离的 line hard limits，因此长 streaming 输出不会消耗持久化 JSONL 预算；普通/non-JSON stdout 仍会持久化并受 stdout byte hard limit 保护。
+
 ## 脱敏和截断
 
 返回前会执行：
 
 - `sanitizeOutput()`：遮蔽常见 API key、token、Authorization header、GitHub token、用户路径和过长 stack trace。
-- `src/modules/subagents/execution.ts` 中的 child 输出硬上限：在异常 child stdout/stderr/JSONL 输出无限增长前停止执行。
+- `src/modules/subagents/execution.ts`、`src/modules/subagents/child-event-filter.ts` 与 `src/modules/subagents/child-output-buffer.ts` 中的 child event filtering、stdout buffering 与输出硬上限：避免持久化高频 streaming snapshots，并在异常 child stdout/stderr/JSONL 输出无限增长前停止执行。
 - `truncateOutput()`：按默认输出限制截断长输出。
 
 因此：

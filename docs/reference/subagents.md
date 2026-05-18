@@ -41,7 +41,7 @@ Differences from other capabilities:
 | `/toolkit agents` | View discovered agents | Manual command | TUI report panel | Does not start subagents | `src/modules/subagents/commands/list.ts` |
 | `/toolkit doctor` | Diagnose config, agents, providers, permissions, LSP, etc. | Manual command | doctor report | report fail/warn are diagnostic items, not command failure | `src/modules/subagents/commands/doctor.ts` |
 | `/toolkit logs` / `/toolkit activity` | View toolkit activity logs/stats | Manual command | text log / TUI panel | Primarily for Web/convert tool observability, not subagent execution log | `src/modules/subagents/commands/logs.ts`, `activity.ts` |
-| Output collection | Collect final result, usage, errors from child pi JSONL/stdout | Automatic internal execution | `details.results[]`, `content[0].text` | Internal helper, not public tool | `src/modules/subagents/collect-output.ts`, `execution.ts` |
+| Output collection | Collect final result, usage, errors from child pi JSONL/stdout | Automatic internal execution | `details.results[]`, `content[0].text` | Internal helper, high-frequency streaming events are transient and not persisted | `src/modules/subagents/collect-output.ts`, `execution.ts`, `child-event-filter.ts` |
 
 ## Built-in agents
 
@@ -316,7 +316,7 @@ Configuration effects:
 - `subagents.enabled=false`: `registerSubagentsModule()` does not register `subagent` tool.
 - `subagents.maxDepth=1`: default prohibits nested subagents.
 - `subagents.timeoutMs`: single child execution hard cap. It starts when the child process is spawned and does not reset on activity.
-- `subagents.idleTimeoutMs`: maximum idle time since the last valid structured child activity event, such as `message_end`, `tool_result_end`, or `turn_end`. Plain stdout text does not reset this timer. Default: 180000ms.
+- `subagents.idleTimeoutMs`: maximum idle time since the last valid structured child activity event, such as `message_end`, `tool_result_end`, or `turn_end`. Plain stdout text and transient streaming events such as `message_update` do not reset this timer. Default: 180000ms.
 - `subagents.allowWrite`: experimental/advanced/unsafe switch; only affects tool filtering for non-readonly custom agents, does not change built-in agents' readonly definition, does not provide complete permission sandbox, audit log, automatic rollback, or stable write-capability contract.
 - `subagents.allowLspTools` / `allowedLspActions`: controls whether subagents can use readonly LSP actions.
 - `subagents.injectDelegationPolicy`: controls whether to inject delegation policy into main agent prompt.
@@ -344,6 +344,7 @@ Failure behavior:
 - Invalid input / disabled / unknown agent / depth exceeded usually returns as `content[0].text` + `details.error`, not necessarily throwing exception.
 - Spawn failure is wrapped as `SUBAGENT_FAILED`.
 - Child process non-0 exit forms failure summary including exit code, error, partial output, and session file.
+- Child stdout JSONL processing does not persist high-frequency streaming events such as `message_update` and `tool_execution_update`; final output is collected from lifecycle/final events such as `message_end`, `turn_end`, and tool/error completion events. Persisted JSONL and transient/drop JSONL lines have separate hard limits.
 - Agent definition parse failure or files missing `name` are silently skipped; `/toolkit doctor` may report user agents skipped.
 
 ## Stability notes
@@ -382,6 +383,8 @@ External scripts should not strongly depend on natural language output, box/TUI 
 | Foreground execution | `src/modules/subagents/execution.ts` |
 | Executor / tool filtering / retry / result assembly | `src/modules/subagents/executor.ts` |
 | Output collection | `src/modules/subagents/collect-output.ts` |
+| Child JSONL event filtering | `src/modules/subagents/child-event-filter.ts` |
+| Child stdout buffering / output limits | `src/modules/subagents/child-output-buffer.ts` |
 | Agent frontmatter parser | `src/modules/subagents/frontmatter.ts` |
 | Pi args / temp prompt/task files | `src/modules/subagents/pi-args.ts` |
 | Pi spawn command resolution | `src/modules/subagents/pi-spawn.ts` |

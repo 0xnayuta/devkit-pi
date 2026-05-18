@@ -4,6 +4,8 @@ import { afterEach, describe, it } from "node:test";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { mergeConfig } from "../../src/config/load-config.ts";
 import type { AgentConfig } from "../../src/modules/subagents/agents.ts";
+import { classifyChildJsonlEvent } from "../../src/modules/subagents/child-event-filter.ts";
+import { ChildStdoutCollector } from "../../src/modules/subagents/child-output-buffer.ts";
 import { collectOutput, extractFinalOutput, extractProviderError, extractUsage, parseJsonLines } from "../../src/modules/subagents/collect-output.ts";
 import { filterToolsForReadonly } from "../../src/modules/subagents/executor.ts";
 import { getPiSpawnCommand, resolveWindowsPiCliScript, type PiSpawnDeps } from "../../src/modules/subagents/pi-spawn.ts";
@@ -148,6 +150,89 @@ describe("subagent runtime output collection", () => {
 		);
 
 		assert.deepEqual(extractUsage(messages), { input: 6, output: 7, cacheRead: 8, cacheWrite: 9, cost: 10, turns: 1 });
+	});
+});
+
+describe("subagent child event filter", () => {
+	it("treats high-frequency streaming events as transient", () => {
+		assert.equal(classifyChildJsonlEvent({ type: "message_update", message: { role: "assistant" } }), "transient");
+		assert.equal(classifyChildJsonlEvent({ type: "tool_execution_update", partialResult: "large" }), "transient");
+	});
+
+	it("persists final lifecycle, error, and unknown events for collection", () => {
+		assert.equal(classifyChildJsonlEvent({ type: "message_end", message: { role: "assistant" } }), "persist");
+		assert.equal(classifyChildJsonlEvent({ type: "turn_end" }), "persist");
+		assert.equal(classifyChildJsonlEvent({ type: "tool_execution_end" }), "persist");
+		assert.equal(classifyChildJsonlEvent({ type: "error", error: { message: "boom" } }), "persist");
+		assert.equal(classifyChildJsonlEvent({ type: "future_event" }), "persist");
+		assert.equal(classifyChildJsonlEvent("plain json string"), "persist");
+	});
+
+	it("drops queue and message start events that are not needed by final collection", () => {
+		assert.equal(classifyChildJsonlEvent({ type: "message_start" }), "drop");
+		assert.equal(classifyChildJsonlEvent({ type: "queue_update" }), "drop");
+	});
+});
+
+describe("subagent child stdout collector", () => {
+	it("persists lifecycle JSONL while filtering transient updates", () => {
+		const collector = new ChildStdoutCollector({
+			maxStdoutBytes: 1024,
+			maxJsonlLines: 10,
+			maxTransientJsonlLines: 10,
+			maxUnterminatedJsonlBytes: 4096,
+		});
+
+		const events = collector.push(
+			Buffer.from(
+				[
+					line({ type: "message_update", message: { role: "assistant", content: [{ type: "text", text: "partial" }] } }),
+					line({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "final" }] } }),
+				].join(""),
+			),
+		);
+
+		assert.equal(collector.limitExceeded, undefined);
+		assert.deepEqual(collector.counts, { persistedJsonlLines: 1, transientJsonlLines: 1 });
+		assert.equal(events.length, 2);
+		assert.equal(collector.decode(), line({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "final" }] } }));
+	});
+
+	it("enforces transient JSONL limits independently from persisted JSONL limits", () => {
+		const collector = new ChildStdoutCollector({
+			maxStdoutBytes: 1024,
+			maxJsonlLines: 1,
+			maxTransientJsonlLines: 2,
+			maxUnterminatedJsonlBytes: 4096,
+		});
+
+		collector.push(
+			Buffer.from(
+				[
+					line({ type: "message_update", message: { role: "assistant" } }),
+					line({ type: "message_update", message: { role: "assistant" } }),
+					line({ type: "message_update", message: { role: "assistant" } }),
+				].join(""),
+			),
+		);
+
+		assert.equal(collector.limitExceeded, "transientJsonlLines");
+		assert.deepEqual(collector.counts, { persistedJsonlLines: 0, transientJsonlLines: 3 });
+		assert.equal(collector.decode(), "");
+	});
+
+	it("bounds unterminated non-JSON stdout", () => {
+		const collector = new ChildStdoutCollector({
+			maxStdoutBytes: 8,
+			maxJsonlLines: 10,
+			maxTransientJsonlLines: 10,
+			maxUnterminatedJsonlBytes: 4096,
+		});
+
+		collector.push(Buffer.from("x".repeat(20)));
+
+		assert.equal(collector.limitExceeded, "stdout");
+		assert.equal(Buffer.byteLength(collector.decode()), 8);
 	});
 });
 

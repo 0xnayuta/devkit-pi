@@ -11,6 +11,14 @@
 import { spawn } from "node:child_process";
 import { attachPostExitStdioGuard, trySignalChild } from "../../shared/post-exit-stdio-guard.ts";
 import type { Usage } from "../../shared/types.ts";
+import {
+  appendLimitedOutput,
+  type ChildOutputLimitExceeded,
+  ChildStdoutCollector,
+  createLimitedOutputBuffer,
+  decodeLimitedOutput,
+  type LimitedOutputBuffer,
+} from "./child-output-buffer.ts";
 import { collectOutput } from "./collect-output.ts";
 import { getPiSpawnCommand } from "./pi-spawn.ts";
 
@@ -18,6 +26,8 @@ const DEFAULT_TERMINATION_GRACE_MS = 5000;
 export const DEFAULT_SUBAGENT_MAX_STDOUT_BYTES = 8 * 1024 * 1024;
 export const DEFAULT_SUBAGENT_MAX_STDERR_BYTES = 1 * 1024 * 1024;
 export const DEFAULT_SUBAGENT_MAX_JSONL_LINES = 10000;
+export const DEFAULT_SUBAGENT_MAX_TRANSIENT_JSONL_LINES = 100000;
+export const DEFAULT_SUBAGENT_MAX_UNTERMINATED_JSONL_BYTES = 1 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Streaming types
@@ -59,7 +69,7 @@ export interface RunSyncResult {
   cancelled?: boolean;
   terminationSignal?: NodeJS.Signals;
   /** Child output hard limit that terminated execution, if any. */
-  outputLimitExceeded?: "stdout" | "stderr" | "jsonlLines";
+  outputLimitExceeded?: ChildOutputLimitExceeded | "stderr";
   /**
    * Display items accumulated during execution. Useful for rich rendering
    * of the final result (showing tool calls the subagent made).
@@ -84,8 +94,14 @@ interface RunSyncOptions {
   maxStdoutBytes?: number;
   /** Internal/test hook: maximum child stderr bytes to collect before terminating. */
   maxStderrBytes?: number;
-  /** Internal/test hook: maximum JSONL stdout lines to process before terminating. */
+  /** Internal/test hook: maximum persisted JSONL stdout lines before terminating. */
   maxJsonlLines?: number;
+  /** Internal/test hook: maximum transient/drop JSONL stdout lines before terminating. */
+  maxTransientJsonlLines?: number;
+  /** Internal/test hook: maximum buffered bytes for an unterminated JSONL candidate. */
+  maxUnterminatedJsonlBytes?: number;
+  /** Internal/test hook: override pi spawn command resolution. */
+  spawnCommand?: { command: string; args?: string[] };
 }
 
 export async function runSync(
@@ -102,12 +118,25 @@ export async function runSync(
     maxStdoutBytes = DEFAULT_SUBAGENT_MAX_STDOUT_BYTES,
     maxStderrBytes = DEFAULT_SUBAGENT_MAX_STDERR_BYTES,
     maxJsonlLines = DEFAULT_SUBAGENT_MAX_JSONL_LINES,
+    maxTransientJsonlLines = DEFAULT_SUBAGENT_MAX_TRANSIENT_JSONL_LINES,
+    maxUnterminatedJsonlBytes = Math.max(
+      maxStdoutBytes,
+      DEFAULT_SUBAGENT_MAX_UNTERMINATED_JSONL_BYTES
+    ),
+    spawnCommand,
   } = options;
-  const { command, args: spawnArgs } = getPiSpawnCommand(args);
+  const { command, args: spawnArgs } = spawnCommand
+    ? { command: spawnCommand.command, args: [...(spawnCommand.args ?? []), ...args] }
+    : getPiSpawnCommand(args);
 
   return new Promise((resolve) => {
-    const stdoutBuffer: LimitedOutputBuffer = { chunks: [], bytes: 0, truncated: false };
-    const stderrBuffer: LimitedOutputBuffer = { chunks: [], bytes: 0, truncated: false };
+    const stdoutCollector = new ChildStdoutCollector({
+      maxStdoutBytes,
+      maxJsonlLines,
+      maxTransientJsonlLines,
+      maxUnterminatedJsonlBytes,
+    });
+    const stderrBuffer: LimitedOutputBuffer = createLimitedOutputBuffer();
     let output = "";
     let stderr = "";
     let exitCode = 0;
@@ -115,7 +144,7 @@ export async function runSync(
     let timeoutReason: "runtime" | "idle" | undefined;
     let cancelled = false;
     let outputLimitExceeded: RunSyncResult["outputLimitExceeded"];
-    let jsonlLineCount = 0;
+
     let runtimeTimeoutHandle: NodeJS.Timeout | undefined;
     let idleTimeoutHandle: NodeJS.Timeout | undefined;
     let forceKillHandle: NodeJS.Timeout | undefined;
@@ -201,19 +230,8 @@ export async function runSync(
     };
     const streamToolCalls: ToolCallInfo[] = [];
     let streamLastAssistantText = "";
-    let lineBuffer = "";
 
-    const processLine = (line: string) => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
-
-      let event: Record<string, unknown>;
-      try {
-        event = JSON.parse(trimmed);
-      } catch {
-        return;
-      }
-
+    const processEvent = (event: Record<string, unknown>) => {
       const eventType = event.type;
 
       // --- message_end: assistant or user message finalized ---
@@ -252,7 +270,7 @@ export async function runSync(
         }
 
         // Reset idle timeout if this event type is considered valid activity
-        if (ACTIVITY_EVENT_TYPES.has(eventType)) {
+        if (typeof eventType === "string" && ACTIVITY_EVENT_TYPES.has(eventType)) {
           resetIdleTimeout();
         }
 
@@ -270,7 +288,7 @@ export async function runSync(
         streamMessages.push(event.message);
 
         // Reset idle timeout if this event type is considered valid activity
-        if (ACTIVITY_EVENT_TYPES.has(eventType)) {
+        if (typeof eventType === "string" && ACTIVITY_EVENT_TYPES.has(eventType)) {
           resetIdleTimeout();
         }
 
@@ -283,28 +301,25 @@ export async function runSync(
       }
     };
 
-    // Collect stdout with proper line buffering and a hard byte cap.
+    const processStdoutEvents = (events: ReturnType<ChildStdoutCollector["push"]>) => {
+      for (const { event, persistence } of events) {
+        if (persistence !== "drop") processEvent(event);
+      }
+    };
+
+    const syncStdoutLimit = () => {
+      const limit = stdoutCollector.limitExceeded;
+      if (limit) markOutputLimitExceeded(limit);
+    };
+
+    // Collect stdout with proper line buffering. Only persisted JSONL/non-JSON
+    // lines are stored in the final stdout buffer; high-frequency transient
+    // child events are parsed for live state but not retained.
     child.stdout?.on("data", (data: Buffer) => {
-      const beforeTruncated = stdoutBuffer.truncated;
-      const kept = appendLimitedOutput(stdoutBuffer, data, maxStdoutBytes);
-      if (!beforeTruncated && stdoutBuffer.truncated) {
-        markOutputLimitExceeded("stdout");
-      }
-      if (kept.length === 0) return;
+      if (outputLimitExceeded) return;
 
-      const text = kept.toString("utf-8");
-      lineBuffer += text;
-      const lines = lineBuffer.split("\n");
-      lineBuffer = lines.pop() || "";
-
-      for (const line of lines) {
-        jsonlLineCount++;
-        if (jsonlLineCount > maxJsonlLines) {
-          markOutputLimitExceeded("jsonlLines");
-          break;
-        }
-        processLine(line);
-      }
+      processStdoutEvents(stdoutCollector.push(data));
+      syncStdoutLimit();
     });
 
     // Collect stderr with a hard byte cap.
@@ -323,19 +338,14 @@ export async function runSync(
       if (forceKillHandle) clearTimeout(forceKillHandle);
       cleanup();
 
-      output = decodeLimitedOutput(stdoutBuffer);
-      stderr = decodeLimitedOutput(stderrBuffer);
-
       // Flush remaining line buffer unless output hard limits already stopped execution.
-      if (!outputLimitExceeded && lineBuffer.trim()) {
-        jsonlLineCount++;
-        if (jsonlLineCount > maxJsonlLines) {
-          markOutputLimitExceeded("jsonlLines");
-        } else {
-          processLine(lineBuffer);
-        }
-        lineBuffer = "";
+      if (!outputLimitExceeded) {
+        processStdoutEvents(stdoutCollector.flush());
+        syncStdoutLimit();
       }
+
+      output = stdoutCollector.decode();
+      stderr = decodeLimitedOutput(stderrBuffer);
 
       exitCode = outputLimitExceeded
         ? 1
@@ -348,6 +358,7 @@ export async function runSync(
             maxStdoutBytes,
             maxStderrBytes,
             maxJsonlLines,
+            maxTransientJsonlLines,
           })} and was stopped.`
         : undefined;
       const collected = outputLimitExceeded
@@ -459,41 +470,14 @@ export function spawnPi(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-interface LimitedOutputBuffer {
-  chunks: Buffer[];
-  bytes: number;
-  truncated: boolean;
-}
-
-function appendLimitedOutput(buffer: LimitedOutputBuffer, chunk: Buffer, maxBytes: number): Buffer {
-  if (buffer.truncated) return Buffer.alloc(0);
-
-  const remaining = maxBytes - buffer.bytes;
-  if (remaining <= 0) {
-    buffer.truncated = true;
-    return Buffer.alloc(0);
-  }
-
-  if (chunk.byteLength > remaining) {
-    const kept = chunk.subarray(0, remaining);
-    buffer.chunks.push(kept);
-    buffer.bytes += kept.byteLength;
-    buffer.truncated = true;
-    return kept;
-  }
-
-  buffer.chunks.push(chunk);
-  buffer.bytes += chunk.byteLength;
-  return chunk;
-}
-
-function decodeLimitedOutput(buffer: LimitedOutputBuffer): string {
-  return Buffer.concat(buffer.chunks, buffer.bytes).toString("utf8");
-}
-
 function formatOutputLimit(
   stream: NonNullable<RunSyncResult["outputLimitExceeded"]>,
-  limits: { maxStdoutBytes: number; maxStderrBytes: number; maxJsonlLines: number }
+  limits: {
+    maxStdoutBytes: number;
+    maxStderrBytes: number;
+    maxJsonlLines: number;
+    maxTransientJsonlLines: number;
+  }
 ): string {
   switch (stream) {
     case "stdout":
@@ -501,7 +485,9 @@ function formatOutputLimit(
     case "stderr":
       return `stderr hard limit (${limits.maxStderrBytes} bytes)`;
     case "jsonlLines":
-      return `JSONL line hard limit (${limits.maxJsonlLines} lines)`;
+      return `persisted JSONL line hard limit (${limits.maxJsonlLines} lines)`;
+    case "transientJsonlLines":
+      return `transient JSONL line hard limit (${limits.maxTransientJsonlLines} lines)`;
   }
 }
 

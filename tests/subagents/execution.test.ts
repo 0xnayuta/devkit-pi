@@ -34,6 +34,14 @@ function makeTempPiScript(): { dir: string; scriptPath: string } {
 	return { dir, scriptPath };
 }
 
+function makeTempPiNodeScript(source: string): { dir: string; scriptPath: string } {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-execution-node-"));
+	tempDirs.push(dir);
+	const scriptPath = path.join(dir, "pi-child.mjs");
+	fs.writeFileSync(scriptPath, source, "utf-8");
+	return { dir, scriptPath };
+}
+
 afterEach(() => {
 	if (envSnapshot.PATH === undefined) delete process.env.PATH;
 	else process.env.PATH = envSnapshot.PATH;
@@ -48,6 +56,89 @@ afterEach(() => {
 });
 
 describe("subagent execution timeout normalization", () => {
+	it("filters high-frequency message_update events with a cross-platform node child", async () => {
+		const { dir, scriptPath } = makeTempPiNodeScript(`
+let text = "";
+for (let i = 0; i < 200; i++) {
+  text += "x".repeat(50);
+  console.log(JSON.stringify({
+    type: "message_update",
+    message: { role: "assistant", content: [{ type: "text", text }] },
+    assistantMessageEvent: {
+      type: "text_delta",
+      delta: "x",
+      partial: { role: "assistant", content: [{ type: "text", text }] },
+    },
+  }));
+}
+console.log(JSON.stringify({
+  type: "message_end",
+  message: {
+    role: "assistant",
+    content: [{ type: "text", text: "cross-platform final" }],
+    usage: { input: 3, output: 4, cost: 0.02 },
+  },
+}));
+`);
+
+		const result = await runSync(dir, [], {
+			timeoutMs: 3000,
+			maxStdoutBytes: 1024,
+			maxJsonlLines: 10,
+			maxTransientJsonlLines: 1000,
+			spawnCommand: { command: process.execPath, args: [scriptPath] },
+		});
+
+		assert.equal(result.outputLimitExceeded, undefined);
+		assert.equal(result.exitCode, 0);
+		assert.equal(result.final, true);
+		assert.equal(result.output, "cross-platform final");
+		assert.equal(result.usage?.input, 3);
+		assert.equal(result.usage?.output, 4);
+	});
+
+	it("enforces transient JSONL line limit separately from persisted JSONL line limit", async () => {
+		const { dir, scriptPath } = makeTempPiNodeScript(`
+for (let i = 0; i < 20; i++) {
+  console.log(JSON.stringify({
+    type: "message_update",
+    message: { role: "assistant", content: [{ type: "text", text: "step " + i }] },
+  }));
+}
+setTimeout(() => {}, 5000);
+`);
+
+		const result = await runSync(dir, [], {
+			timeoutMs: 3000,
+			maxStdoutBytes: 1024,
+			maxJsonlLines: 1,
+			maxTransientJsonlLines: 5,
+			spawnCommand: { command: process.execPath, args: [scriptPath] },
+		});
+
+		assert.equal(result.outputLimitExceeded, "transientJsonlLines");
+		assert.equal(result.exitCode, 1);
+		assert.match(result.output, /transient JSONL line hard limit/);
+	});
+
+	it("enforces non-JSON stdout hard limit with a cross-platform node child", async () => {
+		const { dir, scriptPath } = makeTempPiNodeScript(`
+process.stdout.write("x".repeat(200000));
+setTimeout(() => {}, 5000);
+`);
+
+		const result = await runSync(dir, [], {
+			timeoutMs: 3000,
+			maxStdoutBytes: 1024,
+			spawnCommand: { command: process.execPath, args: [scriptPath] },
+		});
+
+		assert.equal(result.outputLimitExceeded, "stdout");
+		assert.equal(result.exitCode, 1);
+		assert.match(result.output, /stdout hard limit/);
+		assert.ok(Buffer.byteLength(result.partialOutput ?? "") <= 1024);
+	});
+
 	itPosix("normalizes a timed-out long-running child process to exitCode 124", async () => {
 		const { dir } = makeTempPiScript();
 		const started = performance.now();
@@ -285,6 +376,141 @@ describe("subagent execution timeout normalization", () => {
 		assert.equal(result.exitCode, 1);
 		assert.match(result.output, /stdout hard limit/);
 		assert.ok(Buffer.byteLength(result.partialOutput ?? "") <= 1024);
+	});
+
+	itPosix("does not persist high-frequency message_update events into stdout hard limit", async () => {
+		const { dir } = makeTempPiScript();
+		const scriptPath = path.join(dir, "pi");
+		fs.writeFileSync(
+			scriptPath,
+			[
+				"#!/usr/bin/env bash",
+				"node <<'NODE'",
+				"let text = '';",
+				"for (let i = 0; i < 200; i++) {",
+				"  text += 'x'.repeat(50);",
+				"  console.log(JSON.stringify({",
+				"    type: 'message_update',",
+				"    message: { role: 'assistant', content: [{ type: 'text', text }] },",
+				"    assistantMessageEvent: {",
+				"      type: 'text_delta',",
+				"      delta: 'x',",
+				"      partial: { role: 'assistant', content: [{ type: 'text', text }] },",
+				"    },",
+				"  }));",
+				"}",
+				"console.log(JSON.stringify({",
+				"  type: 'message_end',",
+				"  message: {",
+				"    role: 'assistant',",
+				"    content: [{ type: 'text', text: 'final answer' }],",
+				"    usage: { input: 1, output: 2, cost: 0.01 },",
+				"  },",
+				"}));",
+				"NODE",
+				"",
+			].join("\n"),
+			"utf-8",
+		);
+		fs.chmodSync(scriptPath, 0o755);
+
+		const result = await runSync(path.dirname(dir), [], {
+			timeoutMs: 3000,
+			maxStdoutBytes: 1024,
+			maxJsonlLines: 1000,
+			env: {
+				PATH: `${dir}${path.delimiter}${process.env.PATH ?? ""}`,
+			},
+		});
+
+		assert.equal(result.outputLimitExceeded, undefined);
+		assert.equal(result.exitCode, 0);
+		assert.equal(result.final, true);
+		assert.equal(result.output, "final answer");
+		assert.equal(result.usage?.input, 1);
+		assert.equal(result.usage?.output, 2);
+	});
+
+	itPosix("does not persist high-frequency tool_execution_update events into stdout hard limit", async () => {
+		const { dir } = makeTempPiScript();
+		const scriptPath = path.join(dir, "pi");
+		fs.writeFileSync(
+			scriptPath,
+			[
+				"#!/usr/bin/env bash",
+				"node <<'NODE'",
+				"let partialResult = '';",
+				"for (let i = 0; i < 100; i++) {",
+				"  partialResult += 'tool-output-'.repeat(20);",
+				"  console.log(JSON.stringify({",
+				"    type: 'tool_execution_update',",
+				"    toolCallId: 'call-1',",
+				"    partialResult,",
+				"  }));",
+				"}",
+				"console.log(JSON.stringify({",
+				"  type: 'tool_execution_end',",
+				"  toolCallId: 'call-1',",
+				"  result: 'ok',",
+				"}));",
+				"NODE",
+				"",
+			].join("\n"),
+			"utf-8",
+		);
+		fs.chmodSync(scriptPath, 0o755);
+
+		const result = await runSync(path.dirname(dir), [], {
+			timeoutMs: 3000,
+			maxStdoutBytes: 512,
+			maxJsonlLines: 1000,
+			env: {
+				PATH: `${dir}${path.delimiter}${process.env.PATH ?? ""}`,
+			},
+		});
+
+		assert.equal(result.outputLimitExceeded, undefined);
+		assert.equal(result.exitCode, 0);
+		assert.equal(result.final, false);
+		assert.equal(result.lastEventType, "tool_execution_end");
+		assert.match(result.output, /Tool executions completed: 1/);
+	});
+
+	itPosix("counts valid JSONL transient events toward the transient JSONL line hard limit", async () => {
+		const { dir } = makeTempPiScript();
+		const scriptPath = path.join(dir, "pi");
+		fs.writeFileSync(
+			scriptPath,
+			[
+				"#!/usr/bin/env bash",
+				"node <<'NODE'",
+				"for (let i = 0; i < 20; i++) {",
+				"  console.log(JSON.stringify({",
+				"    type: 'message_update',",
+				"    message: { role: 'assistant', content: [{ type: 'text', text: `step ${i}` }] },",
+				"  }));",
+				"}",
+				"NODE",
+				"sleep 5",
+				"",
+			].join("\n"),
+			"utf-8",
+		);
+		fs.chmodSync(scriptPath, 0o755);
+
+		const result = await runSync(path.dirname(dir), [], {
+			timeoutMs: 3000,
+			maxStdoutBytes: 1024,
+			maxJsonlLines: 100,
+			maxTransientJsonlLines: 5,
+			env: {
+				PATH: `${dir}${path.delimiter}${process.env.PATH ?? ""}`,
+			},
+		});
+
+		assert.equal(result.outputLimitExceeded, "transientJsonlLines");
+		assert.equal(result.exitCode, 1);
+		assert.match(result.output, /transient JSONL line hard limit/);
 	});
 
 	itPosix("terminates child when stderr exceeds the hard byte limit", async () => {
