@@ -1,7 +1,7 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-12
+last_verified: 2026-05-19
 language: chinese
 ---
 
@@ -43,6 +43,23 @@ tests/package-manifest.test.ts
 文档契约通过 `pnpm docs:check` 检查，覆盖 frontmatter、相对链接、内置 agent 工具列表、subagent/web 错误码、关键 reference 导航和关键配置默认值漂移。新增或修改 public API 或默认配置时，应同步更新 `docs/reference/` 并确保相关测试覆盖当前行为。
 
 如后续需要 LSP smoke/integration tests，应使用小型 fixture project，并明确标记为可选集成测试，避免 CI 因本机未安装 language server 而失败。
+
+## Coverage 可见性（Node 原生 V8）
+
+项目已接入轻量 coverage 可见性链路（不引入 c8/nyc/istanbul）：
+
+- 本地生成：`pnpm test:coverage`
+- 原始产物：`.coverage/v8/*.json`
+- 汇总产物：`.coverage/summary.json`
+- 热点报告：`.coverage/hotspots.md`
+
+说明：
+
+- 当前阶段为“可见性基线”，不设置覆盖率阈值门禁；
+- PR 不因“coverage 数值低”失败，但测试失败或 coverage 脚本失败仍会导致 CI 失败；
+- 指标基于 Node 原生 V8 range，属于趋势/热点观察的近似指标，不等价于 Istanbul statement/branch coverage。
+
+建议在提交涉及高风险模块变更（`web/network/security`、`convert/security`、`subagent/execution`、`shared/external-command`）前，至少本地运行一次 `pnpm test:coverage` 并查看 `hotspots.md` 是否出现异常回退。
 
 ## 不支持能力的回归测试
 

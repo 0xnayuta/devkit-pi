@@ -21,15 +21,15 @@ language: chinese
 ### 风险与状态汇总
 
 - P0：3（Closed 3）
-- P1：4（Closed 3 / Mitigated 1）
+- P1：4（Closed 4）
 - P2：3（Closed 3）
-- P3：1（Open 1）
+- P3：1（In Progress 1）
 
-- Closed：10
-- Mitigated：1
+- Closed：11
+- Mitigated：0
 - Deferred：0
-- Open：1
-- In Progress：0
+- Open：0
+- In Progress：1
 
 ### 关键问题总览（精简版）
 
@@ -39,7 +39,7 @@ language: chinese
 | RES-001 | external command 输出无硬上限 | P0 | Closed | 已加 stdout/stderr hard cap 并测试。 |
 | RES-002 | subagent child 输出无硬上限 | P0 | Closed | 已加 stdout/stderr/JSONL hard cap 并终止超限子进程。 |
 | RES-003 | web provider 响应无限读取 | P0 | Closed | 已改为统一有限读取。 |
-| SEC-002 | DNS rebinding / TOCTOU 缺口 | P1 | Mitigated | 已文档化限制，连接阶段 pinning 未完成。 |
+| SEC-002 | DNS rebinding / TOCTOU 缺口 | P1 | Closed | 已实现连接阶段 DNS pinning（含 redirect 逐跳重校验与重 pin）。 |
 | ARCH-001 | LSP core 过大（维护性热点） | P1 | Closed | 已按边界文档完成拆分，`core.ts` 由上帝文件收敛为 facade/orchestrator。 |
 | DOC-001 | 配置默认值文档漂移 | P1 | Closed | 文档已对齐，docs:check 已加漂移校验。 |
 | WF-001 | 缺少轻量 workflow 过程提醒 | P2 | Closed | 已落地 guards（git/first-write/verification 提示）。 |
@@ -665,7 +665,7 @@ pnpm test       ✅ 280 tests passed
 2. ✅ 给 subagent child 输出收集增加 hard cap 与结构化错误。
 3. ✅ search providers 改用统一有限 body reader。
 4. ✅ LSP 文件读取增加大小限制。
-5. 🟡 在安全文档中说明 DNS rebinding 限制，并设计连接阶段 pin IP 方案（前半已完成：文档限制说明；后半未完成：连接阶段 pin IP 设计/实现）。
+5. ✅ 在安全文档中说明 DNS rebinding 限制，并完成连接阶段 DNS pinning 设计与实现（web/convert 请求链路已接入，含 redirect 逐跳重校验与重 pin）。
 
 ### 第三阶段（维护性优化 · 1 周）
 
@@ -769,7 +769,7 @@ src/shared/
 
 当前需要持续关注的重点已从“多项高优先级缺口并存”收敛为“少量已知边界与技术债”：
 
-- 安全边界：DNS rebinding / TOCTOU 目前为文档化缓解（Mitigated），连接阶段 pinning 尚未落地；
+- 安全边界：DNS rebinding / TOCTOU 已从“文档化缓解”升级为“连接阶段 pinning 已落地（Closed）”，同时保留非形式化安全保证的边界声明；
 - 工程化提升：coverage 与质量可见性增强仍为后续优化项。
 
 ### 是否建议继续加功能
@@ -792,8 +792,8 @@ src/shared/
 
 ### 下一步最优先执行的三件事（以十七章状态驱动）
 
-1. **推进安全增强剩余项**：评估并设计 DNS 校验到连接阶段的一致性方案（pinning）。
-2. **补齐工程化可见性**：引入轻量 coverage 报告并观察热点覆盖率。
+1. **保持安全增强回归保障**：持续验证 DNS 校验到连接阶段一致性（pinning）与 redirect 逐跳重校验链路，防止回退。
+2. **补齐工程化可见性**：已接入 Node 原生 V8 coverage 可见性链路（脚本 + CI artifact），进入热点覆盖率观察期。
 3. **持续 LSP 回归保障**：在现有拆分基础上继续补 manager/orchestrator 白盒测试与时序回归用例。
 
 ---
@@ -827,7 +827,7 @@ pnpm test ✅（当前测试集 328 tests / 317 passed / 11 skipped）
 | web providers 直接 `response.text()/json()` 无限读取 | ✅ 已关闭 | `src/modules/web/read-limited.ts`, `src/modules/web/providers/*.ts`, `tests/web/providers.test.ts` | provider 响应改为统一有限读取路径。 |
 | LSP source file 无大小限制 | ✅ 已关闭 | `src/modules/lsp/core.ts`, `tests/lsp/tool.test.ts` | 增加 `DEFAULT_LSP_MAX_SOURCE_FILE_BYTES` 与超限错误。 |
 | 配置文档默认值漂移 | ✅ 已关闭 | `docs/reference/configuration.md`, `docs/zh/reference/configuration.md`, `scripts/check-docs.mjs` | 默认值已对齐，并由 docs:check 抽样校验。 |
-| DNS rebinding / DNS TOCTOU 风险未说明 | 🟡 已缓解（文档化） | `docs/guides/security-model.md`, `docs/zh/guides/security-model.md`, web/convert reference | 已明确限制与风险，不再夸大 SSRF 防护；连接阶段 pinning 仍未实现。 |
+| DNS rebinding / DNS TOCTOU 风险未说明 | ✅ 已关闭 | `src/modules/web/network.ts`, `src/modules/web/fetch.ts`, `src/modules/convert/security.ts`, `tests/web/network.test.ts`, `tests/web/fetch-content.test.ts`, `tests/convert/tool.test.ts`, `docs/guides/security-model.md`, `docs/zh/guides/security-model.md`, web/convert reference | 已实现连接阶段 DNS pinning，并完成文档与回归测试同步。 |
 | LSP core 过大（维护性热点） | ✅ 已关闭 | `internal-docs/issues/lsp-core-split-boundaries.md`；`src/modules/lsp/{actions,client-lifecycle,client-manager,diagnostics,edits,formatters,request-orchestrator,server-registry,source-files}.ts` | 阶段 0 的边界记录已在后续迭代完成实现，`core.ts` 已显著瘦身并转为 facade/orchestrator。 |
 
 ### 16.3 新增能力与工程化增量
@@ -870,7 +870,7 @@ pnpm test ✅（当前测试集 328 tests / 317 passed / 11 skipped）
 
 1. 继续保持“安全默认 + 资源上限 + 文档契约校验”作为变更门槛；
 2. 进入专门维护窗口时再推进 LSP core 分步拆分；
-3. 把 DNS rebinding 连接阶段 pinning 作为后续安全增强方向，而非当前文档承诺能力。
+3. 将 DNS pinning 纳入持续回归门槛（代码 + 测试 + 文档一致性），避免后续迭代弱化连接阶段保障。
 
 ### 16.5 当前复审结论
 
@@ -904,10 +904,10 @@ pnpm test ✅（当前测试集 328 tests / 317 passed / 11 skipped）
 | RES-002 | 资源 | subagent child stdout/stderr/JSONL 无硬上限 | P0 | Closed | 原审计 → Stage0 | 子进程噪声或恶意输出可放大资源消耗 | 代码：`src/modules/subagents/execution.ts`（执行链路）；测试：`tests/subagents/execution.test.ts`；文档：`docs/reference/subagents.md` | - | - | 继续补齐/解锁超限场景测试 |
 | RES-003 | 资源 | web providers 直接 `response.text()/json()` 无限读取 | P0 | Closed | 原审计 → Stage0 | 大响应可能拖垮进程内存 | 代码：`src/modules/web/read-limited.ts`（provider 有限读取入口）；测试：`tests/web/providers.test.ts`；文档：`docs/reference/web-tools.md` | - | - | 新 provider 强制复用有限读取 helper |
 | RES-004 | 资源 | LSP source file 读取无大小限制 | P1 | Closed | 原审计 → Stage0 | 大文件阻塞事件循环并增加内存压力 | 代码：`src/modules/lsp/source-files.ts`（读取上限） / `src/modules/lsp/core.ts`（编排）；测试：`tests/lsp/tool.test.ts`；文档：`docs/reference/lsp-tools.md` | - | - | 观察是否需要后续配置化 |
-| SEC-002 | 安全 | DNS rebinding / DNS TOCTOU 连接阶段缺口 | P1 | Mitigated | 原审计 → Stage0 | 私网阻断非强保证，存在校验-连接间隙 | 代码：`src/modules/web/security.ts`；测试：`tests/web/security.test.ts`；文档：`docs/guides/security-model.md`（含 zh 对应页） | 当前先文档化并明确边界，接受残余风险 | 安全增强窗口或高风险部署需求 | 设计并评估连接阶段 IP pinning |
+| SEC-002 | 安全 | DNS rebinding / DNS TOCTOU 连接阶段缺口 | P1 | Closed | 原审计 → Stage0 → 2026-05-19 关闭 | 私网阻断已从“仅校验阶段”升级为“校验-连接一致性” | 代码：`src/modules/web/network.ts`、`src/modules/web/fetch.ts`、`src/modules/convert/security.ts`、`src/modules/web/security.ts`；测试：`tests/web/network.test.ts`、`tests/web/fetch-content.test.ts`、`tests/convert/tool.test.ts`、`tests/web/security.test.ts`；文档：`docs/guides/security-model.md`（含 zh 对应页）与 web/convert reference | 保留边界声明（非对所有上游网络攻击的形式化保证） | 连接阶段 pinning 被绕过、redirect 跳转未重校验或相关回归测试失败 | 维持 pinning 回归测试与文档一致性检查
 | DOC-001 | 文档契约 | 配置默认值与源码漂移（含 timeout/idle） | P1 | Closed | 原审计 → Stage0 | 用户按文档调试会误判行为 | 代码：`src/config/load-config.ts`；测试/校验：`scripts/check-docs.mjs`；文档：`docs/reference/configuration.md`（含 zh 对应页） | - | - | 继续扩展 drift 检查覆盖面 |
 | DOC-002 | 文档契约 | guide 新增后可能未进入导航 | P2 | Closed | Stage2 | 文档可发现性差，易形成信息孤岛 | 代码：`scripts/check-docs.mjs`；测试/校验：`pnpm docs:check`（脚本门禁）；文档：`docs/guides/agent-workflow.md` | - | - | 后续可扩展到 reference 导航一致性 |
 | WF-001 | 流程质量 | 会话缺少轻量 workflow 提醒 | P2 | Closed | Stage1 | 容易“改完未验证就结束” | 代码：`src/modules/guards/`；测试：`tests/guards/git-context.test.ts`；文档：`docs/guides/agent-workflow.md` | - | - | 观察误报/漏报，迭代分类器 |
 | ARCH-001 | 架构 | `lsp/core.ts` 过大、职责集中 | P1 | Closed | 原审计 + Stage0(0-H) → 后续迭代关闭 | 单文件复杂度高、变更面过大 | 代码：`src/modules/lsp/core.ts` + `src/modules/lsp/{actions,client-lifecycle,client-manager,diagnostics,edits,formatters,request-orchestrator,server-registry,source-files}.ts`；测试：`tests/lsp/*.test.ts`；文档：`internal-docs/issues/lsp-core-split-boundaries.md` | - | - | 维持 facade 边界稳定并持续补时序/回归测试 |
 | ENG-001 | 工程化 | Node engines 未声明（兼容矩阵不够显式） | P2 | Closed | 原审计 → 后续迭代关闭 | 旧 Node 环境可能出现运行时兼容问题 | 代码：`package.json`（`engines.node >=22.6.0`）；测试/校验：`pnpm test` / `pnpm typecheck`（Node 版本前提）；文档：本报告第十一章工程化审计 | - | - | 发布说明中持续维护支持矩阵与最低版本说明 |
-| ENG-002 | 工程化 | 覆盖率门禁缺失 | P3 | Open | 原审计 | 难量化热点模块测试充分性 | 代码：CI/脚本配置（待补覆盖率接入）；测试：现有 `pnpm test` 基线（缺 coverage 指标）；文档：本报告第十/十一章 | 当前已有 type/lint/test 基线，先保持轻量 | CI 质量门升级时 | 引入轻量 coverage 报告（先观察不设硬门） |
+| ENG-002 | 工程化 | 覆盖率门禁缺失 | P3 | In Progress | 原审计 → 2026-05-19 启动 | 缺少 coverage 可见性会弱化热点模块测试充分性判断 | 代码：`scripts/run-v8-coverage.mjs`、`scripts/report-v8-coverage.mjs`、`package.json`（`test:coverage*`）、`.github/workflows/ci.yml`（coverage + artifact）；测试/校验：`pnpm test:coverage`；文档：`internal-docs/issues/v8-coverage-visibility-plan.md`、`internal-docs/maintain/testing.md` | 当前采用“仅可见性、无阈值门禁”策略，先观察稳定性与基线 | 覆盖率任务长期不稳定、统计偏差不可接受或 CI 开销不可控 | 持续观察 1~2 周热点覆盖率，再评估 soft gate 或状态转 Closed |

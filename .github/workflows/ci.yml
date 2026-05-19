@@ -37,3 +37,18 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      - name: Run V8 coverage
+        run: pnpm test:coverage
+
+      - name: Upload V8 coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v8-coverage-${{ github.sha }}
+          path: |
+            .coverage/summary.json
+            .coverage/hotspots.md
+            .coverage/v8
+          if-no-files-found: error
+          retention-days: 14

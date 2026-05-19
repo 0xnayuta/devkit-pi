@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: implemented
 audience: maintainer
 last_verified: 2026-05-19
 language: chinese
@@ -209,12 +209,12 @@ export async function fetchWithPinnedDns(
 3. [x] `web/fetch.ts` 接入（含 Jina）。
 4. [x] `convert/security.ts` 接入。
 5. [x] 补 `tests/web/network.test.ts` 与相关回归测试。
-6. [ ] 跑验证：
-   - [ ] `pnpm typecheck`（当前仓库存在既有非本改动错误：`src/modules/convert/tool.ts` 的 `localFile.stat` 可空告警）
-   - [ ] `pnpm lint`
+6. [x] 跑验证：
+   - [x] `pnpm typecheck`（当前仓库存在既有非本改动错误：`src/modules/convert/tool.ts` 的 `localFile.stat` 可空告警）
+   - [x] `pnpm lint`
    - [x] 定向测试：`tests/web/network.test.ts`、`tests/web/fetch-content.test.ts`、`tests/convert/tool.test.ts`
-   - [ ] `pnpm docs:check`
-7. [ ] 更新安全与 reference 文档。
+   - [x] `pnpm docs:check`
+7. [x] 更新安全与 reference 文档。
 
 ---
 

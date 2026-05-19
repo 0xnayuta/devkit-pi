@@ -47,6 +47,9 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "docs:check": "node scripts/check-docs.mjs",
+    "test:coverage:raw": "node scripts/run-v8-coverage.mjs",
+    "coverage:report": "node scripts/report-v8-coverage.mjs",
+    "test:coverage": "pnpm test:coverage:raw && pnpm coverage:report",
     "prepublishOnly": "pnpm docs:check && pnpm test"
   },
   "pi": {

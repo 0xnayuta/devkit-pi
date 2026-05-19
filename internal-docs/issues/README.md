@@ -9,6 +9,7 @@ language: chinese
 
 ## 后续维护设计记录
 
+- [基于 Node 原生 V8 Coverage 的轻量可见性实施方案](./v8-coverage-visibility-plan.md)：以 `NODE_V8_COVERAGE` + 项目内聚合脚本建立 coverage 可见性，不引入额外复杂工具链。
 - [LSP core 拆分边界设计记录](./lsp-core-split-boundaries.md)：拆分计划已执行完成，当前保留为边界与历史参考；实现下沉 go/no-go 结论见 [ADR 0007](../adr/0007-lsp-load-sync-no-go.md)。
 
 ## 最近修复
