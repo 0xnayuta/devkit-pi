@@ -1,13 +1,13 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-18
+last_verified: 2026-05-19
 language: chinese
 ---
 
 # 项目代码质量审计报告 · devkit-pi
 
-> **审计基准 commit**: `db96565` · **审计日期**: 2026-05-13 · **审计对象**: `src/`、`tests/`、`agents/`、`docs/zh/guides`、`docs/zh/archive`、`docs/zh/reference` · **验证命令**: `pnpm typecheck`、`pnpm lint`、`pnpm test` 全部通过（280 tests）
+> **审计基准 commit**: `db96565` · **审计日期**: 2026-05-13 · **审计对象**: `src/`、`tests/`、`agents/`、`docs/zh/guides`、`docs/zh/archive`、`docs/zh/reference`（当前对应维护路径：`internal-docs/maintain`、`internal-docs/archive`、`docs/zh/reference`）· **验证命令**: `pnpm typecheck`、`pnpm lint`、`pnpm test` 全部通过（280 tests）
 >
 > **历史路径说明**：本报告记录审计当时的仓库结构。后续文档分流后，部分维护者文档、归档文档和审计文档已从 `docs/` / `docs/zh/` 移动到 `internal-docs/`；报告正文中的旧路径保留为当时上下文。
 >
@@ -21,14 +21,14 @@ language: chinese
 ### 风险与状态汇总
 
 - P0：3（Closed 3）
-- P1：4（Closed 2 / Mitigated 1 / Deferred 1）
-- P2：3（Closed 2 / Open 1）
+- P1：4（Closed 3 / Mitigated 1）
+- P2：3（Closed 3）
 - P3：1（Open 1）
 
-- Closed：8
+- Closed：10
 - Mitigated：1
-- Deferred：1
-- Open：2
+- Deferred：0
+- Open：1
 - In Progress：0
 
 ### 关键问题总览（精简版）
@@ -40,7 +40,7 @@ language: chinese
 | RES-002 | subagent child 输出无硬上限 | P0 | Closed | 已加 stdout/stderr/JSONL hard cap 并终止超限子进程。 |
 | RES-003 | web provider 响应无限读取 | P0 | Closed | 已改为统一有限读取。 |
 | SEC-002 | DNS rebinding / TOCTOU 缺口 | P1 | Mitigated | 已文档化限制，连接阶段 pinning 未完成。 |
-| ARCH-001 | LSP core 过大（维护性热点） | P1 | Deferred | 已记录拆分边界，待专门维护窗口执行。 |
+| ARCH-001 | LSP core 过大（维护性热点） | P1 | Closed | 已按边界文档完成拆分，`core.ts` 由上帝文件收敛为 facade/orchestrator。 |
 | DOC-001 | 配置默认值文档漂移 | P1 | Closed | 文档已对齐，docs:check 已加漂移校验。 |
 | WF-001 | 缺少轻量 workflow 过程提醒 | P2 | Closed | 已落地 guards（git/first-write/verification 提示）。 |
 
@@ -105,7 +105,7 @@ devkit-pi/
 ├── tests/                            # 23 个测试文件，按模块镜像
 ├── docs/zh/guides/                   # 架构、安全、测试、范围指南
 ├── docs/zh/reference/                # 配置、工具、命令、结果 schema reference
-└── docs/zh/archive/                  # 历史计划归档，不作为当前行为依据
+└── docs/zh/archive/                  # 历史路径（现已迁移为 internal-docs/archive/）
 ```
 
 ### 优点
@@ -114,14 +114,14 @@ devkit-pi/
 - **源码 / 测试 / 文档结构一致**：`src/modules/*`、`tests/*`、`docs/zh/reference/*` 基本按同一能力域映射。
 - **配置集中**：`src/config/load-config.ts` 是默认值和 normalize 的 canonical source，符合文档中的架构一致性策略。
 - **内置 agent 独立为 Markdown**：`agents/*.md` 便于用户理解 prompt 与工具边界。
-- **历史文档有归档边界**：`docs/zh/archive/index.md` 明确 archive 仅供参考，降低旧计划误导当前实现的风险。
+- **历史文档有归档边界**：历史路径 `docs/zh/archive/index.md` 已迁移；当前以 `internal-docs/archive/README.md` 作为归档边界说明。
 
 ### 问题
 
 - **`src/modules/lsp/core.ts` 过大**：约 1876 行，混合 server discovery、spawn、JSON-RPC client、诊断、symbol/format helper、Kotlin 辅助下载等职责，是当前最明显的维护热点。
 - **`docs/zh/reference/configuration.md` 与源码存在默认值不一致**：源码 `DEFAULT_SUBAGENTS_CONFIG.timeoutMs = 900000`，但配置参考完整默认示例和表格写 `300000`；同时源码已有 `idleTimeoutMs=180000`，完整默认示例未列出。
 - **内置 agents 目录定位逻辑脆弱**：`src/modules/subagents/agents.ts` 会优先向上查找任意 `agents/` 目录作为 builtin 根，普通工作区若也有 `agents/` 目录，可能混淆内置 agent 来源。
-- **中文测试文档未列出 `tests/convert/` 与 `tests/shared/`**：`docs/zh/guides/testing.md` 的测试目录示例落后于当前仓库。
+- **中文测试文档未列出 `tests/convert/` 与 `tests/shared/`**：该历史问题对应文档已迁移，当前维护路径为 `internal-docs/maintain/testing.md`。
 
 ### 风险等级
 
@@ -601,6 +601,8 @@ pnpm test       ✅ 280 tests passed
 
 ## 十一、工程化审计
 
+> 时效说明：本章主体为 2026-05-13 审计快照；当前状态以第十六、十七章为准。
+
 ### 工程化能力检查
 
 | 项目 | 状态 |
@@ -614,12 +616,12 @@ pnpm test       ✅ 280 tests passed
 | Unit tests | ✅ Node test runner，280 tests |
 | Docs check | ✅ `scripts/check-docs.mjs` |
 | CI | ✅ `.github/workflows/ci.yml` / docs workflow |
-| Release checklist | ✅ `docs/zh/guides/release-checklist.md` |
+| Release checklist | ✅ `internal-docs/maintain/release-checklist.md`（历史路径：`docs/zh/guides/release-checklist.md`） |
 | CHANGELOG | ✅ |
 | License | ✅ MIT |
 | Docker | N/A（extension 包，不需要） |
 | Coverage 报告 | ⚠️ 未见覆盖率门禁 |
-| Node engines | ⚠️ 未声明 |
+| Node engines | ✅ 已声明（`>=22.6.0`） |
 
 ### 工程化优点
 
@@ -629,19 +631,21 @@ pnpm test       ✅ 280 tests passed
 
 ### 工程化问题
 
-- 未声明 Node engine，用户在旧 Node 上可能遇到 Web Streams / fetch / `AbortSignal.any` 兼容问题。
-- 没有测试覆盖率统计，难以量化 LSP core 等热点覆盖缺口。
-- 文档一致性检查还不够强，未捕获 `timeoutMs` 默认值漂移。
+- （历史问题，已关闭）Node engine 已在后续迭代声明；兼容矩阵显式性风险已收敛。
+- 没有测试覆盖率统计，难以量化热点模块覆盖缺口。
+- 文档一致性检查仍可继续扩展（当前已覆盖关键默认值与 guide 导航校验）。
 
 ### 工程化建议
 
-1. 增加 `engines.node`。
+1. （已完成）`engines.node` 已补齐，后续维护最低支持版本说明。
 2. 引入轻量 coverage（Node test 可配合 c8/内置 V8 coverage），不必一开始设高门槛，先观察热点。
-3. 扩展 `docs:check`：校验配置默认值、测试目录列表、工具错误码与 reference 表格。
+3. 继续扩展 `docs:check`：在现有默认值/导航校验基础上，逐步增加错误码与 reference 一致性校验。
 
 ---
 
 ## 十二、重构路线图
+
+> 时效说明：本章为原审计规划视角；其中已完成事项请以第十六、十七章状态为准。
 
 ### 第一阶段（立即执行 · 0.5–1 天）
 
@@ -649,7 +653,7 @@ pnpm test       ✅ 280 tests passed
 
 1. ✅ 移除 `http-pool.ts` 中 `rejectUnauthorized:false`，或改成显式高风险配置且默认关闭。
 2. ✅ 更新 `docs/zh/reference/configuration.md`：`subagents.timeoutMs=900000`、补 `idleTimeoutMs=180000`。
-3. ✅ 更新 `docs/zh/guides/testing.md`：补 `tests/convert/`、`tests/shared/`。
+3. ✅ 更新测试文档（当前维护路径 `internal-docs/maintain/testing.md`；历史路径 `docs/zh/guides/testing.md`）：补 `tests/convert/`、`tests/shared/`。
 4. ✅ 修复 `spawnPi()` abort listener remove 引用。
 5. ✅ 为以上变更补测试。
 
@@ -667,11 +671,11 @@ pnpm test       ✅ 280 tests passed
 
 **目标**：降低 LSP 复杂度和强化文档契约。
 
-1. 拆分 `src/modules/lsp/core.ts`。
-2. 补 LSP manager 级单测。
+1. ✅ 拆分 `src/modules/lsp/core.ts`（已完成，详见 `internal-docs/issues/lsp-core-split-boundaries.md`）。
+2. 🟡 持续补 LSP manager/orchestrator 级白盒与时序回归测试。
 3. ✅ 扩展 `docs:check` 默认值一致性检查。
-4. 增加 coverage 报告。
-5. 建立统一 logger/diagnostics sink，减少裸 `console.*`。
+4. 🟡 增加 coverage 报告（待推进）。
+5. 🟡 建立统一 logger/diagnostics sink，减少裸 `console.*`（待推进）。
 
 ### 第四阶段（长期）
 
@@ -685,6 +689,8 @@ pnpm test       ✅ 280 tests passed
 ---
 
 ## 十三、推荐目录结构（局部重构后）
+
+> 时效说明：本节目标结构已大部分落地；保留为架构意图与对照参考。
 
 ```text
 src/modules/lsp/
@@ -722,15 +728,17 @@ src/shared/
 
 ## 十四、综合评分
 
+> 时效说明：本章分数为 2026-05-13 原审计快照，不代表 2026-05-19 的最新量化评分。
+
 | 维度 | 分数 | 备注 |
 |---|---:|---|
-| 项目结构 | **8/10** | 模块清晰，LSP core 过大扣分 |
+| 项目结构 | **8/10** | （原审计快照）当时因 LSP core 过大扣分 |
 | 代码质量 | **7/10** | 可读性总体好，部分 `any` 和 console/fallback 存在 |
 | 架构设计 | **8/10** | provider/handler/config/test/doc 契约成熟 |
 | 性能 | **7/10** | 常规使用足够，外部输出和 LSP 大文件需硬上限 |
 | 安全 | **6/10** | 默认边界不错，但 TLS 与 DNS rebinding 是实质缺口 |
 | 测试 | **8/10** | 280 tests 通过，覆盖广；LSP manager/资源上限缺口明显 |
-| 工程化 | **8/10** | typecheck/lint/test/docs/CI 完整；缺 engines/coverage |
+| 工程化 | **8/10** | （原审计快照）当时缺 engines/coverage；其中 engines 已在后续迭代关闭 |
 | 文档一致性 | **7/10** | 文档体系完整，但配置默认值和测试目录有漂移 |
 
 ### 综合评分
@@ -762,17 +770,16 @@ src/shared/
 当前需要持续关注的重点已从“多项高优先级缺口并存”收敛为“少量已知边界与技术债”：
 
 - 安全边界：DNS rebinding / TOCTOU 目前为文档化缓解（Mitigated），连接阶段 pinning 尚未落地；
-- 架构维护性：`lsp/core.ts` 拆分仍待专门维护窗口执行（Deferred/Open 按总表为准）；
-- 工程化提升：Node engines、coverage 等工程项仍为后续优化项。
+- 工程化提升：coverage 与质量可见性增强仍为后续优化项。
 
 ### 是否建议继续加功能
 
 - ☐ 是
-- ☑ **原则上先按问题总表清理 Open / Deferred 项，再评估新增功能节奏**
+- ☑ **原则上先按问题总表清理剩余 Open 项，再评估新增功能节奏**
 
 ### 是否建议先重构
 
-- ☑ **是，但只做局部重构**：优先按 `internal-docs/issues/lsp-core-split-boundaries.md` 分步拆分 `lsp/core.ts`，不重排顶层结构。
+- ☑ **是，但只做局部重构**：当前优先进行拆分后回归巩固（manager/orchestrator 时序测试、边界稳定性），不重排顶层结构。
 
 ### 是否适合商业化
 
@@ -786,8 +793,8 @@ src/shared/
 ### 下一步最优先执行的三件事（以十七章状态驱动）
 
 1. **推进安全增强剩余项**：评估并设计 DNS 校验到连接阶段的一致性方案（pinning）。
-2. **推进 LSP 维护性拆分**：按已记录边界分步拆分 `lsp/core.ts` 并补 manager 级测试。
-3. **补齐工程化可见性**：评估增加 `engines.node` 与轻量 coverage 报告。
+2. **补齐工程化可见性**：引入轻量 coverage 报告并观察热点覆盖率。
+3. **持续 LSP 回归保障**：在现有拆分基础上继续补 manager/orchestrator 白盒测试与时序回归用例。
 
 ---
 
@@ -821,7 +828,7 @@ pnpm test ✅（当前测试集 328 tests / 317 passed / 11 skipped）
 | LSP source file 无大小限制 | ✅ 已关闭 | `src/modules/lsp/core.ts`, `tests/lsp/tool.test.ts` | 增加 `DEFAULT_LSP_MAX_SOURCE_FILE_BYTES` 与超限错误。 |
 | 配置文档默认值漂移 | ✅ 已关闭 | `docs/reference/configuration.md`, `docs/zh/reference/configuration.md`, `scripts/check-docs.mjs` | 默认值已对齐，并由 docs:check 抽样校验。 |
 | DNS rebinding / DNS TOCTOU 风险未说明 | 🟡 已缓解（文档化） | `docs/guides/security-model.md`, `docs/zh/guides/security-model.md`, web/convert reference | 已明确限制与风险，不再夸大 SSRF 防护；连接阶段 pinning 仍未实现。 |
-| LSP core 过大（维护性热点） | 🟡 未关闭（已建边界记录） | `internal-docs/issues/lsp-core-split-boundaries.md` | 阶段 0 按计划仅记录拆分边界，未做全面重构。 |
+| LSP core 过大（维护性热点） | ✅ 已关闭 | `internal-docs/issues/lsp-core-split-boundaries.md`；`src/modules/lsp/{actions,client-lifecycle,client-manager,diagnostics,edits,formatters,request-orchestrator,server-registry,source-files}.ts` | 阶段 0 的边界记录已在后续迭代完成实现，`core.ts` 已显著瘦身并转为 facade/orchestrator。 |
 
 ### 16.3 新增能力与工程化增量
 
@@ -871,6 +878,19 @@ pnpm test ✅（当前测试集 328 tests / 317 passed / 11 skipped）
 - 原审计提出的高优先级修复项（TLS 默认、输出硬上限、有限读取、配置漂移）已完成闭环。
 - 审计文档可继续沿用单文档增量更新模式，无需拆出独立平行审计文件。
 
+### 16.6 内部交叉引用校验（2026-05-19）
+
+本轮对第十六、十七章“证据（代码/测试/文档）”路径做了逐项存在性校验，并同步清理了少量历史路径漂移引用。
+
+校验结论：
+
+- ✅ 关键证据路径均存在（代码、测试、文档与维护文档）。
+- ✅ `ARCH-001`/`ENG-001` 关闭状态对应证据可在仓库中直接定位。
+- ✅ 历史路径 `docs/zh/archive/*`、`docs/zh/guides/{testing,release-checklist}.md` 已在文档中补充迁移说明并指向当前维护路径：
+  - `internal-docs/archive/README.md`
+  - `internal-docs/maintain/testing.md`
+  - `internal-docs/maintain/release-checklist.md`
+
 ---
 
 ## 十七、附录：问题总表（详细版）
@@ -879,15 +899,15 @@ pnpm test ✅（当前测试集 328 tests / 317 passed / 11 skipped）
 
 | ID | 领域 | 问题标题 | Priority | Status | 阶段来源 | 影响摘要 | 证据（代码/测试/文档） | 暂缓原因 / 风险接受 | 重开触发条件 | 下一步动作 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| SEC-001 | 安全 | HTTPS 默认关闭证书校验（`rejectUnauthorized:false`） | P0 | Closed | 原审计 → Stage0 | 可能导致中间人风险，违背安全默认 | `src/modules/web/http-pool.ts`；`tests/web/http-pool.test.ts` | - | - | 保持回归测试，防止回退 |
-| RES-001 | 资源 | external command stdout/stderr 无硬上限 | P0 | Closed | 原审计 → Stage0 | 异常输出可导致内存膨胀/阻塞 | `src/shared/external-command.ts`；`tests/shared/external-command.test.ts`；`docs/reference/convert-tools.md` | - | - | 如需可评估阈值配置化 |
-| RES-002 | 资源 | subagent child stdout/stderr/JSONL 无硬上限 | P0 | Closed | 原审计 → Stage0 | 子进程噪声或恶意输出可放大资源消耗 | `src/modules/subagents/execution.ts`、`src/modules/subagents/executor.ts`；`tests/subagents/execution.test.ts`；`docs/reference/subagents.md` | - | - | 继续补齐/解锁超限场景测试 |
-| RES-003 | 资源 | web providers 直接 `response.text()/json()` 无限读取 | P0 | Closed | 原审计 → Stage0 | 大响应可能拖垮进程内存 | `src/modules/web/read-limited.ts`；`src/modules/web/providers/*.ts`；`tests/web/providers.test.ts` | - | - | 新 provider 强制复用有限读取 helper |
-| RES-004 | 资源 | LSP source file 读取无大小限制 | P1 | Closed | 原审计 → Stage0 | 大文件阻塞事件循环并增加内存压力 | `src/modules/lsp/core.ts`；`tests/lsp/tool.test.ts`；`docs/reference/lsp-tools.md` | - | - | 观察是否需要后续配置化 |
-| SEC-002 | 安全 | DNS rebinding / DNS TOCTOU 连接阶段缺口 | P1 | Mitigated | 原审计 → Stage0 | 私网阻断非强保证，存在校验-连接间隙 | `src/modules/web/security.ts`；`docs/guides/security-model.md`；`docs/zh/guides/security-model.md` | 当前先文档化并明确边界，接受残余风险 | 安全增强窗口或高风险部署需求 | 设计并评估连接阶段 IP pinning |
-| DOC-001 | 文档契约 | 配置默认值与源码漂移（含 timeout/idle） | P1 | Closed | 原审计 → Stage0 | 用户按文档调试会误判行为 | `docs/reference/configuration.md`、`docs/zh/reference/configuration.md`；`scripts/check-docs.mjs`；`src/config/load-config.ts` | - | - | 继续扩展 drift 检查覆盖面 |
-| DOC-002 | 文档契约 | guide 新增后可能未进入导航 | P2 | Closed | Stage2 | 文档可发现性差，易形成信息孤岛 | `scripts/check-docs.mjs`；`docs/.vitepress/config.ts`；`docs/guides/agent-workflow.md` | - | - | 后续可扩展到 reference 导航一致性 |
-| WF-001 | 流程质量 | 会话缺少轻量 workflow 提醒 | P2 | Closed | Stage1 | 容易“改完未验证就结束” | `src/modules/guards/*`；`src/index.ts`；`tests/guards/git-context.test.ts` | - | - | 观察误报/漏报，迭代分类器 |
-| ARCH-001 | 架构 | `lsp/core.ts` 过大、职责集中 | P1 | Deferred | 原审计 + Stage0(0-H) | 维护成本高、变更风险大 | `src/modules/lsp/core.ts`；`internal-docs/issues/lsp-core-split-boundaries.md` | 硬化阶段避免大重构，先记录边界 | 进入专门 LSP 维护窗口 | 按边界文档分步拆分并补 manager 级测试 |
-| ENG-001 | 工程化 | Node engines 未声明（兼容矩阵不够显式） | P2 | Open | 原审计 | 旧 Node 环境可能出现运行时兼容问题 | `package.json`；工程化章节 | 非阻塞，当前风险可控 | 下一次发布准备窗口 | 增加 `engines.node` 与支持范围说明 |
-| ENG-002 | 工程化 | 覆盖率门禁缺失 | P3 | Open | 原审计 | 难量化热点模块测试充分性 | 工程化章节；测试章节 | 当前已有 type/lint/test 基线，先保持轻量 | CI 质量门升级时 | 引入轻量 coverage 报告（先观察不设硬门） |
+| SEC-001 | 安全 | HTTPS 默认关闭证书校验（`rejectUnauthorized:false`） | P0 | Closed | 原审计 → Stage0 | 可能导致中间人风险，违背安全默认 | 代码：`src/modules/web/http-pool.ts`；测试：`tests/web/http-pool.test.ts`；文档：`docs/guides/security-model.md` | - | - | 保持回归测试，防止回退 |
+| RES-001 | 资源 | external command stdout/stderr 无硬上限 | P0 | Closed | 原审计 → Stage0 | 异常输出可导致内存膨胀/阻塞 | 代码：`src/shared/external-command.ts`；测试：`tests/shared/external-command.test.ts`；文档：`docs/reference/convert-tools.md` | - | - | 如需可评估阈值配置化 |
+| RES-002 | 资源 | subagent child stdout/stderr/JSONL 无硬上限 | P0 | Closed | 原审计 → Stage0 | 子进程噪声或恶意输出可放大资源消耗 | 代码：`src/modules/subagents/execution.ts`（执行链路）；测试：`tests/subagents/execution.test.ts`；文档：`docs/reference/subagents.md` | - | - | 继续补齐/解锁超限场景测试 |
+| RES-003 | 资源 | web providers 直接 `response.text()/json()` 无限读取 | P0 | Closed | 原审计 → Stage0 | 大响应可能拖垮进程内存 | 代码：`src/modules/web/read-limited.ts`（provider 有限读取入口）；测试：`tests/web/providers.test.ts`；文档：`docs/reference/web-tools.md` | - | - | 新 provider 强制复用有限读取 helper |
+| RES-004 | 资源 | LSP source file 读取无大小限制 | P1 | Closed | 原审计 → Stage0 | 大文件阻塞事件循环并增加内存压力 | 代码：`src/modules/lsp/source-files.ts`（读取上限） / `src/modules/lsp/core.ts`（编排）；测试：`tests/lsp/tool.test.ts`；文档：`docs/reference/lsp-tools.md` | - | - | 观察是否需要后续配置化 |
+| SEC-002 | 安全 | DNS rebinding / DNS TOCTOU 连接阶段缺口 | P1 | Mitigated | 原审计 → Stage0 | 私网阻断非强保证，存在校验-连接间隙 | 代码：`src/modules/web/security.ts`；测试：`tests/web/security.test.ts`；文档：`docs/guides/security-model.md`（含 zh 对应页） | 当前先文档化并明确边界，接受残余风险 | 安全增强窗口或高风险部署需求 | 设计并评估连接阶段 IP pinning |
+| DOC-001 | 文档契约 | 配置默认值与源码漂移（含 timeout/idle） | P1 | Closed | 原审计 → Stage0 | 用户按文档调试会误判行为 | 代码：`src/config/load-config.ts`；测试/校验：`scripts/check-docs.mjs`；文档：`docs/reference/configuration.md`（含 zh 对应页） | - | - | 继续扩展 drift 检查覆盖面 |
+| DOC-002 | 文档契约 | guide 新增后可能未进入导航 | P2 | Closed | Stage2 | 文档可发现性差，易形成信息孤岛 | 代码：`scripts/check-docs.mjs`；测试/校验：`pnpm docs:check`（脚本门禁）；文档：`docs/guides/agent-workflow.md` | - | - | 后续可扩展到 reference 导航一致性 |
+| WF-001 | 流程质量 | 会话缺少轻量 workflow 提醒 | P2 | Closed | Stage1 | 容易“改完未验证就结束” | 代码：`src/modules/guards/`；测试：`tests/guards/git-context.test.ts`；文档：`docs/guides/agent-workflow.md` | - | - | 观察误报/漏报，迭代分类器 |
+| ARCH-001 | 架构 | `lsp/core.ts` 过大、职责集中 | P1 | Closed | 原审计 + Stage0(0-H) → 后续迭代关闭 | 单文件复杂度高、变更面过大 | 代码：`src/modules/lsp/core.ts` + `src/modules/lsp/{actions,client-lifecycle,client-manager,diagnostics,edits,formatters,request-orchestrator,server-registry,source-files}.ts`；测试：`tests/lsp/*.test.ts`；文档：`internal-docs/issues/lsp-core-split-boundaries.md` | - | - | 维持 facade 边界稳定并持续补时序/回归测试 |
+| ENG-001 | 工程化 | Node engines 未声明（兼容矩阵不够显式） | P2 | Closed | 原审计 → 后续迭代关闭 | 旧 Node 环境可能出现运行时兼容问题 | 代码：`package.json`（`engines.node >=22.6.0`）；测试/校验：`pnpm test` / `pnpm typecheck`（Node 版本前提）；文档：本报告第十一章工程化审计 | - | - | 发布说明中持续维护支持矩阵与最低版本说明 |
+| ENG-002 | 工程化 | 覆盖率门禁缺失 | P3 | Open | 原审计 | 难量化热点模块测试充分性 | 代码：CI/脚本配置（待补覆盖率接入）；测试：现有 `pnpm test` 基线（缺 coverage 指标）；文档：本报告第十/十一章 | 当前已有 type/lint/test 基线，先保持轻量 | CI 质量门升级时 | 引入轻量 coverage 报告（先观察不设硬门） |
