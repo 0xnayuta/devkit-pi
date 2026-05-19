@@ -52,6 +52,26 @@ describe("fetch_content input, security, and limits", () => {
 		assert.equal(allowed.results[0].content, "local dev server content");
 	});
 
+	it("follows redirects manually and fetches the final URL content", async () => {
+		const calls: string[] = [];
+		globalThis.fetch = ((input: string | URL) => {
+			const url = String(input);
+			calls.push(url);
+			if (url === "https://93.184.216.34/start") {
+				return Promise.resolve(new Response(null, { status: 302, headers: { location: "/final" } }));
+			}
+			if (url === "https://93.184.216.34/final") {
+				return Promise.resolve(new Response("redirected content", { status: 200, headers: { "content-type": "text/plain" } }));
+			}
+			return Promise.resolve(new Response("unexpected", { status: 500, headers: { "content-type": "text/plain" } }));
+		}) as typeof fetch;
+
+		const result = await assertFetchOk({ url: "https://93.184.216.34/start" });
+		assert.equal(result.results[0].url, "https://93.184.216.34/final");
+		assert.equal(result.results[0].content, "redirected content");
+		assert.deepEqual(calls, ["https://93.184.216.34/start", "https://93.184.216.34/final"]);
+	});
+
 	it("limits response bytes and max content characters", async () => {
 		mockFetch("0123456789", "text/plain");
 		const responseLimited = await assertFetchOk({ url: "https://93.184.216.34/text" }, mergeWebConfig({ web: { maxResponseBytes: 5, maxContentChars: 100 } }));
@@ -83,6 +103,21 @@ describe("fetch_content Jina reader fallback", () => {
 		assert.match(result.results[0].content, /useful extracted content/i);
 		assert.equal(result.results[0].contentType, "text/markdown; source=jina");
 		assert.equal(calls.some((call) => call.startsWith("https://r.jina.ai/")), true);
+	});
+
+	it("cancels non-OK Jina fallback bodies", async () => {
+		let jinaCancelCount = 0;
+		globalThis.fetch = ((input: string | URL) => {
+			const url = String(input);
+			if (url.startsWith("https://r.jina.ai/")) {
+				return Promise.resolve(new Response(new ReadableStream<Uint8Array>({ cancel() { jinaCancelCount += 1; } }), { status: 500, headers: { "content-type": "text/plain" } }));
+			}
+			return Promise.resolve(new Response("<html><head><title>Original</title></head><body><script>a</script><script>b</script><script>c</script><script>d</script><div id='app'></div></body></html>", { status: 200, headers: { "content-type": "text/html" } }));
+		}) as typeof fetch;
+
+		const result = await assertFetchOk({ url: "https://93.184.216.34/js" }, mergeWebConfig({ web: { enableJinaFallback: true } }));
+		assert.equal(result.results[0].title, "Original");
+		assert.equal(jinaCancelCount, 1);
 	});
 
 	it("honors preferReader and jinaTriggers", async () => {

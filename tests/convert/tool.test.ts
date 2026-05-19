@@ -246,6 +246,46 @@ describe("convertContent local path", () => {
     }
   });
 
+  it("follows manual redirects and converts the final downloaded file", async () => {
+    const provider = new MockProvider();
+    const calls: string[] = [];
+    const fetchMock = mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+      const url = String(input);
+      calls.push(url);
+      if (url === "https://93.184.216.34/start.pdf") {
+        return new Response(null, { status: 302, headers: { location: "/final.pdf" } });
+      }
+      if (url === "https://93.184.216.34/final.pdf") {
+        return new Response("final remote pdf", {
+          status: 200,
+          headers: { "content-type": "application/pdf" },
+        });
+      }
+      return new Response("unexpected", { status: 500 });
+    });
+    const config = mergeConfig({}).convertContent;
+
+    try {
+      const result = await convertContent(
+        { url: "https://93.184.216.34/start.pdf" },
+        config,
+        undefined,
+        provider
+      );
+
+      assert.equal("error" in result, false);
+      if ("error" in result) return;
+      assert.equal(result.source, "https://93.184.216.34/start.pdf");
+      assert.equal(provider.calls.length, 1);
+      assert.deepEqual(calls, [
+        "https://93.184.216.34/start.pdf",
+        "https://93.184.216.34/final.pdf",
+      ]);
+    } finally {
+      fetchMock.mock.restore();
+    }
+  });
+
   it("removes the downloaded temp file when URL conversion fails", async () => {
     const provider = new MockProvider();
     const seenTempPaths: string[] = [];
@@ -312,10 +352,35 @@ describe("convertContent local path", () => {
     }
   });
 
+  it("cancels non-OK URL download response bodies", async () => {
+    const provider = new MockProvider();
+    let cancelCount = 0;
+    const fetchMock = mock.method(globalThis, "fetch", async () => {
+      return new Response(new ReadableStream<Uint8Array>({ cancel() { cancelCount += 1; } }), {
+        status: 500,
+      });
+    });
+    const config = mergeConfig({}).convertContent;
+
+    try {
+      const result = await convertContent({ url: "https://93.184.216.34/doc.pdf" }, config, undefined, provider);
+
+      assert.equal(errorCode(result), CONVERT_ERROR_CODES.NETWORK_ERROR);
+      assert.equal(provider.calls.length, 0);
+      assert.equal(cancelCount, 1);
+    } finally {
+      fetchMock.mock.restore();
+    }
+  });
+
   it("enforces URL download size limits before converting", async () => {
     const provider = new MockProvider();
+    let cancelCount = 0;
     const fetchMock = mock.method(globalThis, "fetch", async () => {
-      return new Response("too large", { status: 200, headers: { "content-length": "9" } });
+      return new Response(new ReadableStream<Uint8Array>({ cancel() { cancelCount += 1; } }), {
+        status: 200,
+        headers: { "content-length": "9" },
+      });
     });
     const config = mergeConfig({ convertContent: { maxResponseBytes: 5 } }).convertContent;
 
@@ -324,6 +389,7 @@ describe("convertContent local path", () => {
 
       assert.equal(errorCode(result), CONVERT_ERROR_CODES.FILE_TOO_LARGE);
       assert.equal(provider.calls.length, 0);
+      assert.equal(cancelCount, 1);
     } finally {
       fetchMock.mock.restore();
     }
