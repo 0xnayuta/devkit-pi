@@ -1,4 +1,4 @@
-import { Agent } from "undici";
+import { Agent, fetch as undiciFetch } from "undici";
 import {
   type DnsLookupImpl,
   type DnsResolvedAddress,
@@ -34,6 +34,8 @@ type DisposableDispatcher = {
   close?: () => Promise<void> | void;
   destroy?: () => void;
 };
+
+const initialGlobalFetch = globalThis.fetch;
 
 type LookupFamilyPreference = number | "IPv4" | "IPv6" | undefined;
 
@@ -158,6 +160,10 @@ function normalizeLookupHostname(hostname: string): string {
   return normalizeHostForIp(normalizeDnsHostname(hostname));
 }
 
+function defaultFetchImpl(): typeof fetch {
+  return globalThis.fetch === initialGlobalFetch ? (undiciFetch as typeof fetch) : globalThis.fetch;
+}
+
 export function createPinnedLookup(url: URL, addresses: DnsResolvedAddress[]) {
   const hostname = normalizeLookupHostname(url.hostname);
   const cursor = { value: 0 };
@@ -236,7 +242,7 @@ export async function fetchWithPinnedDns(
     }
   );
 
-  const fetchImpl = dependencies.fetchImpl ?? globalThis.fetch;
+  const fetchImpl = dependencies.fetchImpl ?? defaultFetchImpl();
   const dispatcherFactory = dependencies.createDispatcher ?? createPinnedDispatcher;
   const dispatcher = dispatcherFactory({
     url: resolved.url,

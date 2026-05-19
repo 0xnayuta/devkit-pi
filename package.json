@@ -76,7 +76,7 @@
   },
   "dependencies": {
     "typebox": "^1.1.38",
-    "undici": "^6.21.2",
+    "undici": "^8.3.0",
     "vscode-jsonrpc": "^8.2.1",
     "vscode-languageserver-protocol": "^3.17.5"
   },
@@ -84,14 +84,14 @@
     "@biomejs/biome": "^2.4.15",
     "@earendil-works/pi-agent-core": "^0.75.1",
     "@earendil-works/pi-ai": "^0.75.1",
-    "@earendil-works/pi-coding-agent": "link:..\\pi\\packages\\coding-agent",
+    "@earendil-works/pi-coding-agent": "^0.75.1",
     "@earendil-works/pi-tui": "^0.75.1",
     "@types/node": "^25.8.0",
     "typescript": "^6.0.3",
-    "vitepress": "^1.6.4"
+    "vitepress": "2.0.0-alpha.17"
   },
   "engines": {
-    "node": ">=22.6.0"
+    "node": ">=22.19.0"
   },
   "packageManager": "pnpm@11.1.2"
 }

@@ -28,7 +28,7 @@ npm package: [https://www.npmjs.com/package/devkit-pi](https://www.npmjs.com/pac
 
 ### Runtime requirement
 
-- Node.js `>=22.6.0`
+- Node.js `>=22.19.0`
 
 ### Or link locally for development
 

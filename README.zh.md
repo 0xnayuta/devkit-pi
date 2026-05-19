@@ -28,7 +28,7 @@ npm 包：[https://www.npmjs.com/package/devkit-pi](https://www.npmjs.com/packag
 
 ### 运行时要求
 
-- Node.js `>=22.6.0`
+- Node.js `>=22.19.0`
 
 ### 或本地链接开发
 
