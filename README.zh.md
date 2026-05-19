@@ -4,7 +4,7 @@
 
 面向个人工作流的一体化 pi coding 工具包。
 
-将 subagent 任务委派、Web 研究、文档转换、LSP 代码智能、自动诊断 hook 和开发者命令整合为一个模块化 pi 扩展。
+将 subagent 任务委派、Web 研究、文档转换、LSP 代码智能、自动诊断 hook、开发者命令和轻量流程提醒整合为一个模块化 pi 扩展。
 
 ## 模块
 
@@ -13,8 +13,9 @@
 | **subagents** | 将任务委派给 5 个专职 readonly agent；支持通过 markdown frontmatter 自定义 user/project agent | 启用 |
 | **web** | `web_search`、`fetch_content`、`get_search_content` — 多供应商搜索、URL 内容提取、结果缓存 | 启用 |
 | **convertContent** | `convert_content` — 通过 MarkItDown CLI 将本地文件或安全下载的远程文件转换为 Markdown | 启用 |
-| **lsp** | LSP 工具（definition、references、hover、symbols、diagnostics）+ `agent_end` 后自动诊断 hook | 启用 |
+| **lsp** | LSP 工具（definition、references、hover、signature、symbols、diagnostics、workspace diagnostics）+ `agent_end` 后自动诊断 hook | 启用 |
 | **commands** | 统一 `/toolkit` 命令中心：doctor、modules、logs、agents、lsp、activity | 启用 |
+| **guards** | git context、首次写入、verification status 的轻量流程提醒；仅作为提示，不做硬性 gate | 启用 |
 
 ## 快速开始
 
@@ -35,7 +36,7 @@ npm 包：[https://www.npmjs.com/package/devkit-pi](https://www.npmjs.com/packag
 ```json
 {
   "pi": {
-    "extensions": ["./src/index.ts"]
+    "extensions": ["./index.ts"]
   }
 }
 ```
@@ -163,12 +164,15 @@ src/
 │  │  └─ providers/         # ddgs、brave、tavily、serper、openserp、searxng
 │  ├─ convert/              # convert_content 工具、MarkItDown provider、安全下载
 │  ├─ lsp/                  # LSP 工具、诊断 hook、server 管理
-│  └─ commands/             # 统一 /toolkit 命令注册
+│  ├─ commands/             # 统一 /toolkit 命令注册
+│  └─ guards/               # git context、首次写入、verification 流程提醒
 ├─ config/                  # 配置加载与默认值
 └─ shared/                  # 类型、错误码、通用工具
+index.ts                    # 包根入口，重导出 src/index.ts
 agents/                     # 5 个内置 agent 定义（markdown）
-tests/                      # 镜像 src/modules 结构
-docs/                       # 文档、指南、ADR
+tests/                      # 模块测试，并包含 shared、commands、guards、manifest、fixtures
+docs/                       # 面向用户的 guides/reference 与中文镜像
+internal-docs/              # 维护者文档：audit、ADR、planning、issues、archive
 ```
 
 ## 设计边界
@@ -178,7 +182,8 @@ docs/                       # 文档、指南、ADR
 3. 默认 readonly — 自定义 subagents 的写入能力需要显式配置且仍属于实验性能力
 4. LSP 变更类操作（`rename`、`codeAction`、`restart`）默认禁用，且在子代理进程中始终被阻止
 5. `convert_content` 使用可选的外部 MarkItDown CLI provider；核心包不内置重型文档转换依赖
-6. 每个模块均可独立启用或禁用
+6. guards 仅提供轻量提醒，不执行硬性 workflow gate
+7. 每个模块均可独立启用或禁用
 
 ## 开发
 
@@ -188,6 +193,7 @@ pnpm lint         # 使用 Biome 检查代码
 pnpm lint:fix     # 自动修复 lint 问题
 pnpm format       # 使用 Biome 格式化代码
 pnpm test         # 运行单元测试
+pnpm test:coverage # 生成轻量 V8 coverage 可见性报告
 pnpm docs:check   # 验证文档
 ```
 

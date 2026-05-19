@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Personal all-in-one pi coding toolkit for agentic coding workflows.
 
-Combines subagents, web research, document conversion, LSP code intelligence, automatic diagnostics hooks, and developer commands into a single modular pi extension.
+Combines subagents, web research, document conversion, LSP code intelligence, automatic diagnostics hooks, developer commands, and lightweight workflow reminders into a single modular pi extension.
 
 ## Modules
 
@@ -13,8 +13,9 @@ Combines subagents, web research, document conversion, LSP code intelligence, au
 | **subagents** | Delegate tasks to 5 specialized readonly agents; supports user/project custom agents via markdown frontmatter | enabled |
 | **web** | `web_search`, `fetch_content`, `get_search_content` — multi-provider search, URL content extraction, result caching | enabled |
 | **convertContent** | `convert_content` — convert local files or safely downloaded remote files to Markdown through MarkItDown CLI | enabled |
-| **lsp** | LSP tool (definitions, references, hover, symbols, diagnostics) + auto diagnostics hook on `agent_end` | enabled |
+| **lsp** | LSP tool (definition, references, hover, signature, symbols, diagnostics, workspace diagnostics) + auto diagnostics hook on `agent_end` | enabled |
 | **commands** | Unified `/toolkit` command center: doctor, modules, logs, agents, lsp, activity | enabled |
+| **guards** | Lightweight workflow reminders for git context, first writes, and verification status; guidance only, not hard gates | enabled |
 
 ## Quick Start
 
@@ -35,7 +36,7 @@ npm package: [https://www.npmjs.com/package/devkit-pi](https://www.npmjs.com/pac
 ```json
 {
   "pi": {
-    "extensions": ["./src/index.ts"]
+    "extensions": ["./index.ts"]
   }
 }
 ```
@@ -163,12 +164,15 @@ src/
 │  │  └─ providers/         # ddgs, brave, tavily, serper, openserp, searxng
 │  ├─ convert/              # convert_content tool, MarkItDown provider, safe downloads
 │  ├─ lsp/                  # LSP tool, diagnostics hook, server management
-│  └─ commands/             # Unified /toolkit command registration
+│  ├─ commands/             # Unified /toolkit command registration
+│  └─ guards/               # Git context, first-write, verification workflow reminders
 ├─ config/                  # Configuration loading and defaults
 └─ shared/                  # Types, error codes, utilities
+index.ts                    # Package root entry, re-exports src/index.ts
 agents/                     # 5 built-in agent definitions (markdown)
-tests/                      # Mirrors src/modules structure
-docs/                       # Documentation, guides, ADRs
+tests/                      # Module tests plus shared, commands, guards, manifest, fixtures
+docs/                       # User-facing guides/reference and zh mirror
+internal-docs/              # Maintainer docs: audit, ADRs, planning, issues, archive
 ```
 
 ## Design Boundaries
@@ -178,7 +182,8 @@ docs/                       # Documentation, guides, ADRs
 3. Default readonly — write capability requires explicit configuration and remains experimental for custom subagents
 4. LSP mutating actions (`rename`, `codeAction`, `restart`) are disabled by default and always blocked in subagent processes
 5. `convert_content` uses an optional external MarkItDown CLI provider; heavy document conversion dependencies are not bundled into the core package
-6. Each module can be independently enabled or disabled
+6. Guards are lightweight reminders only; they do not enforce hard workflow gates
+7. Each module can be independently enabled or disabled
 
 ## Development
 
@@ -188,6 +193,7 @@ pnpm lint         # Lint with Biome
 pnpm lint:fix     # Auto-fix lint issues
 pnpm format       # Format with Biome
 pnpm test         # Run unit tests
+pnpm test:coverage # Generate lightweight V8 coverage visibility reports
 pnpm docs:check   # Validate documentation
 ```
 
