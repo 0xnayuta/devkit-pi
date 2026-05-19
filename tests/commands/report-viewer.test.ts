@@ -3,9 +3,10 @@ import { afterEach, describe, it } from "node:test";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { showToolkitReport, ToolkitReportPanel } from "../../src/modules/commands/report-viewer.ts";
+import { createLogger, createMemoryLoggerSink } from "../../src/shared/logger.ts";
 
 function stripAnsi(value: string): string {
-  return value.replace(/\x1b\[[0-9;]*m/g, "");
+  return value.replace(/\u001b\[[0-9;]*m/g, "");
 }
 
 const dummyTheme = {
@@ -58,12 +59,10 @@ function createCtx(options: { hasUI?: boolean; customResult?: unknown } = {}) {
 
 describe("toolkit report viewer", () => {
   const originalLog = console.log;
-  const originalError = console.error;
   const originalArgv = [...process.argv];
 
   afterEach(() => {
     console.log = originalLog;
-    console.error = originalError;
     process.argv.length = 0;
     process.argv.push(...originalArgv);
   });
@@ -177,20 +176,20 @@ describe("toolkit report viewer", () => {
   it("does not print raw text in JSON protocol mode", async () => {
     const { ctx } = createCtx({ hasUI: false });
     const output: string[] = [];
-    const errors: string[] = [];
+    const sink = createMemoryLoggerSink();
+    const logger = createLogger({ module: "test.commands.report", sink });
     console.log = (value?: unknown) => {
       output.push(String(value ?? ""));
     };
-    console.error = (value?: unknown) => {
-      errors.push(String(value ?? ""));
-    };
     process.argv.push("--mode", "json");
 
-    await showToolkitReport(ctx as any, { title: "JSON", content: "report body" });
+    await showToolkitReport(ctx as any, { title: "JSON", content: "report body" }, logger);
 
     assert.equal(output.length, 0);
-    assert.equal(errors.length, 1);
-    assert.match(errors[0], /JSON protocol mode/);
+    assert.equal(sink.events.length, 1);
+    assert.equal(sink.events[0]?.level, "warn");
+    assert.equal(sink.events[0]?.event, "report.stdout_blocked_json_mode");
+    assert.match(sink.events[0]?.message ?? "", /JSON protocol mode/);
   });
 
   it("does not print raw text when custom UI is degraded", async () => {

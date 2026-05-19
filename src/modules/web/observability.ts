@@ -4,6 +4,12 @@ import {
   getToolkitActivityLog,
   type ToolkitActivityEntry,
 } from "../../shared/activity.ts";
+import {
+  createConsoleLoggerSink,
+  createLogger,
+  type Logger,
+  type LoggerSink,
+} from "../../shared/logger.ts";
 import type { DebugLevel } from "../../shared/types.ts";
 
 export type ActivityEntry = ToolkitActivityEntry;
@@ -49,6 +55,10 @@ const stats: RawStats = {
 };
 
 let debugEnabled: DebugLevel = false;
+let debugLogger: Logger = createLogger({
+  module: "web.observability",
+  sink: createConsoleLoggerSink(),
+});
 
 function ensureRawProvider(provider: string): RawProviderStats {
   if (!stats.providers[provider]) {
@@ -61,8 +71,18 @@ function ensureRawProvider(provider: string): RawProviderStats {
 // Configuration
 // ============================================================================
 
-export function configureWebObservability(debug: DebugLevel): void {
+export function configureWebObservability(
+  debug: DebugLevel,
+  options: { logger?: Logger; loggerSink?: LoggerSink } = {}
+): void {
   debugEnabled = debug;
+  if (options.logger) {
+    debugLogger = options.logger;
+    return;
+  }
+  if (options.loggerSink) {
+    debugLogger = createLogger({ module: "web.observability", sink: options.loggerSink });
+  }
 }
 
 export function getDebugLevel(): DebugLevel {
@@ -171,22 +191,12 @@ export function recordFetchFailure(code: string): void {
 // Debug Logging (with levels)
 // ============================================================================
 
-function formatDebugMessage(level: DebugLevel, message: string, details?: unknown): string {
-  const timestamp = new Date().toISOString().replace("T", " ").replace("Z", "");
-  const prefix = `[web-tools] ${timestamp}`;
-
-  if (details === undefined) {
-    return `${prefix} ${message}`;
+function normalizeDebugMetadata(level: DebugLevel, details?: unknown): Record<string, unknown> {
+  if (details === undefined) return { level };
+  if (typeof details === "object" && details !== null) {
+    return { level, ...(details as Record<string, unknown>) };
   }
-
-  if (level === "minimal") {
-    const detailStr =
-      typeof details === "object" && details !== null ? JSON.stringify(details) : String(details);
-    return `${prefix} ${message} ${detailStr}`;
-  }
-
-  // verbose
-  return `${prefix} ${message}\n${JSON.stringify(details, null, 2)}`;
+  return { level, detail: details };
 }
 
 function isWarningOrErrorMessage(message: string): boolean {
@@ -206,8 +216,12 @@ export function webDebugLog(message: string, details?: unknown): void {
   if (debugEnabled === false) return;
   if (debugEnabled === "minimal" && !isWarningOrErrorMessage(message)) return;
 
-  const formatted = formatDebugMessage(debugEnabled, message, details);
-  console.log(formatted);
+  const metadata = normalizeDebugMetadata(debugEnabled, details);
+  if (debugEnabled === "verbose") {
+    debugLogger.debug("debug.log", message, metadata);
+    return;
+  }
+  debugLogger.warn("debug.log", message, metadata);
 }
 
 // ============================================================================

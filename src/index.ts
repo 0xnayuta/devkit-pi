@@ -19,12 +19,29 @@ import { registerGuardsModule } from "./modules/guards/index.ts";
 import { registerLspModule } from "./modules/lsp/register.ts";
 import { registerSubagentsModule } from "./modules/subagents/register.ts";
 import { registerWebTools } from "./modules/web/register.ts";
+import {
+  createConsoleLoggerSink,
+  createLogger,
+  type Logger,
+  type LoggerSink,
+} from "./shared/logger.ts";
 
-export default function registerExtension(pi: ExtensionAPI): void {
+export default function registerExtension(
+  pi: ExtensionAPI,
+  options: { logger?: Logger; loggerSink?: LoggerSink } = {}
+): void {
+  const baseLogger =
+    options.logger ??
+    createLogger({
+      module: "extension",
+      sink: options.loggerSink ?? createConsoleLoggerSink(),
+    });
+  const logger = baseLogger.child("index");
+
   const { config, errors } = loadConfig();
   if (errors.length > 0) {
     for (const msg of errors) {
-      console.error(msg);
+      logger.error("config.load_error", msg);
     }
   }
   const effectiveConfig = mergeConfig(config);
@@ -47,7 +64,7 @@ export default function registerExtension(pi: ExtensionAPI): void {
   };
 
   // Subagents module handles PI_SUBAGENT_CHILD check internally.
-  registerSubagentsModule(pi, subagentsConfig);
+  registerSubagentsModule(pi, subagentsConfig, { logger: logger.child("subagents") });
 
   // Convert tool is available in both parent and child processes.
   registerConvertTools(pi, effectiveConfig.convertContent);

@@ -15,8 +15,8 @@ import {
   recordSearchActivity,
   resetWebToolStats,
   webDebugLog,
-  type ActivityEntry,
 } from "../../src/modules/web/observability.ts";
+import { createLogger, createMemoryLoggerSink } from "../../src/shared/logger.ts";
 
 describe("observability - configuration", () => {
   beforeEach(() => {
@@ -76,9 +76,9 @@ describe("observability - stats", () => {
     recordSearchActivity("tavily", "success", startTs + 150);
 
     const stats = getWebToolStats();
-    assert.equal(stats.providerStats["ddgs"].requests, 3);
-    assert.equal(stats.providerStats["ddgs"].successRate, 2 / 3);
-    assert.equal(stats.providerStats["tavily"].requests, 1);
+    assert.equal(stats.providerStats.ddgs.requests, 3);
+    assert.equal(stats.providerStats.ddgs.successRate, 2 / 3);
+    assert.equal(stats.providerStats.tavily.requests, 1);
   });
 
   it("calculates average latency and resets correctly", () => {
@@ -207,38 +207,38 @@ describe("observability - record functions", () => {
 // ============================================================================
 
 describe("observability - debug logging", () => {
-  let consoleLogSpy: string[];
-  let originalConsoleLog: typeof console.log;
+  let sink: ReturnType<typeof createMemoryLoggerSink>;
 
   beforeEach(() => {
-    configureWebObservability(false);
-    consoleLogSpy = [];
-    originalConsoleLog = console.log;
-    console.log = (...args: unknown[]) => {
-      consoleLogSpy.push(args.map(String).join(" "));
-    };
+    sink = createMemoryLoggerSink();
+    configureWebObservability("minimal", {
+      logger: createLogger({ module: "test.web.observability", sink }),
+    });
   });
 
   afterEach(() => {
-    console.log = originalConsoleLog;
     configureWebObservability(false);
   });
 
   it("does not output logs when debug is disabled", () => {
-    configureWebObservability(false);
+    configureWebObservability(false, {
+      logger: createLogger({ module: "test.web.observability", sink }),
+    });
     webDebugLog("test message", { key: "value" });
 
-    assert.equal(consoleLogSpy.length, 0);
+    assert.equal(sink.events.length, 0);
   });
 
-  it("outputs minimal debug logs for warnings/errors when minimal level is enabled", () => {
-    configureWebObservability("minimal");
+  it("outputs minimal debug logs only for warnings/errors", () => {
+    configureWebObservability("minimal", {
+      logger: createLogger({ module: "test.web.observability", sink }),
+    });
     webDebugLog("search success", {
       provider: "ddgs",
       mode: "auto",
       responseId: "test-123",
     });
-    assert.equal(consoleLogSpy.length, 0);
+    assert.equal(sink.events.length, 0);
 
     webDebugLog("search failed", {
       provider: "ddgs",
@@ -246,62 +246,65 @@ describe("observability - debug logging", () => {
       code: "WEB_SEARCH_FAILED",
     });
 
-    assert.ok(consoleLogSpy.length > 0);
-    assert.ok(consoleLogSpy[0].includes("[web-tools]"));
-    assert.ok(consoleLogSpy[0].includes("search failed"));
-    // Minimal mode should have JSON on same line
-    assert.ok(consoleLogSpy[0].includes('"provider"'));
+    assert.equal(sink.events.length, 1);
+    assert.equal(sink.events[0]?.level, "warn");
+    assert.equal(sink.events[0]?.event, "debug.log");
+    assert.equal(sink.events[0]?.message, "search failed");
+    assert.equal(sink.events[0]?.metadata?.provider, "ddgs");
   });
 
-  it("outputs verbose debug logs when verbose level is enabled", () => {
-    configureWebObservability("verbose");
+  it("outputs verbose debug logs through shared logger metadata", () => {
+    configureWebObservability("verbose", {
+      logger: createLogger({ module: "test.web.observability", sink }),
+    });
     webDebugLog("fetch_content failed", { message: "timeout", urls: 2 });
 
-    assert.ok(consoleLogSpy.length > 0);
-    assert.ok(consoleLogSpy[0].includes("[web-tools]"));
-    assert.ok(consoleLogSpy[0].includes("fetch_content failed"));
-    // Verbose mode should have formatted JSON
-    assert.ok(consoleLogSpy[0].includes("\n"));
-    assert.ok(consoleLogSpy[0].includes('"message"'));
-  });
-
-  it("includes timestamp in debug output", () => {
-    configureWebObservability("minimal");
-    webDebugLog("test warning");
-
-    assert.ok(consoleLogSpy[0].match(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/));
+    assert.equal(sink.events.length, 1);
+    assert.equal(sink.events[0]?.level, "debug");
+    assert.equal(sink.events[0]?.message, "fetch_content failed");
+    assert.equal(sink.events[0]?.metadata?.message, "timeout");
   });
 
   it("handles undefined details gracefully", () => {
-    configureWebObservability("minimal");
     webDebugLog("warning no details");
 
-    assert.ok(consoleLogSpy.length > 0);
-    assert.ok(consoleLogSpy[0].includes("warning no details"));
+    assert.equal(sink.events.length, 1);
+    assert.equal(sink.events[0]?.message, "warning no details");
+    assert.equal(sink.events[0]?.metadata?.level, "minimal");
   });
 
   it("handles non-object details", () => {
-    configureWebObservability("minimal");
     webDebugLog("simple error", "just a string");
 
-    assert.ok(consoleLogSpy.length > 0);
-    assert.ok(consoleLogSpy[0].includes("just a string"));
+    assert.equal(sink.events.length, 1);
+    assert.equal(sink.events[0]?.metadata?.detail, "just a string");
+  });
+
+  it("uses shared logger redaction boundary for sensitive metadata", () => {
+    webDebugLog("search failed", { apiKey: "secret-value", token: "t-1" });
+
+    assert.equal(sink.events.length, 1);
+    assert.equal(sink.events[0]?.metadata?.apiKey, "[REDACTED]");
+    assert.equal(sink.events[0]?.metadata?.token, "[REDACTED]");
   });
 
   it("debug logs can be toggled on and off", () => {
-    // Start disabled
+    configureWebObservability(false, {
+      logger: createLogger({ module: "test.web.observability", sink }),
+    });
     webDebugLog("disabled", { test: true });
-    assert.equal(consoleLogSpy.length, 0);
+    assert.equal(sink.events.length, 0);
 
-    // Enable
-    configureWebObservability("minimal");
+    configureWebObservability("minimal", {
+      logger: createLogger({ module: "test.web.observability", sink }),
+    });
     webDebugLog("enabled warning", { test: true });
-    assert.ok(consoleLogSpy.length > 0);
-    const countWhenEnabled = consoleLogSpy.length;
+    assert.equal(sink.events.length, 1);
 
-    // Disable again
-    configureWebObservability(false);
+    configureWebObservability(false, {
+      logger: createLogger({ module: "test.web.observability", sink }),
+    });
     webDebugLog("disabled again", { test: true });
-    assert.equal(consoleLogSpy.length, countWhenEnabled); // No new entries
+    assert.equal(sink.events.length, 1);
   });
 });

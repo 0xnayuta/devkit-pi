@@ -2,13 +2,16 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/load-config.ts";
 import { registerToolkitCommands } from "../../src/modules/commands/register.ts";
+import { createLogger, createMemoryLoggerSink } from "../../src/shared/logger.ts";
 import { PI_SUBAGENT_CHILD } from "../../src/shared/types.ts";
 
 function createPiMock() {
   const commands: Array<{
     name: string;
     handler: (args: string, ctx: any) => Promise<void>;
-    getArgumentCompletions?: (argumentPrefix: string) => unknown[] | null | Promise<unknown[] | null>;
+    getArgumentCompletions?: (
+      argumentPrefix: string
+    ) => unknown[] | null | Promise<unknown[] | null>;
   }> = [];
   const notifications: Array<{ message: string; level: string }> = [];
   const reports: string[] = [];
@@ -60,13 +63,11 @@ function createPiMock() {
 describe("commands module", () => {
   const originalChild = process.env[PI_SUBAGENT_CHILD];
   const originalLog = console.log;
-  const originalError = console.error;
 
   afterEach(() => {
     if (originalChild === undefined) delete process.env[PI_SUBAGENT_CHILD];
     else process.env[PI_SUBAGENT_CHILD] = originalChild;
     console.log = originalLog;
-    console.error = originalError;
   });
 
   it("registers unified toolkit command in main process", () => {
@@ -188,18 +189,18 @@ describe("commands module", () => {
 
   it("toolkit activity reports unavailable when UI is absent", async () => {
     const pi = createPiMock();
-    registerToolkitCommands(pi as any, mergeConfig({}));
-
-    const errors: string[] = [];
-    console.error = (value?: unknown) => {
-      errors.push(String(value ?? ""));
-    };
+    const sink = createMemoryLoggerSink();
+    registerToolkitCommands(pi as any, mergeConfig({}), {
+      logger: createLogger({ module: "test.commands", sink }),
+    });
 
     await pi.commands[0].handler("activity", pi.createCtx({ hasUI: false }));
 
     assert.equal(pi.reports.length, 0);
-    assert.equal(errors.length, 1);
-    assert.match(errors[0], /requires interactive UI/);
+    assert.equal(sink.events.length, 1);
+    assert.equal(sink.events[0]?.level, "warn");
+    assert.equal(sink.events[0]?.event, "activity.ui_required");
+    assert.match(sink.events[0]?.message ?? "", /requires interactive UI/);
   });
 
   it("toolkit activity warns when custom UI is degraded", async () => {

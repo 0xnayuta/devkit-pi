@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { AutocompleteItem } from "@earendil-works/pi-tui";
 import { DEFAULT_SUBAGENT_LSP_ACTIONS } from "../../config/load-config.ts";
+import { createConsoleLoggerSink, createLogger, type Logger } from "../../shared/logger.ts";
 import { PI_SUBAGENT_CHILD, type ResolvedToolkitConfig } from "../../shared/types.ts";
 import { LSP_ACTIONS } from "../lsp/tool.ts";
 import { createActivityPanel } from "../subagents/commands/activity.ts";
@@ -136,7 +137,17 @@ function formatHelp(): string {
   ].join("\n");
 }
 
-export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolkitConfig): void {
+export function registerToolkitCommands(
+  pi: ExtensionAPI,
+  config: ResolvedToolkitConfig,
+  options: { logger?: Logger } = {}
+): void {
+  const logger =
+    options.logger ??
+    createLogger({
+      module: "commands.register",
+      sink: createConsoleLoggerSink(),
+    });
   if (!config.commands.enabled) return;
   if (process.env[PI_SUBAGENT_CHILD] === "1") return;
 
@@ -150,10 +161,14 @@ export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolki
         if (subcommand === "doctor") {
           const report = await runDoctorChecks(ctx.cwd, config);
           const output = formatDoctorReport(report);
-          await showToolkitReport(ctx, {
-            title: "Toolkit Doctor",
-            content: output,
-          });
+          await showToolkitReport(
+            ctx,
+            {
+              title: "Toolkit Doctor",
+              content: output,
+            },
+            logger.child("report")
+          );
           ctx.ui.notify(
             `Doctor: ${report.summary.passed} passed, ${report.summary.warnings} warnings, ${report.summary.failed} failed`,
             "info"
@@ -162,41 +177,58 @@ export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolki
         }
 
         if (subcommand === "modules") {
-          await showToolkitReport(ctx, {
-            title: "Toolkit Modules",
-            content: formatModulesOverview(config),
-          });
+          await showToolkitReport(
+            ctx,
+            {
+              title: "Toolkit Modules",
+              content: formatModulesOverview(config),
+            },
+            logger.child("report")
+          );
           return;
         }
 
         if (subcommand === "logs") {
-          await showToolkitReport(ctx, {
-            title: "Toolkit Activity Logs",
-            content: formatLogs(parseLogsOptions(rest)),
-          });
+          await showToolkitReport(
+            ctx,
+            {
+              title: "Toolkit Activity Logs",
+              content: formatLogs(parseLogsOptions(rest)),
+            },
+            logger.child("report")
+          );
           return;
         }
 
         if (subcommand === "agents") {
           const report = getAgentList(ctx.cwd);
-          await showToolkitReport(ctx, {
-            title: `Toolkit Agents (${report.total})`,
-            content: formatAgentList(report),
-          });
+          await showToolkitReport(
+            ctx,
+            {
+              title: `Toolkit Agents (${report.total})`,
+              content: formatAgentList(report),
+            },
+            logger.child("report")
+          );
           return;
         }
 
         if (subcommand === "lsp") {
-          await showToolkitReport(ctx, {
-            title: "Toolkit LSP",
-            content: formatLspOverview(config),
-          });
+          await showToolkitReport(
+            ctx,
+            {
+              title: "Toolkit LSP",
+              content: formatLspOverview(config),
+            },
+            logger.child("report")
+          );
           return;
         }
 
         if (subcommand === "activity") {
           if (!ctx.hasUI) {
-            console.error(
+            logger.warn(
+              "activity.ui_required",
               "Toolkit activity panel requires interactive UI; use /toolkit logs for a text report."
             );
             return;
@@ -226,10 +258,14 @@ export function registerToolkitCommands(pi: ExtensionAPI, config: ResolvedToolki
           return;
         }
 
-        await showToolkitReport(ctx, {
-          title: "Toolkit Help",
-          content: formatHelp(),
-        });
+        await showToolkitReport(
+          ctx,
+          {
+            title: "Toolkit Help",
+            content: formatHelp(),
+          },
+          logger.child("report")
+        );
       } catch (error) {
         ctx.ui.notify(
           `Toolkit command failed: ${error instanceof Error ? error.message : error}`,

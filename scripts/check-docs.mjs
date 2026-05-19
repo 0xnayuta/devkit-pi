@@ -3,10 +3,55 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const allowedDocStatus = new Set(["current", "deprecated", "proposed", "implemented"]);
-const allowedAdrStatus = new Set(["proposed", "accepted", "rejected", "deprecated", "superseded"]);
 const allowedAudience = new Set(["user", "maintainer", "all"]);
 const allowedLanguage = new Set(["english", "chinese"]);
+
+const DOC_META_RULES = {
+  defaultStatus: new Set(["current", "deprecated", "proposed", "implemented", "template"]),
+  defaultAudience: allowedAudience,
+  scoped: [
+    {
+      pattern: /^(docs\/(zh\/)?adr|internal-docs\/adr)\/\d{4}-/,
+      status: new Set(["proposed", "accepted", "rejected", "deprecated", "superseded"]),
+    },
+    {
+      pattern: /^internal-docs\/archive\//,
+      status: new Set(["archived", "current"]),
+    },
+    {
+      pattern: /^internal-docs\/audit\//,
+      status: new Set(["draft", "current", "superseded", "template", "implemented"]),
+    },
+    {
+      pattern: /^internal-docs\/issues\//,
+      status: new Set(["proposed", "in_progress", "implemented", "wontfix", "superseded", "current"]),
+    },
+    {
+      pattern: /^internal-docs\/planning\//,
+      status: new Set(["proposed", "approved", "implemented", "cancelled", "superseded", "current"]),
+    },
+    {
+      pattern: /^internal-docs\/maintain\//,
+      status: new Set(["current", "deprecated"]),
+    },
+    {
+      pattern: /^docs\/(zh\/)?guides\//,
+      status: new Set(["current", "deprecated"]),
+    },
+    {
+      pattern: /^docs\/(zh\/)?reference\//,
+      status: new Set(["current", "deprecated"]),
+    },
+    {
+      pattern: /^docs\//,
+      audience: new Set(["user", "all"]),
+    },
+    {
+      pattern: /^internal-docs\//,
+      audience: new Set(["maintainer", "all"]),
+    },
+  ],
+};
 const errors = [];
 
 const keyReferenceFiles = [
@@ -50,10 +95,37 @@ function parseFrontmatter(content) {
   return data;
 }
 
+function matchingRulesFor(file, key) {
+  return DOC_META_RULES.scoped.filter((rule) => rule.pattern.test(file) && rule[key]);
+}
+
+function ruleFor(file, key) {
+  const matches = matchingRulesFor(file, key);
+  if (matches.length > 0) return matches[0][key];
+  return key === "status" ? DOC_META_RULES.defaultStatus : DOC_META_RULES.defaultAudience;
+}
+
+function checkDocMetaRuleConflicts() {
+  for (const file of markdownFilesUnder("docs", "internal-docs")) {
+    for (const key of ["status", "audience"]) {
+      const matches = matchingRulesFor(file, key);
+      if (matches.length > 1) {
+        errors.push(
+          `${file}: conflicting ${key} rules matched (${matches
+            .map((rule) => rule.pattern.toString())
+            .join(" | ")})`
+        );
+      }
+    }
+  }
+}
+
 function allowedStatusFor(file) {
-  return /^(docs\/(zh\/)?adr|internal-docs\/adr)\/\d{4}-/.test(file)
-    ? allowedAdrStatus
-    : allowedDocStatus;
+  return ruleFor(file, "status");
+}
+
+function allowedAudienceFor(file) {
+  return ruleFor(file, "audience");
 }
 
 function markdownFilesUnder(...dirs) {
@@ -89,8 +161,17 @@ function checkDocFrontmatter() {
     if (fm.audience && !allowedAudience.has(fm.audience)) {
       errors.push(`${file}: invalid audience '${fm.audience}'`);
     }
+    if (fm.audience && !allowedAudienceFor(file).has(fm.audience)) {
+      errors.push(
+        `${file}: audience '${fm.audience}' not allowed for this doc scope (allowed: ${[
+          ...allowedAudienceFor(file),
+        ].join(", ")})`
+      );
+    }
     if (fm.last_verified && !/^\d{4}-\d{2}-\d{2}$/.test(fm.last_verified)) {
-      errors.push(`${file}: invalid last_verified '${fm.last_verified}'`);
+      if (!(fm.status === "template" && fm.last_verified === "YYYY-MM-DD")) {
+        errors.push(`${file}: invalid last_verified '${fm.last_verified}'`);
+      }
     }
     if (fm.language && !allowedLanguage.has(fm.language)) {
       errors.push(`${file}: invalid language '${fm.language}'`);
@@ -374,28 +455,8 @@ function checkPlanningDocs() {
     }
   }
 
-  const planningStatusByFile = new Map([
-    ["internal-docs/planning/add-convert_content-tool-plan.md", new Set(["implemented"])],
-    ["internal-docs/planning/personal-toolkit-feature-roadmap.md", new Set(["proposed"])],
-  ]);
-
-  for (const [file, allowedStatuses] of planningStatusByFile) {
-    if (!fs.existsSync(path.join(root, file))) continue;
-    const content = read(file);
-    const fm = parseFrontmatter(content);
-    if (!fm) {
-      errors.push(`${file}: missing frontmatter`);
-      continue;
-    }
-    if (!allowedStatuses.has(fm.status)) {
-      errors.push(
-        `${file}: planning doc must have status ${[...allowedStatuses]
-          .map((status) => `'${status}'`)
-          .join(" or ")}, got '${fm.status}'`
-      );
-    }
-
-  }
+  // Planning docs status is now governed by allowedStatusFor("internal-docs/planning/*")
+  // in checkDocFrontmatter(), avoiding per-file hardcoded status rules.
 }
 
 function checkPlanningNotInMainSidebar() {
@@ -568,6 +629,7 @@ function checkVitePressHeadMeta() {
   }
 }
 
+checkDocMetaRuleConflicts();
 checkDocFrontmatter();
 checkLinks();
 checkAgentsInDocs();

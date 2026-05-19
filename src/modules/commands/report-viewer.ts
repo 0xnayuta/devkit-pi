@@ -7,6 +7,7 @@ import {
   visibleWidth,
   wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
+import { createConsoleLoggerSink, createLogger, type Logger } from "../../shared/logger.ts";
 
 const DEFAULT_VISIBLE_LINES = 24;
 const PANEL_RESULT_CLOSED = "closed";
@@ -198,11 +199,16 @@ export class ToolkitReportPanel implements Component {
 
 export async function showToolkitReport(
   ctx: ExtensionCommandContext,
-  options: ToolkitReportOptions
+  options: ToolkitReportOptions,
+  logger: Logger = createLogger({
+    module: "commands.report-viewer",
+    sink: createConsoleLoggerSink(),
+  })
 ): Promise<void> {
   if (!ctx.hasUI) {
     if (isJsonProtocolMode()) {
-      console.error(
+      logger.warn(
+        "report.stdout_blocked_json_mode",
         "Toolkit report is not available in JSON protocol mode; report was not written to stdout to avoid protocol corruption."
       );
       return;

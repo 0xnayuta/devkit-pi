@@ -20,6 +20,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { DELEGATION_EXAMPLES, DELEGATION_POLICY } from "../../shared/delegation-policy.ts";
+import { createLogger, type Logger } from "../../shared/logger.ts";
 import { resolveCurrentSessionId } from "../../shared/session-identity.ts";
 import {
   checkSubagentDepth,
@@ -181,7 +182,12 @@ function ensureAccessibleDir(dirPath: string): void {
 // Module Registration
 // ============================================================================
 
-export function registerSubagentsModule(pi: ExtensionAPI, config: ResolvedSubagentsConfig): void {
+export function registerSubagentsModule(
+  pi: ExtensionAPI,
+  config: ResolvedSubagentsConfig,
+  options: { logger?: Logger } = {}
+): void {
+  const logger = options.logger ?? createLogger({ module: "subagents.register" });
   // Prevent child processes from registering the subagent tool.
   if (process.env[PI_SUBAGENT_CHILD] === "1") return;
 
@@ -190,7 +196,7 @@ export function registerSubagentsModule(pi: ExtensionAPI, config: ResolvedSubage
 
   // Check if subagents are disabled
   if (config.enabled === false) {
-    console.log("Subagent extension is disabled in config");
+    logger.info("module.disabled", "Subagent extension is disabled in config");
     return;
   }
 

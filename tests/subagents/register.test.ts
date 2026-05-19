@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/load-config.ts";
 import { registerSubagentsModule } from "../../src/modules/subagents/register.ts";
+import { createMemoryLoggerSink, createLogger } from "../../src/shared/logger.ts";
 import { PI_SUBAGENT_CHILD } from "../../src/shared/types.ts";
 
 function createPiMock() {
@@ -52,5 +53,19 @@ describe("subagents module registration", () => {
     assert.equal(pi.tools.length, 0);
     assert.equal(pi.commands.length, 0);
     assert.equal(pi.listeners.length, 0);
+  });
+
+  it("logs disabled status through injected shared logger", () => {
+    const pi = createPiMock();
+    const config = mergeConfig({ subagents: { enabled: false } });
+    const sink = createMemoryLoggerSink();
+    const logger = createLogger({ module: "test", sink });
+
+    registerSubagentsModule(pi as any, config.subagents, { logger });
+
+    assert.equal(pi.tools.length, 0);
+    assert.equal(sink.events.length, 1);
+    assert.equal(sink.events[0]?.level, "info");
+    assert.equal(sink.events[0]?.event, "module.disabled");
   });
 });
