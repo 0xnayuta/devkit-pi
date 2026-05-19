@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: english
 ---
 
@@ -153,4 +153,4 @@ The following cases cause agent files to be skipped or have capabilities not mat
 | Frontmatter parser | `src/modules/subagents/frontmatter.ts` |
 | Tool filtering | `src/modules/subagents/executor.ts` |
 | Built-in agents | `agents/*.md` |
-| Tests | `tests/subagents/agents.test.ts`, `tests/subagents/frontmatter.test.ts` |
+| Tests | `tests/subagents/agents.test.ts`, `tests/subagents/runtime.test.ts`, `tests/subagents/config.test.ts` |

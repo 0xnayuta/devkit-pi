@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-18
+last_verified: 2026-05-20
 language: english
 ---
 
@@ -563,6 +563,6 @@ Boundary notes:
 | Config loading/defaults | `src/config/load-config.ts` |
 | Config types / subagent LSP env | `src/shared/types.ts` |
 | Toolkit command surface | `src/modules/commands/register.ts` |
-| LSP tests | `tests/lsp/tool.test.ts` |
-| Subagent LSP exposure tests | `tests/subagents/lsp-tools.test.ts` |
+| LSP tests | `tests/lsp/tool.test.ts` and related `tests/lsp/*.test.ts` |
+| Subagent LSP exposure tests | `tests/subagents/runtime.test.ts`, `tests/subagents/config.test.ts`, `tests/subagents/agents.test.ts` |
 | Shared external command tests | `tests/shared/external-command.test.ts` |

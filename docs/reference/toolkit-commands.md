@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: english
 ---
 
@@ -447,6 +447,15 @@ Developer convenience / may adjust:
 
 Not recommended for external scripts to strongly depend on `/toolkit`'s human-readable output format. If stable machine-parseable output is needed in the future, corresponding parameters should be formally exposed in source code and tests supplemented.
 
+## Coverage visibility
+
+`/toolkit` does not expose a coverage subcommand. Coverage visibility is provided by package scripts:
+
+- `pnpm test` remains the default unit test command.
+- `pnpm test:coverage` runs the lightweight Node/V8 coverage visibility pipeline.
+- Current coverage output is a visibility report, not a threshold gate.
+- Run coverage when changing test visibility, release checks, coverage-related docs, or high-risk modules where hotspot trends are useful.
+
 ## Source map
 
 | Topic | Source |
@@ -466,6 +475,6 @@ Not recommended for external scripts to strongly depend on `/toolkit`'s human-re
 | Web schemas | `src/modules/web/schemas.ts` |
 | Toolkit activity logs / Web stats | `src/shared/activity.ts`, `src/modules/web/observability.ts`, `src/modules/convert/observability.ts` |
 | Command tests | `tests/commands/` |
-| Subagent command tests | `tests/subagents/commands/` |
+| Subagent command tests | `tests/subagents/commands.test.ts` |
 | LSP tests | `tests/lsp/` |
 | Web tests | `tests/web/` |

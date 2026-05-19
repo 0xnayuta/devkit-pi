@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-13
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -11,7 +11,7 @@ language: chinese
 
 # devkit-pi
 
-`devkit-pi` 是面向个人工作流的一体化 pi coding 工具包。它将 subagent 任务委派、Web 研究工具、内容转换、LSP 代码智能、自动诊断 hook 和开发者命令整合为一个模块化 pi 扩展。
+`devkit-pi` 是面向个人工作流的一体化 pi coding 工具包。它将 subagent 任务委派、Web 研究工具、内容转换、LSP 代码智能、自动诊断 hook、开发者命令和轻量流程提醒/guards 整合为一个模块化 pi 扩展。
 
 公开文档站刻意只分为指南和参考。维护者内部资料位于仓库根目录的 `internal-docs/`，不进入公开网站导航。
 
@@ -38,7 +38,7 @@ pnpm docs:preview
 ## 从这里开始
 
 - [目标与范围](./guides/goals-and-scope.md)：项目目标和当前能力边界。
-- [安全模型](./guides/security-model.md)：subagents、Web 工具、LSP、convert 和写入能力的安全边界。
+- [安全模型](./guides/security-model.md)：subagents、Web 工具、convert、LSP、guards 和写入能力的安全边界。
 - [Agent Workflow Guide](./guides/agent-workflow.md)：覆盖 planning、debug、review 与 verification 说明的轻量流程指南。
 - [Subagents 参考](./reference/subagents.md)：subagent 模块 surface 和执行边界。
 - [Web 工具参考](./reference/web-tools.md)：`web_search`、`fetch_content` 和 `get_search_content`。

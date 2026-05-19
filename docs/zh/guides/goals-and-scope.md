@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -14,7 +14,7 @@ language: chinese
 `devkit-pi` 是面向个人工作流的综合 pi coding toolkit：
 
 ```text
-subagents + web tools + LSP tool + LSP diagnostics hook + developer commands
+subagents + web tools + convert_content + LSP tool + LSP diagnostics hook + developer commands + lightweight guards
 ```
 
 目标不是完整多代理框架，而是把高频 coding 辅助能力模块化地合入一个 pi extension。
@@ -42,11 +42,13 @@ devkit-pi 优先考虑结构一致性，而不是保留旧有布局。
 - foreground 单次子代理执行
 - 子代理递归保护：`subagents.maxDepth = 1`
 - bundled readonly web tools：`web_search`、`fetch_content`、`get_search_content`
+- `convert_content` tool：将本地文件或安全下载的远程 HTTP(S) 文件转换为 Markdown，依赖可选外部 MarkItDown CLI provider
 - LSP tool：definitions、references、hover、signature、symbols、diagnostics、workspace diagnostics、servers
 - LSP diagnostics hook：默认在 `agent_end` 后对本轮修改文件自动诊断，可配置为 `edit_write` 或关闭
 - 可选的子代理 readonly LSP：通过 `subagents.allowLspTools` 和 `subagents.allowedLspActions` 控制
 - unified developer command：`/toolkit`（doctor、modules、logs、agents、lsp、activity）
-- namespace 化配置：`subagents` / `web` / `lsp` / `commands`
+- lightweight guards：git context、首次写入和 verification status 的轻量提醒；仅为 soft reminder，不是 hard workflow gate
+- namespace 化配置：`subagents` / `web` / `convertContent` / `lsp` / `commands` / `guards`
 
 ## 当前不包含
 
@@ -70,7 +72,9 @@ devkit-pi 优先考虑结构一致性，而不是保留旧有布局。
 4. LSP readonly actions 可作为 read/grep/find 的渐进增强。
 5. `rename`、`codeAction`、`restart` 默认禁用，且在子代理进程中始终禁用。
 6. 各模块必须可独立启停。
-7. 职责相近的平行模块应收敛到统一的结构、命名、配置、测试和文档模式，而不是保留旧有布局。
+7. `convert_content` 依赖可选外部 CLI provider；核心包不捆绑重型文档转换栈。
+8. guards 只提供 workflow reminders，不阻止 tool call，也不强制触发后续 agent turn。
+9. 职责相近的平行模块应收敛到统一的结构、命名、配置、测试和文档模式，而不是保留旧有布局。
 
 ## 自定义 agent 示例
 

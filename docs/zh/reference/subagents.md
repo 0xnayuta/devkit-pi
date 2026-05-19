@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -398,4 +398,4 @@ Internal implementation / 可能变化：
 | Session identity | `src/shared/session-identity.ts` |
 | Shared result/error/config types | `src/shared/types.ts` |
 | Built-in agent definitions | `agents/*.md` |
-| Tests | `tests/subagents/`, `tests/subagents/commands/` |
+| Tests | `tests/subagents/*.test.ts`，尤其是 `tests/subagents/commands.test.ts`、`tests/subagents/runtime.test.ts`、`tests/subagents/config.test.ts` |

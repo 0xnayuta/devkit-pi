@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-19
+last_verified: 2026-05-20
 language: english
 ---
 
@@ -51,6 +51,8 @@ Execution validates that exactly one of `path` or `url` is provided. Providing b
 - `file_path` is not a supported canonical field; use `path`.
 
 ## MarkItDown provider status
+
+MarkItDown CLI is an external optional dependency. devkit-pi does not bundle MarkItDown, Python document-conversion stacks, OCR engines, browser engines, Tika, Pandoc, or Office/PDF heavy parsers in the core package. Install `markitdown` separately and configure `convertContent.command` when needed.
 
 `src/modules/convert/provider.ts` implements `MarkItDownProvider`:
 

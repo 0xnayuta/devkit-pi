@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: english
 ---
 
@@ -9,7 +9,7 @@ language: english
 
 ## Reference overview
 
-`docs/reference/` is devkit-pi's lookup-table, contract-oriented documentation directory. It records the currently implemented public surface, configuration, tool parameters, return structures, error/failure semantics, and stability boundaries.
+`docs/reference/` is devkit-pi's lookup-table, contract-oriented documentation directory. It records the currently implemented public surface, configuration, tool parameters, return structures, error/failure semantics, and stability boundaries, including lightweight guards documented through the configuration and workflow/security guides.
 
 Reference documents are not tutorials and do not record roadmaps. If proposals, ADRs, or archives conflict with reference documents, the canonical sources are the current `src/`, `tests/`, and this reference directory.
 
@@ -34,7 +34,7 @@ Maintainer-only architecture, testing, release, ADR, planning, archive, issue, a
 
 | Document | When to read | Canonical source |
 |---|---|---|
-| [configuration.md](./configuration.md) | Configure devkit-pi, verify defaults and normalize rules | `src/config/load-config.ts`, `src/shared/types.ts` |
+| [configuration.md](./configuration.md) | Configure devkit-pi, verify defaults and normalize rules, including `guards` soft-reminder settings | `src/config/load-config.ts`, `src/shared/types.ts` |
 
 ### Subagents
 

@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-13
+last_verified: 2026-05-20
 language: english
 ---
 
@@ -11,7 +11,7 @@ language: english
 
 # devkit-pi
 
-`devkit-pi` is a personal all-in-one pi coding toolkit for agentic coding workflows. It combines subagents, Web research tools, content conversion, LSP code intelligence, automatic diagnostics hooks, and developer commands into a modular pi extension.
+`devkit-pi` is a personal all-in-one pi coding toolkit for agentic coding workflows. It combines subagents, Web research tools, content conversion, LSP code intelligence, automatic diagnostics hooks, developer commands, and lightweight workflow reminders/guards into a modular pi extension.
 
 The public documentation site is intentionally split into guides and reference. Internal maintainer documents live in the repository's `internal-docs/` directory and are not part of the public website navigation.
 
@@ -38,7 +38,7 @@ pnpm docs:preview
 ## Start here
 
 - [Goals and scope](./guides/goals-and-scope.md): project goals and current capability boundaries.
-- [Security model](./guides/security-model.md): security boundaries for subagents, Web tools, LSP, convert, and write capability.
+- [Security model](./guides/security-model.md): security boundaries for subagents, Web tools, convert, LSP, guards, and write capability.
 - [Agent workflow guide](./guides/agent-workflow.md): practical lightweight workflow patterns for planning, debug, review, and verification reporting.
 - [Subagents reference](./reference/subagents.md): subagent module surface and execution boundaries.
 - [Web tools reference](./reference/web-tools.md): `web_search`, `fetch_content`, and `get_search_content`.

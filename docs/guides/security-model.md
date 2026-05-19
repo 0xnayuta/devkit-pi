@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-19
+last_verified: 2026-05-20
 language: english
 ---
 
@@ -56,6 +56,31 @@ Boundary notes:
 - Internal callers of the pinned fetch helper must fully read or explicitly cancel response bodies so per-request dispatchers can be closed; built-in web and convert tools do this internally.
 
 Current provider, Jina fallback, storage, and URL security boundaries are defined in [Web tools reference](../reference/web-tools.md), [Web providers reference](../reference/web-providers.md), and [Configuration reference](../reference/configuration.md). Historical design background is kept in `internal-docs/adr/0004-bundled-readonly-web-tools.md`.
+
+## Convert content security boundaries
+
+`convert_content` can convert local files or safely downloaded remote HTTP(S) files through the configured MarkItDown CLI provider. Its public behavior is defined in [Convert content tool reference](../reference/convert-tools.md) and [Configuration reference](../reference/configuration.md).
+
+Current boundaries:
+
+- Local `path` conversion is restricted to files inside the active workspace.
+- Remote `url` conversion only supports `http:` and `https:`.
+- Private-network targets are blocked by default via `convertContent.allowPrivateNetwork=false`.
+- Redirect hops are revalidated with the same private-network policy and repinned before follow.
+- Downloads are bounded by `convertContent.maxResponseBytes`.
+- Returned Markdown is bounded by `convertContent.maxContentChars`.
+- Provider execution is bounded by `convertContent.timeoutMs` and shared external-command stdout/stderr hard limits.
+- MarkItDown is an external optional CLI dependency; devkit-pi does not bundle heavy PDF/Office/OCR/browser/Tika/Pandoc conversion stacks in the core package.
+- The configured CLI is executed through shared external-command infrastructure with structured arguments and without shell interpolation.
+
+## Guards boundaries
+
+Guards provide lightweight workflow reminders, not security enforcement:
+
+- Guards are registered only in the main agent process, not in subagent processes.
+- They do not block tool calls, rewrite turns, or force follow-up agent turns.
+- Git context, first-write, and verification reminders degrade silently when git, cwd context, or UI facilities are unavailable.
+- Guard notices are soft guidance and should not be treated as a permission model, audit log, or policy engine.
 
 ## LSP security boundaries
 

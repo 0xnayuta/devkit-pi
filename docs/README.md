@@ -1,13 +1,13 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-13
+last_verified: 2026-05-20
 language: english
 ---
 
 # devkit-pi Documentation
 
-`docs/` contains the public VitePress documentation site. It is intentionally limited to user-facing guides and API/reference material.
+`docs/` contains the public VitePress documentation site for devkit-pi's subagents, Web research tools, content conversion, LSP code intelligence, developer commands, and lightweight workflow reminders. It is intentionally limited to user-facing guides and API/reference material.
 
 Internal maintainer material such as architecture notes, testing strategy, release checklists, ADRs, planning, issue logs, archive notes, and audits lives outside the website in `internal-docs/`.
 
@@ -33,7 +33,7 @@ pnpm docs:preview
 
 - [Goals and scope](./guides/goals-and-scope.md): project goals, included/excluded capabilities, and design boundaries.
 - [Agent workflow guide](./guides/agent-workflow.md): lightweight workflow methods for planning, implementation, debug, review, and verification reporting.
-- [Security model](./guides/security-model.md): security boundaries for subagents, Web tools, LSP, convert, and write capability.
+- [Security model](./guides/security-model.md): security boundaries for subagents, Web tools, convert, LSP, guards, and write capability.
 
 ### Reference
 

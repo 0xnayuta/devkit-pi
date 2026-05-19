@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -9,7 +9,7 @@ language: chinese
 
 ## Reference 概述
 
-`docs/reference/` 是 devkit-pi 的查表型、契约型文档目录。这里记录当前已实现的 public surface、配置、工具参数、返回结构、错误/失败语义和稳定性边界。
+`docs/reference/` 是 devkit-pi 的查表型、契约型文档目录。这里记录当前已实现的 public surface、配置、工具参数、返回结构、错误/失败语义和稳定性边界；轻量 guards 通过配置参考和 workflow/security 指南记录。
 
 Reference 文档不是教程，也不记录 roadmap。若 proposal、ADR 或 archive 与 reference 不一致，以当前 `src/`、`tests/` 和本目录 reference 为准。
 
@@ -34,7 +34,7 @@ Reference 文档不是教程，也不记录 roadmap。若 proposal、ADR 或 arc
 
 | 文档 | 适合什么时候读 | Canonical source |
 |---|---|---|
-| [configuration.md](./configuration.md) | 配置 devkit-pi、核对默认值和 normalize 规则 | `src/config/load-config.ts`, `src/shared/types.ts` |
+| [configuration.md](./configuration.md) | 配置 devkit-pi、核对默认值和 normalize 规则，包括 `guards` soft-reminder 设置 | `src/config/load-config.ts`, `src/shared/types.ts` |
 
 ### Subagents
 

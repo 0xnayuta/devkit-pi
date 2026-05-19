@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-19
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -56,6 +56,31 @@ URL 安全检查会在每个 fetch/download hop 前校验 protocol、hostname/IP
 - pinned fetch helper 的内部调用方必须完整读取或显式取消 response body，以便关闭每次请求创建的 dispatcher；内置 web 与 convert 工具已在内部完成该处理。
 
 当前 provider、Jina fallback、storage 和 URL 安全边界以 [Web tools reference](../reference/web-tools.md)、[Web providers reference](../reference/web-providers.md) 与 [Configuration reference](../reference/configuration.md) 为准。历史设计背景保存在 `internal-docs/adr/0004-bundled-readonly-web-tools.md`。
+
+## Convert content 安全边界
+
+`convert_content` 可以通过已配置的 MarkItDown CLI provider 转换本地文件，或先安全下载远程 HTTP(S) 文件再转换。Public 行为以 [Convert content 工具参考](../reference/convert-tools.md) 和 [配置参考](../reference/configuration.md) 为准。
+
+当前边界：
+
+- 本地 `path` 转换限制在 active workspace 内。
+- 远程 `url` 转换只支持 `http:` 和 `https:`。
+- 默认通过 `convertContent.allowPrivateNetwork=false` 阻止私网目标。
+- 每个 redirect hop 都会使用相同 private-network policy 重新校验，并在 follow 前重新 pin。
+- 下载受 `convertContent.maxResponseBytes` 限制。
+- 返回 Markdown 受 `convertContent.maxContentChars` 限制。
+- Provider 执行受 `convertContent.timeoutMs` 和 shared external-command stdout/stderr hard limits 限制。
+- MarkItDown 是外部可选 CLI 依赖；devkit-pi 核心包不捆绑重型 PDF/Office/OCR/browser/Tika/Pandoc 转换栈。
+- 已配置 CLI 通过 shared external-command 基础设施以结构化参数执行，不使用 shell interpolation。
+
+## Guards 边界
+
+Guards 提供轻量 workflow reminders，不是安全 enforcement：
+
+- Guards 只在主代理进程注册，不在子代理进程注册。
+- 不阻止 tool calls，不改写 turn，也不强制触发后续 agent turn。
+- 当 git、cwd context 或 UI 能力不可用时，git context、first-write 和 verification reminders 会静默降级。
+- Guard notices 只是 soft guidance，不应视为权限模型、审计日志或策略引擎。
 
 ## LSP 安全边界
 

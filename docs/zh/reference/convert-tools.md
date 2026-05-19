@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-19
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -51,6 +51,8 @@ Canonical source：`src/modules/convert/` 和 `src/config/load-config.ts`。
 - `file_path` 不是受支持的 canonical field；请使用 `path`。
 
 ## MarkItDown provider 状态
+
+MarkItDown CLI 是外部可选依赖。devkit-pi 核心包不捆绑 MarkItDown、Python 文档转换栈、OCR 引擎、browser engine、Tika、Pandoc 或 Office/PDF 重型解析器。需要时请单独安装 `markitdown`，并配置 `convertContent.command`。
 
 `src/modules/convert/provider.ts` 实现了 `MarkItDownProvider`：
 

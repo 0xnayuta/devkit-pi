@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: english
 ---
 
@@ -14,7 +14,7 @@ Current public API and configuration details are defined in [Reference index](..
 `devkit-pi` is a comprehensive pi coding toolkit for personal workflows:
 
 ```text
-subagents + web tools + LSP tool + LSP diagnostics hook + developer commands
+subagents + web tools + convert_content + LSP tool + LSP diagnostics hook + developer commands + lightweight guards
 ```
 
 The goal is not a full multi-agent framework, but to modularly integrate high-frequency coding assistance capabilities into a single pi extension.
@@ -42,11 +42,13 @@ Prefer:
 - Foreground single-shot subagent execution
 - Subagent recursion guard: `subagents.maxDepth = 1`
 - Bundled readonly web tools: `web_search`, `fetch_content`, `get_search_content`
+- `convert_content` tool for local files or safely downloaded remote HTTP(S) files, using the optional external MarkItDown CLI provider
 - LSP tool: definitions, references, hover, signature, symbols, diagnostics, workspace diagnostics, servers
 - LSP diagnostics hook: auto-diagnoses files modified in the current turn after `agent_end` by default; configurable to `edit_write` or disabled
 - Optional subagent readonly LSP: controlled via `subagents.allowLspTools` and `subagents.allowedLspActions`
 - Unified developer command: `/toolkit` (doctor, modules, logs, agents, lsp, activity)
-- Namespace-based configuration: `subagents` / `web` / `lsp` / `commands`
+- Lightweight guards for git context, first-write, and verification-status reminders; these are soft reminders, not hard workflow gates
+- Namespace-based configuration: `subagents` / `web` / `convertContent` / `lsp` / `commands` / `guards`
 
 ## Currently excluded
 
@@ -70,7 +72,9 @@ Prefer:
 4. LSP readonly actions can serve as a progressive enhancement over read/grep/find.
 5. `rename`, `codeAction`, `restart` are disabled by default and always disabled in subagent processes.
 6. Each module must be independently enabled/disabled.
-7. Parallel modules with similar responsibilities should converge on shared structure, naming, configuration, tests, and documentation patterns instead of preserving legacy layouts.
+7. `convert_content` relies on an optional external CLI provider; heavy document conversion stacks are not bundled into the core package.
+8. Guards provide workflow reminders only and do not block tool calls or force follow-up agent turns.
+9. Parallel modules with similar responsibilities should converge on shared structure, naming, configuration, tests, and documentation patterns instead of preserving legacy layouts.
 
 ## Custom agent example
 

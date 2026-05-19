@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -153,4 +153,4 @@ read, grep, find, ls, web_search, fetch_content, get_search_content, convert_con
 | Frontmatter parser | `src/modules/subagents/frontmatter.ts` |
 | Tool filtering | `src/modules/subagents/executor.ts` |
 | Built-in agents | `agents/*.md` |
-| Tests | `tests/subagents/agents.test.ts`, `tests/subagents/frontmatter.test.ts` |
+| Tests | `tests/subagents/agents.test.ts`, `tests/subagents/runtime.test.ts`, `tests/subagents/config.test.ts` |

@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-18
+last_verified: 2026-05-20
 language: english
 ---
 
@@ -18,8 +18,9 @@ This guide is for day-to-day coding tasks with devkit-pi tools:
 - convert (`convert_content`)
 - LSP (`lsp`)
 - toolkit commands (`/toolkit`)
+- lightweight guards (git context, first-write, verification reminders)
 
-It does **not** introduce workflow phases, hard gates, or mandatory turn rewrites.
+It does **not** introduce workflow phases, hard gates, or mandatory turn rewrites. Guards are soft reminders only; they do not block tool calls or force follow-up turns.
 
 ## 2) devkit-pi workflow principles
 
@@ -85,6 +86,14 @@ Review is not a replacement for build/test/lint verification.
 
 Before declaring completion, include verification status.
 
+Common checks:
+
+- `pnpm typecheck`
+- `pnpm lint`
+- `pnpm test`
+- `pnpm docs:check` when docs changed
+- `pnpm test:coverage` when coverage visibility matters; current coverage is a lightweight Node/V8 visibility report, not a threshold gate
+
 Examples:
 
 ```md
@@ -101,7 +110,7 @@ If verification was not run:
 ## Verification
 
 - Not run in this session.
-- Suggested next step: `pnpm typecheck && pnpm test`
+- Suggested next step: `pnpm typecheck && pnpm lint && pnpm test`
 ```
 
 ## 8) Subagent boundaries

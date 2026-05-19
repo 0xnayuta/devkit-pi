@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -23,7 +23,7 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配�
 
 ## 完整默认配置示例
 
-对应源码：`src/config/load-config.ts` 中的 `DEFAULT_CONFIG`、`DEFAULT_SUBAGENTS_CONFIG`、`DEFAULT_WEB_CONFIG`、`DEFAULT_CONVERT_CONTENT_CONFIG`。
+对应源码：`src/config/load-config.ts` 中的 `DEFAULT_CONFIG`、`DEFAULT_SUBAGENTS_CONFIG`、`DEFAULT_WEB_CONFIG`、`DEFAULT_CONVERT_CONTENT_CONFIG`、`DEFAULT_GUARDS_CONFIG` 和 `DEFAULT_SUBAGENT_LSP_ACTIONS`。
 
 ```json
 {
@@ -590,7 +590,7 @@ doctor, modules, logs, agents, lsp, activity, help
 
 ## Guards 配置
 
-对应源码：`DEFAULT_CONFIG.guards`、`normalizeGuardsConfig()`、`src/modules/guards/*`。
+对应源码：`DEFAULT_GUARDS_CONFIG`、`normalizeGuardsConfig()`、`src/modules/guards/*`。
 
 Guards 是轻量 session notices。它们优先使用 UI notification/status channel，不阻止 tool calls，也不触发 follow-up agent turn。
 
@@ -601,7 +601,7 @@ Guards 是轻量 session notices。它们优先使用 UI notification/status cha
 | `guards.firstWriteReminder` | boolean | `true` | 否 | session 第一次疑似写入 tool call 前，显示一次当前 branch/worktree context | `src/modules/guards/index.ts`, `src/modules/guards/tool-classifier.ts` |
 | `guards.verificationReminder` | boolean | `true` | 否 | agent end 时，如果当前 turn 疑似修改了文件但没有检测到 verification command，则显示 soft reminder | `src/modules/guards/index.ts`, `src/modules/guards/command-classifier.ts` |
 
-当前行为：`gitContextNotice`、`firstWriteReminder` 和 `verificationReminder` 已实现。Git commands 使用短 timeout；当 git 不可用、cwd 不在 git repo 中或 git 命令失败时会静默降级。写入分类是保守的：显式文件编辑工具会被视为写入，`bash`/`shell` 仅在明显 mutating commands 时视为写入，例如 redirection、`rm`、`mv`、`cp`、`sed -i`、`tee`、`apply_patch`、部分 mutating `git` 命令或 package installs。验证命令分类同样保守，识别常见 test/lint/typecheck/build 命令，例如 `pnpm test`、`npm run lint`、`tsc --noEmit`、`cargo test`、`pytest`、`go test`、`cmake --build`、`ctest` 和 `biome check`。子代理进程不注册 guards。
+当前行为：`gitContextNotice`、`firstWriteReminder` 和 `verificationReminder` 已实现。Git commands 使用短 timeout；当 git 不可用、cwd 不在 git repo 中或 git 命令失败时会静默降级。写入分类是保守的：显式文件编辑工具会被视为写入，`bash`/`shell` 仅在明显 mutating commands 时视为写入，例如 redirection、`rm`、`mv`、`cp`、`sed -i`、`tee`、`apply_patch`、部分 mutating `git` 命令或 package installs。验证命令分类同样保守，识别常见 test/lint/typecheck/build 命令。示例包括但不限于：`pnpm test`、`pnpm lint`、`pnpm typecheck`、`pnpm run test`、`pnpm run lint`、`pnpm run typecheck`、`npm test`、`npm run test`、`npm run lint`、`npm run typecheck`、`yarn test`、`yarn lint`、`yarn typecheck`、`tsc --noEmit`、`cargo test`、`cargo check`、`pytest`、`uv run pytest`、`go test`、`cmake --build`、`ctest` 和 `biome check`。子代理进程不注册 guards。
 
 示例：
 

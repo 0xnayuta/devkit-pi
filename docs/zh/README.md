@@ -1,13 +1,13 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-13
+last_verified: 2026-05-20
 language: chinese
 ---
 
 # devkit-pi 文档
 
-`docs/` 保存公开 VitePress 文档站内容。这里刻意只保留面向用户的指南和 API/reference 文档。
+`docs/` 保存 devkit-pi 的公开 VitePress 文档站内容，覆盖 subagents、Web 研究工具、内容转换、LSP 代码智能、开发者命令和轻量流程提醒。这里刻意只保留面向用户的指南和 API/reference 文档。
 
 架构说明、测试策略、发布清单、ADR、规划、问题日志、归档和审计等维护者资料已分流到仓库根目录的 `internal-docs/`，不进入公开网站主导航。
 
@@ -33,7 +33,7 @@ pnpm docs:preview
 
 - [目标与范围](./guides/goals-and-scope.md)：项目目标、当前包含/不包含的能力和设计边界。
 - [Agent Workflow Guide](./guides/agent-workflow.md)：轻量 workflow 方法，覆盖 planning、implementation、debug、review 与 verification 说明。
-- [安全模型](./guides/security-model.md)：Subagents、Web tools、LSP、convert 和写入能力的安全边界。
+- [安全模型](./guides/security-model.md)：Subagents、Web tools、convert、LSP、guards 和写入能力的安全边界。
 
 ### 参考
 

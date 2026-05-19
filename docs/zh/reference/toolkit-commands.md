@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -433,6 +433,15 @@ Developer convenience / 可能调整：
 
 不建议外部脚本强依赖 `/toolkit` 的人类可读输出格式。若未来需要稳定机器可解析输出，应先在源码中正式暴露相应参数并补充测试。
 
+## Coverage 可见性
+
+`/toolkit` 不提供 coverage 子命令。Coverage 可见性由 package scripts 提供：
+
+- `pnpm test` 仍是默认单元测试命令。
+- `pnpm test:coverage` 运行轻量 Node/V8 coverage 可见性链路。
+- 当前 coverage 输出是可见性报告，不是阈值门禁。
+- 当修改测试可见性、发布检查、coverage 相关文档，或高风险模块需要观察 hotspot 趋势时运行 coverage。
+
 ## Source map
 
 | 主题 | 源码 |
@@ -452,6 +461,6 @@ Developer convenience / 可能调整：
 | Web schemas | `src/modules/web/schemas.ts` |
 | Toolkit activity logs / Web stats | `src/shared/activity.ts`, `src/modules/web/observability.ts`, `src/modules/convert/observability.ts` |
 | Command tests | `tests/commands/` |
-| Subagent command tests | `tests/subagents/commands/` |
+| Subagent command tests | `tests/subagents/commands.test.ts` |
 | LSP tests | `tests/lsp/` |
 | Web tests | `tests/web/` |

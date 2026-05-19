@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: english
 ---
 
@@ -23,7 +23,7 @@ Configuration follows the architecture consistency policy: similar modules use n
 
 ## Complete default configuration example
 
-Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG`, `DEFAULT_CONVERT_CONTENT_CONFIG` in `src/config/load-config.ts`.
+Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG`, `DEFAULT_CONVERT_CONTENT_CONFIG`, `DEFAULT_GUARDS_CONFIG`, and `DEFAULT_SUBAGENT_LSP_ACTIONS` in `src/config/load-config.ts`.
 
 ```json
 {
@@ -590,7 +590,7 @@ Example:
 
 ## Guards configuration
 
-Source: `DEFAULT_CONFIG.guards`, `normalizeGuardsConfig()`, `src/modules/guards/*`.
+Source: `DEFAULT_GUARDS_CONFIG`, `normalizeGuardsConfig()`, `src/modules/guards/*`.
 
 Guards are lightweight session notices. They use UI notification/status channels when available, do not block tool calls, and do not trigger follow-up agent turns.
 
@@ -601,7 +601,7 @@ Guards are lightweight session notices. They use UI notification/status channels
 | `guards.firstWriteReminder` | boolean | `true` | No | Before the first likely write tool call in a session, show current branch/worktree context once | `src/modules/guards/index.ts`, `src/modules/guards/tool-classifier.ts` |
 | `guards.verificationReminder` | boolean | `true` | No | At agent end, if the current turn appears to have modified files but no verification command was detected, show a soft reminder | `src/modules/guards/index.ts`, `src/modules/guards/command-classifier.ts` |
 
-Current behavior: `gitContextNotice`, `firstWriteReminder`, and `verificationReminder` are implemented. Git commands use a short timeout and silently degrade when git is unavailable, the cwd is not a git repo, or git commands fail. Write classification is conservative: explicit file-editing tools are treated as writes, and `bash`/`shell` are only treated as writes for obvious mutating commands such as redirection, `rm`, `mv`, `cp`, `sed -i`, `tee`, `apply_patch`, selected `git` mutating commands, or package installs. Verification classification is also conservative and recognizes common test/lint/typecheck/build commands such as `pnpm test`, `npm run lint`, `tsc --noEmit`, `cargo test`, `pytest`, `go test`, `cmake --build`, `ctest`, and `biome check`. Subagent child processes do not register guards.
+Current behavior: `gitContextNotice`, `firstWriteReminder`, and `verificationReminder` are implemented. Git commands use a short timeout and silently degrade when git is unavailable, the cwd is not a git repo, or git commands fail. Write classification is conservative: explicit file-editing tools are treated as writes, and `bash`/`shell` are only treated as writes for obvious mutating commands such as redirection, `rm`, `mv`, `cp`, `sed -i`, `tee`, `apply_patch`, selected `git` mutating commands, or package installs. Verification classification is also conservative and recognizes common test/lint/typecheck/build commands. Examples include, but are not limited to: `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm run test`, `pnpm run lint`, `pnpm run typecheck`, `npm test`, `npm run test`, `npm run lint`, `npm run typecheck`, `yarn test`, `yarn lint`, `yarn typecheck`, `tsc --noEmit`, `cargo test`, `cargo check`, `pytest`, `uv run pytest`, `go test`, `cmake --build`, `ctest`, and `biome check`. Subagent child processes do not register guards.
 
 Example:
 

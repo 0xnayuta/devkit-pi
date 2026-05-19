@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-18
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -18,8 +18,9 @@ language: chinese
 - 文档转换（`convert_content`）
 - LSP（`lsp`）
 - 开发者命令（`/toolkit`）
+- 轻量 guards（git context、首次写入、verification reminders）
 
-本文档不引入 workflow phase tracking、hard gate 或强制改写最终回复。
+本文档不引入 workflow phase tracking、hard gate 或强制改写最终回复。Guards 只是 soft reminders，不阻止 tool call，也不强制触发后续 turn。
 
 ## 二、devkit-pi 的工作流原则
 
@@ -85,6 +86,14 @@ Review 不能替代 test/lint/typecheck/build 验证。
 
 在“完成”之前，明确写出验证状态。
 
+常用检查：
+
+- `pnpm typecheck`
+- `pnpm lint`
+- `pnpm test`
+- 文档变更时运行 `pnpm docs:check`
+- 需要 coverage 可见性时运行 `pnpm test:coverage`；当前 coverage 是轻量 Node/V8 可见性报告，不是阈值门禁
+
 示例：
 
 ```md
@@ -101,7 +110,7 @@ Review 不能替代 test/lint/typecheck/build 验证。
 ## Verification
 
 - Not run in this session.
-- Suggested next step: `pnpm typecheck && pnpm test`
+- Suggested next step: `pnpm typecheck && pnpm lint && pnpm test`
 ```
 
 ## 八、Subagent 使用边界
