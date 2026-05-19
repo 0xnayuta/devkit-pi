@@ -1,8 +1,9 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { isAbortLikeError, withTimeoutSignal } from "../web/abort.ts";
-import { validatePublicHttpUrl } from "../web/security.ts";
+import { isAbortLikeError, withTimeoutSignal } from "../../shared/abort.ts";
+import { HttpSecurityError, validatePublicHttpUrl } from "../../shared/http-security.ts";
+import { fetchWithPinnedDns } from "../../shared/pinned-fetch.ts";
 import { CONVERT_ERROR_CODES, ConvertProviderError } from "./errors.ts";
 
 const MAX_REDIRECTS = 5;
@@ -74,11 +75,15 @@ export interface DownloadedFile {
 
 function classifyUrlValidationError(error: unknown): ConvertProviderError {
   const message = error instanceof Error ? error.message : String(error);
-  if (message.includes("Unsupported URL protocol")) {
-    return new ConvertProviderError(CONVERT_ERROR_CODES.UNSUPPORTED_PROTOCOL, message);
-  }
-  if (message.includes("Blocked private")) {
-    return new ConvertProviderError(CONVERT_ERROR_CODES.PRIVATE_NETWORK_BLOCKED, message);
+  if (error instanceof HttpSecurityError) {
+    switch (error.code) {
+      case "UNSUPPORTED_PROTOCOL":
+        return new ConvertProviderError(CONVERT_ERROR_CODES.UNSUPPORTED_PROTOCOL, message);
+      case "PRIVATE_NETWORK_BLOCKED":
+        return new ConvertProviderError(CONVERT_ERROR_CODES.PRIVATE_NETWORK_BLOCKED, message);
+      default:
+        return new ConvertProviderError(CONVERT_ERROR_CODES.NETWORK_ERROR, message);
+    }
   }
   return new ConvertProviderError(CONVERT_ERROR_CODES.NETWORK_ERROR, message);
 }
@@ -174,13 +179,17 @@ export async function downloadUrlToTempFile(
 
   try {
     for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
-      const response = await fetch(currentUrl, {
+      const response = await fetchWithPinnedDns(currentUrl, {
         redirect: "manual",
         signal,
+        timeoutMs: options.timeoutMs,
+        allowPrivateNetwork: options.allowPrivateNetwork,
         headers: { "user-agent": USER_AGENT },
       });
 
       if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        await response.body?.cancel();
         if (redirectCount === MAX_REDIRECTS) {
           throw new ConvertProviderError(
             CONVERT_ERROR_CODES.NETWORK_ERROR,
@@ -188,13 +197,14 @@ export async function downloadUrlToTempFile(
           );
         }
         currentUrl = await validatedUrl(
-          redirectTarget(currentUrl, response.headers.get("location")),
+          redirectTarget(currentUrl, location),
           options.allowPrivateNetwork
         );
         continue;
       }
 
       if (!response.ok) {
+        await response.body?.cancel();
         throw new ConvertProviderError(
           CONVERT_ERROR_CODES.NETWORK_ERROR,
           `Failed to download ${currentUrl.toString()}: HTTP ${response.status}.`
@@ -203,6 +213,7 @@ export async function downloadUrlToTempFile(
 
       const contentLength = response.headers.get("content-length");
       if (contentLength && Number(contentLength) > options.maxResponseBytes) {
+        await response.body?.cancel();
         throw new ConvertProviderError(
           CONVERT_ERROR_CODES.FILE_TOO_LARGE,
           `Downloaded content exceeds convertContent.maxResponseBytes (${contentLength} > ${options.maxResponseBytes}).`
@@ -232,6 +243,7 @@ export async function downloadUrlToTempFile(
     }
   } catch (error) {
     if (error instanceof ConvertProviderError) throw error;
+    if (error instanceof HttpSecurityError) throw classifyUrlValidationError(error);
     if (isAbortLikeError(error)) {
       throw new ConvertProviderError(
         CONVERT_ERROR_CODES.CONVERT_TIMEOUT,

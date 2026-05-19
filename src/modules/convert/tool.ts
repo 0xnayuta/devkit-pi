@@ -87,12 +87,17 @@ export async function convertContent(
     return error("CONVERT_FAILED", `Conversion failed: ${message}`);
   }
 
-  const sourcePath = localFile.path;
-  if (localFile.stat.size > config.maxResponseBytes) {
+  const { path: sourcePath } = localFile;
+  const localStat = localFile.stat;
+  if (!localStat) {
+    recordConvertActivity(provider.name, "error", startTs, CONVERT_ERROR_CODES.FILE_NOT_FOUND);
+    return error("FILE_NOT_FOUND", `File not found: ${sourcePath}`);
+  }
+  if (localStat.size > config.maxResponseBytes) {
     recordConvertActivity(provider.name, "error", startTs, CONVERT_ERROR_CODES.FILE_TOO_LARGE);
     return error(
       "FILE_TOO_LARGE",
-      `File exceeds convertContent.maxResponseBytes (${localFile.stat.size} > ${config.maxResponseBytes}): ${sourcePath}`
+      `File exceeds convertContent.maxResponseBytes (${localStat.size} > ${config.maxResponseBytes}): ${sourcePath}`
     );
   }
 

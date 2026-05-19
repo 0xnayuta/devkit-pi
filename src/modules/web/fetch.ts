@@ -10,7 +10,7 @@ import {
   truncateContent,
 } from "./extract.ts";
 import { getHandler, runHandler } from "./handlers.ts";
-import { pooledFetch } from "./http-pool.ts";
+import { fetchWithPinnedDns } from "./network.ts";
 import { recordFetchActivity, webDebugLog } from "./observability.ts";
 import {
   getWebSecurityLimits,
@@ -511,10 +511,12 @@ async function fetchWithRedirects(
   let currentUrl = initialUrl;
 
   for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
-    const response = await pooledFetch(currentUrl.href, {
+    const response = await fetchWithPinnedDns(currentUrl.href, {
       method: "GET",
       redirect: "manual",
       signal: withTimeoutSignal(timeoutMs, signal),
+      timeoutMs,
+      allowPrivateNetwork,
       headers: {
         accept: "text/html,text/plain;q=0.9,*/*;q=0.1",
         "user-agent": "devkit-pi-web-tools/0.1",
@@ -523,6 +525,7 @@ async function fetchWithRedirects(
 
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       const location = response.headers.get("location");
+      await response.body?.cancel();
       if (!location) throw new Error(`Redirect without Location header: ${currentUrl.href}`);
       currentUrl = await validatePublicHttpUrl(new URL(location, currentUrl).href, {
         allowPrivateNetwork,
@@ -563,16 +566,21 @@ async function fetchFromJinaReader(
   maxResponseBytes: number,
   signal?: AbortSignal
 ): Promise<{ title?: string; content: string; truncated: boolean } | null> {
-  const response = await pooledFetch(`${JINA_READER_BASE}${url}`, {
+  const response = await fetchWithPinnedDns(`${JINA_READER_BASE}${url}`, {
     method: "GET",
     signal: withTimeoutSignal(timeoutMs, signal),
+    timeoutMs,
+    allowPrivateNetwork: false,
     headers: {
       accept: "text/plain,text/markdown;q=0.9,*/*;q=0.1",
       "x-no-cache": "true",
     },
   });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    await response.body?.cancel();
+    return null;
+  }
 
   const { body, truncated } = await readLimitedBody(response, maxResponseBytes);
   const raw = new TextDecoder("utf-8", { fatal: false }).decode(body);

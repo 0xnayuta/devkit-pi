@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "typebox": "^1.1.38",
+    "undici": "^6.21.2",
     "vscode-jsonrpc": "^8.2.1",
     "vscode-languageserver-protocol": "^3.17.5"
   },
