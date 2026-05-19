@@ -1,5 +1,5 @@
 ---
-status: implemented
+status: archived
 audience: all
 last_verified: 2026-05-12
 language: chinese

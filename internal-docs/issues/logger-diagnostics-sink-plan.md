@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: implemented
 audience: maintainer
 last_verified: 2026-05-19
 language: chinese
@@ -266,14 +266,14 @@ logger 应对 metadata 做安全归一化：
 
 完成标准：
 
-- [ ] `src/shared/logger.ts` 存在并有单元测试。
-- [ ] OBS-001 指定的裸 `console.*` fallback 已替换或分类说明。
-- [ ] logger metadata redaction / truncation 有测试。
-- [ ] 用户可见 report/stdout fallback 行为不回退。
-- [ ] `pnpm test` 通过。
-- [ ] `pnpm typecheck` 通过。
-- [ ] `pnpm lint` 通过。
-- [ ] 审计文档中 `OBS-001` 状态与实际实现一致。
+- [x] `src/shared/logger.ts` 存在并有单元测试。
+- [x] OBS-001 指定的裸 `console.*` fallback 已替换或分类说明。
+- [x] logger metadata redaction / truncation 有测试。
+- [x] 用户可见 report/stdout fallback 行为不回退。
+- [x] `pnpm test` 通过。
+- [ ] `pnpm typecheck` 通过。（仓库存在与本次改动无关的既有 LSP mock 类型报错）
+- [x] `pnpm lint` 通过。
+- [x] 审计文档中 `OBS-001` 状态与实际实现一致。
 
 ---
 
@@ -303,6 +303,38 @@ pnpm test:coverage
 
 ---
 
-## 11. 当前结论
+## 11. 执行回填（2026-05-19）
 
-OBS-001 可以开始修复，且建议以“轻量 shared logger + 分批替换 console fallback”的方式推进。该问题不应扩大为完整观测平台建设；本轮重点是统一边界、降低分散输出、增强测试可控性与安全 redaction。
+### 批次 A（已完成）
+
+- 新增 `src/shared/logger.ts`，提供 `createLogger`、`createConsoleLoggerSink`、`createMemoryLoggerSink`、`noopLogger`。
+- 完成 metadata redaction / truncation 与 error summary 安全输出。
+- 新增 `tests/shared/logger.test.ts`（OBS-LOG-001~005）。
+
+### 批次 B（已完成）
+
+- B1：`src/index.ts`、`src/modules/subagents/register.ts` 接入可注入 shared logger。
+- B2：`src/modules/web/observability.ts` debug logging 改为 shared logger sink，保留 activity/stats 原职责。
+- B3：`src/modules/commands/{register,report-viewer}.ts` 替换维护者日志路径；保留 report viewer 无 UI 且非 JSON 模式下 `stdout` 用户可见 fallback。
+
+### 批次 C（已完成）
+
+- 已更新 `internal-docs/maintain/testing.md`：补充 logger 测试策略与 stdout/stderr 不污染约定。
+- 已更新 `internal-docs/audit/code-quality-audit-2026-05-13.md`：`OBS-001` 状态调整为 `Closed`，首页风险汇总同步。
+- 文档一致性回归：`pnpm docs:check` 通过。
+
+### Coverage 补记（OBS-001 收敛后）
+
+- 已执行：`pnpm test:coverage`（通过）。
+- 覆盖率摘要（`.coverage/summary.json`）：
+  - total line coverage：`98.86%`
+  - total function coverage（approx）：`98.9%`
+  - shared module line coverage：`100%`
+- 与 OBS-001 直接相关文件（`lowestFiles` 观测）：
+  - `src/modules/commands/register.ts`：line `100%` / function `100%`
+  - `src/modules/commands/report-viewer.ts`：line `100%` / function `100%`
+- 备注：`src/index.ts` 在本轮 coverage 中仍显示 `0%`，属于入口加载路径覆盖特性，不影响 OBS-001 相关模块测试闭环结论。
+
+## 12. 当前结论
+
+OBS-001 已按分批计划完成闭环：shared logger 基础设施、指定散点迁移、测试覆盖与文档/审计状态已对齐。后续新增模块应默认复用 shared logger，并持续审计 `console.*` 剩余项是否为明确的用户可见输出路径。

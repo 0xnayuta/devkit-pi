@@ -1,5 +1,5 @@
 ---
-status: deprecated
+status: current
 audience: maintainer
 last_verified: 2026-05-12
 language: chinese
@@ -7,7 +7,7 @@ language: chinese
 
 # 归档
 
-已弃用的计划和历史文档。这些文档不再是最新的，仅供参考保留。
+已归档的计划和历史文档。这些文档不再是最新的，仅供参考保留。
 
 ## 归档文档
 

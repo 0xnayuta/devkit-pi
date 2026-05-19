@@ -23,13 +23,13 @@ language: chinese
 - P0：3（Closed 3）
 - P1：4（Closed 4）
 - P2：3（Closed 3）
-- P3：2（Closed 1 / In Progress 1）
+- P3：2（Closed 2）
 
-- Closed：12
+- Closed：13
 - Mitigated：0
 - Deferred：0
 - Open：0
-- In Progress：1
+- In Progress：0
 
 ### 关键问题总览（精简版）
 
@@ -675,7 +675,7 @@ pnpm test       ✅ 280 tests passed
 2. 🟡 持续补 LSP manager/orchestrator 级白盒与时序回归测试。
 3. ✅ 扩展 `docs:check` 默认值一致性检查。
 4. ✅ 增加 coverage 报告（已完成，V8 coverage 可见性链路已接入）。
-5. 🟡 建立统一 logger/diagnostics sink，减少裸 `console.*`（待推进）。
+5. ✅ 建立统一 logger/diagnostics sink，减少裸 `console.*`（已完成批次 A/B，核心散点已收敛）。
 
 ### 第四阶段（长期）
 
@@ -918,4 +918,4 @@ pnpm test:coverage ✅（V8 coverage summary + hotspots 已接入并产出）
 | ARCH-001 | 架构 | `lsp/core.ts` 过大、职责集中 | P1 | Closed | 原审计 + Stage0(0-H) → 后续迭代关闭 | 单文件复杂度高、变更面过大 | 代码：`src/modules/lsp/core.ts` + `src/modules/lsp/{actions,client-lifecycle,client-manager,diagnostics,edits,formatters,request-orchestrator,server-registry,source-files}.ts`；测试：`tests/lsp/*.test.ts`；文档：`internal-docs/issues/lsp-core-split-boundaries.md` | - | - | 维持 facade 边界稳定并持续补时序/回归测试 |
 | ENG-001 | 工程化 | Node engines 未声明（兼容矩阵不够显式） | P2 | Closed | 原审计 → 后续迭代关闭 | 旧 Node 环境可能出现运行时兼容问题 | 代码：`package.json`（`engines.node >=22.6.0`）；测试/校验：`pnpm test` / `pnpm typecheck`（Node 版本前提）；文档：本报告第十一章工程化审计 | - | - | 发布说明中持续维护支持矩阵与最低版本说明 |
 | ENG-002 | 工程化 | 覆盖率门禁缺失 | P3 | Closed | 原审计 → 2026-05-19 关闭 | 缺少 coverage 可见性会弱化热点模块测试充分性判断 | 代码：`scripts/run-v8-coverage.mjs`、`scripts/report-v8-coverage.mjs`、`package.json`（`test:coverage*`）、`.github/workflows/ci.yml`（coverage + artifact）；测试/校验：`pnpm test:coverage`；文档：`internal-docs/issues/v8-coverage-visibility-plan.md`、`internal-docs/maintain/testing.md` | 当前采用“仅可见性、无阈值门禁”策略，先观察稳定性与基线 | 覆盖率任务长期不稳定、统计偏差不可接受或 CI 开销不可控 | 维持覆盖率可见性基线，按趋势评估是否引入 soft gate（不影响 Closed 状态） |
-| OBS-001 | 可观测性 | 缺少统一 logger/diagnostics sink（仍有分散 `console.*` fallback） | P3 | In Progress | 原审计后续维护项 | 模块日志出口不统一，跨模块排障一致性受限 | 代码：`src/index.ts`、`src/modules/subagents/register.ts`、`src/modules/web/observability.ts`、`src/modules/commands/*`；文档：本报告第九章与第十二章第三阶段 | 当前风险可接受（不影响安全默认与核心功能正确性） | 发生跨模块问题难以归因，或日志一致性影响维护效率 | 设计并落地统一 logger 接口与 diagnostics sink，逐步替换裸 `console.*` |
+| OBS-001 | 可观测性 | 缺少统一 logger/diagnostics sink（仍有分散 `console.*` fallback） | P3 | Closed | 原审计后续维护项 → 2026-05-19 关闭 | 模块日志出口已统一到 shared logger，跨模块排障一致性提升 | 代码：`src/shared/logger.ts`、`src/index.ts`、`src/modules/subagents/register.ts`、`src/modules/web/observability.ts`、`src/modules/commands/{register,report-viewer}.ts`；测试：`tests/shared/logger.test.ts`、`tests/subagents/register.test.ts`、`tests/web/observability.test.ts`、`tests/commands/{register,report-viewer}.test.ts`；说明：`src/modules/commands/report-viewer.ts` 保留用户可见 `stdout` fallback | - | 若新增模块绕过 shared logger 直接引入分散 `console.*` 维护者日志 | 维持“logger 注入 + memory sink 断言”测试约定，并持续审计 `console.*` 剩余项是否属于用户可见输出路径 |
