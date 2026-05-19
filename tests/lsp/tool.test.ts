@@ -44,7 +44,7 @@ function createPiMock() {
   };
 }
 
-function createFakeLspClient() {
+function createFakeLspClient(definitionResult?: any) {
   const calls = {
     shutdownRequests: 0,
     exitNotifications: 0,
@@ -55,7 +55,13 @@ function createFakeLspClient() {
   const client = {
     connection: {
       sendRequest(method: string) {
-        if (method === "shutdown") calls.shutdownRequests += 1;
+        if (method === "shutdown") {
+          calls.shutdownRequests += 1;
+          return Promise.resolve(null);
+        }
+        if (method === "textDocument/definition") {
+          return Promise.resolve(definitionResult ?? []);
+        }
         return Promise.resolve(null);
       },
       sendNotification(method: string) {
@@ -65,10 +71,19 @@ function createFakeLspClient() {
       end() {
         calls.connectionEnds += 1;
       },
+      onNotification() {},
+      onError() {},
+      onClose() {},
+      onRequest() {},
+      listen() {},
     },
     process: {
       kill() {
         calls.processKills += 1;
+        return true;
+      },
+      on() {
+        return undefined;
       },
     },
     diagnostics: new Map(),
@@ -350,6 +365,274 @@ describe("lsp module", () => {
       assert.equal(spawnCalls, 2);
     } finally {
       lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, ...originalServers);
+      await manager.shutdown();
+    }
+  });
+
+  it("LSP-RACE-001 restart + getClientsForFile race does not write stale generation client", async () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-race-001-"));
+    const file = path.join(workspace, "main.ts");
+    fs.writeFileSync(file, "export const x = 1;\n", "utf-8");
+    fs.writeFileSync(path.join(workspace, "package.json"), "{}\n", "utf-8");
+
+    const manager = new lspCore.LSPManager(workspace);
+    const originalServers = [...lspCore.LSP_SERVERS];
+
+    let resolveInit: (client: any) => void = () => {
+      throw new Error("init resolver was not captured");
+    };
+    let initCalls = 0;
+    const first = createFakeLspClient();
+    const second = createFakeLspClient();
+
+    try {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, {
+        id: "typescript",
+        extensions: [".ts"],
+        findRoot: () => workspace,
+        spawn: async () => undefined,
+      });
+
+      (manager as any).initClient = async () => {
+        initCalls += 1;
+        if (initCalls === 1) {
+          return await new Promise<any>((resolve) => {
+            resolveInit = resolve;
+          });
+        }
+        return second.client;
+      };
+
+      const pending = manager.getClientsForFile(file);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      await manager.restartServers(["typescript"]);
+      resolveInit(first.client);
+      const staleResult = await pending;
+      const freshResult = await manager.getClientsForFile(file);
+
+      assert.deepEqual(staleResult, []);
+      assert.equal(freshResult.length, 1);
+      assert.equal(freshResult[0], second.client);
+      assert.equal(initCalls, 2);
+      assert.equal((manager as any).clients.size, 1);
+
+      assert.equal(first.calls.shutdownRequests, 1);
+      assert.equal(first.calls.exitNotifications, 1);
+      assert.equal(first.calls.connectionEnds, 1);
+      assert.equal(first.calls.processKills, 1);
+    } finally {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, ...originalServers);
+      await manager.shutdown();
+    }
+  });
+
+  it("LSP-RACE-003 restarting one server id does not affect other server clients", async () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-race-003-"));
+    const file = path.join(workspace, "main.ts");
+    fs.writeFileSync(file, "export const x = 1;\n", "utf-8");
+    fs.writeFileSync(path.join(workspace, "package.json"), "{}\n", "utf-8");
+
+    const manager = new lspCore.LSPManager(workspace);
+    const originalServers = [...lspCore.LSP_SERVERS];
+
+    const stableClient = createFakeLspClient();
+    const restartedOldClient = createFakeLspClient();
+    const restartedNewClient = createFakeLspClient();
+    let alphaInitCalls = 0;
+
+    try {
+      lspCore.LSP_SERVERS.splice(
+        0,
+        lspCore.LSP_SERVERS.length,
+        {
+          id: "alpha",
+          extensions: [".ts"],
+          findRoot: () => workspace,
+          spawn: async () => undefined,
+        },
+        {
+          id: "beta",
+          extensions: [".ts"],
+          findRoot: () => workspace,
+          spawn: async () => undefined,
+        }
+      );
+
+      (manager as any).initClient = async (config: any) => {
+        if (config.id === "alpha") {
+          alphaInitCalls += 1;
+          return alphaInitCalls === 1 ? restartedOldClient.client : restartedNewClient.client;
+        }
+        return stableClient.client;
+      };
+
+      const firstClients = await manager.getClientsForFile(file);
+      assert.equal(firstClients.length, 2);
+      assert.ok(firstClients.includes(stableClient.client));
+      assert.ok(firstClients.includes(restartedOldClient.client));
+
+      const restarted = await manager.restartServers(["alpha"]);
+      assert.equal(restarted, 1);
+
+      const secondClients = await manager.getClientsForFile(file);
+      assert.equal(secondClients.length, 2);
+      assert.ok(secondClients.includes(stableClient.client));
+      assert.ok(secondClients.includes(restartedNewClient.client));
+      assert.equal(alphaInitCalls, 2);
+
+      assert.equal(restartedOldClient.calls.shutdownRequests, 1);
+      assert.equal(restartedOldClient.calls.exitNotifications, 1);
+      assert.equal(stableClient.calls.shutdownRequests, 0);
+      assert.equal(stableClient.calls.exitNotifications, 0);
+    } finally {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, ...originalServers);
+      await manager.shutdown();
+    }
+  });
+
+  it("LSP-REC-001 partial server init failure keeps remaining server actions available", async () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-rec-001-"));
+    const file = path.join(workspace, "main.ts");
+    fs.writeFileSync(file, "export const x = 1;\n", "utf-8");
+    fs.writeFileSync(path.join(workspace, "package.json"), "{}\n", "utf-8");
+
+    const manager = new lspCore.LSPManager(workspace);
+    const originalServers = [...lspCore.LSP_SERVERS];
+
+    const definitionLocation = {
+      uri: "file:///tmp/def.ts",
+      range: {
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 5 },
+      },
+    };
+    const goodClient = createFakeLspClient([definitionLocation]);
+
+    try {
+      lspCore.LSP_SERVERS.splice(
+        0,
+        lspCore.LSP_SERVERS.length,
+        {
+          id: "bad-server",
+          extensions: [".ts"],
+          findRoot: () => workspace,
+          spawn: async () => undefined,
+        },
+        {
+          id: "good-server",
+          extensions: [".ts"],
+          findRoot: () => workspace,
+          spawn: async () => undefined,
+        }
+      );
+
+      (manager as any).initClient = async (config: any, root: string) => {
+        if (config.id === "bad-server") {
+          (manager as any).broken.add(`bad-server:${root}`);
+          return undefined;
+        }
+        return goodClient.client;
+      };
+
+      const locations = await manager.getDefinition(file, 1, 1);
+
+      assert.equal(locations.length, 1);
+      assert.deepEqual(locations[0], definitionLocation);
+      assert.equal((manager as any).broken.has(`bad-server:${workspace}`), true);
+    } finally {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, ...originalServers);
+      await manager.shutdown();
+    }
+  });
+
+  it("LSP-REC-003 restartServers subset clears only matched broken/spawning state", async () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-rec-003-tool-"));
+    const file = path.join(workspace, "main.ts");
+    fs.writeFileSync(file, "export const x = 1;\n", "utf-8");
+    fs.writeFileSync(path.join(workspace, "package.json"), "{}\n", "utf-8");
+
+    const manager = new lspCore.LSPManager(workspace);
+    const originalServers = [...lspCore.LSP_SERVERS];
+
+    const stableClient = createFakeLspClient();
+    const restartedOldClient = createFakeLspClient();
+    const restartedNewClient = createFakeLspClient();
+
+    try {
+      lspCore.LSP_SERVERS.splice(
+        0,
+        lspCore.LSP_SERVERS.length,
+        {
+          id: "alpha",
+          extensions: [".ts"],
+          findRoot: () => workspace,
+          spawn: async () => undefined,
+        },
+        {
+          id: "beta",
+          extensions: [".ts"],
+          findRoot: () => workspace,
+          spawn: async () => undefined,
+        }
+      );
+
+      let alphaInitCalls = 0;
+      (manager as any).initClient = async (config: any) => {
+        if (config.id === "alpha") {
+          alphaInitCalls += 1;
+          return alphaInitCalls === 1 ? restartedOldClient.client : restartedNewClient.client;
+        }
+        return stableClient.client;
+      };
+
+      await manager.getClientsForFile(file);
+      (manager as any).broken.add(`beta:${workspace}`);
+      (manager as any).spawning.set(`beta:${workspace}`, Promise.resolve(undefined));
+
+      const restarted = await manager.restartServers(["alpha"]);
+      assert.equal(restarted, 1);
+
+      const alphaKey = `alpha:${workspace}`;
+      const betaKey = `beta:${workspace}`;
+
+      assert.equal((manager as any).broken.has(alphaKey), false);
+      assert.equal((manager as any).spawning.has(alphaKey), false);
+
+      assert.equal((manager as any).broken.has(betaKey), true);
+      assert.equal((manager as any).spawning.has(betaKey), true);
+
+      assert.equal(restartedOldClient.calls.shutdownRequests, 1);
+      assert.equal(restartedOldClient.calls.exitNotifications, 1);
+    } finally {
+      lspCore.LSP_SERVERS.splice(0, lspCore.LSP_SERVERS.length, ...originalServers);
+      await manager.shutdown();
+    }
+  });
+
+  it("restartServers no-op variants keep state unchanged", async () => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-lsp-restart-noop-"));
+    const manager = new lspCore.LSPManager(workspace);
+
+    const before = {
+      clients: (manager as any).clients.size,
+      spawning: (manager as any).spawning.size,
+      broken: (manager as any).broken.size,
+    };
+
+    try {
+      const restartedUndefined = await manager.restartServers(undefined as any);
+      const restartedEmpty = await manager.restartServers([]);
+      const restartedMissing = await manager.restartServers(["missing-server"]);
+
+      assert.equal(restartedUndefined, 0);
+      assert.equal(restartedEmpty, 0);
+      assert.equal(restartedMissing, 0);
+
+      assert.equal((manager as any).clients.size, before.clients);
+      assert.equal((manager as any).spawning.size, before.spawning);
+      assert.equal((manager as any).broken.size, before.broken);
+    } finally {
       await manager.shutdown();
     }
   });

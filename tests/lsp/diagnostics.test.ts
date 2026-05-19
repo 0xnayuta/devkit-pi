@@ -80,4 +80,35 @@ describe("lsp diagnostics cycle", () => {
     assert.deepEqual(result.diagnostics, pulled);
     assert.deepEqual(client.diagnostics.get("/tmp/b.ts"), pulled);
   });
+
+  it("LSP-TIME-002 returns stable empty result when push and pull both miss", async () => {
+    const client = fakeClient();
+    const absPath = "/tmp/c.ts";
+    client.diagnostics.set(absPath, [
+      {
+        range: {
+          start: { line: 0, character: 0 },
+          end: { line: 0, character: 1 },
+        },
+        message: "stale",
+      },
+    ] as Diagnostic[]);
+
+    const result = await runDiagnosticsCycle({
+      clients: [client],
+      absPath,
+      uri: "file:///tmp/c.ts",
+      langId: "typescript",
+      content: "c",
+      timeoutMs: 50,
+      isNew: false,
+      waitForDiagnostics: async () => false,
+      openOrUpdate: async () => {},
+      pullDiagnostics: async () => ({ diagnostics: [], responded: false }),
+    });
+
+    assert.equal(result.responded, false);
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(client.diagnostics.has(absPath), false);
+  });
 });
