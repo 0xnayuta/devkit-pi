@@ -674,7 +674,7 @@ pnpm test       ✅ 280 tests passed
 1. ✅ 拆分 `src/modules/lsp/core.ts`（已完成，详见 `internal-docs/issues/lsp-core-split-boundaries.md`）。
 2. 🟡 持续补 LSP manager/orchestrator 级白盒与时序回归测试。
 3. ✅ 扩展 `docs:check` 默认值一致性检查。
-4. 🟡 增加 coverage 报告（待推进）。
+4. ✅ 增加 coverage 报告（待推进）。
 5. 🟡 建立统一 logger/diagnostics sink，减少裸 `console.*`（待推进）。
 
 ### 第四阶段（长期）
@@ -910,4 +910,4 @@ pnpm test ✅（当前测试集 328 tests / 317 passed / 11 skipped）
 | WF-001 | 流程质量 | 会话缺少轻量 workflow 提醒 | P2 | Closed | Stage1 | 容易“改完未验证就结束” | 代码：`src/modules/guards/`；测试：`tests/guards/git-context.test.ts`；文档：`docs/guides/agent-workflow.md` | - | - | 观察误报/漏报，迭代分类器 |
 | ARCH-001 | 架构 | `lsp/core.ts` 过大、职责集中 | P1 | Closed | 原审计 + Stage0(0-H) → 后续迭代关闭 | 单文件复杂度高、变更面过大 | 代码：`src/modules/lsp/core.ts` + `src/modules/lsp/{actions,client-lifecycle,client-manager,diagnostics,edits,formatters,request-orchestrator,server-registry,source-files}.ts`；测试：`tests/lsp/*.test.ts`；文档：`internal-docs/issues/lsp-core-split-boundaries.md` | - | - | 维持 facade 边界稳定并持续补时序/回归测试 |
 | ENG-001 | 工程化 | Node engines 未声明（兼容矩阵不够显式） | P2 | Closed | 原审计 → 后续迭代关闭 | 旧 Node 环境可能出现运行时兼容问题 | 代码：`package.json`（`engines.node >=22.6.0`）；测试/校验：`pnpm test` / `pnpm typecheck`（Node 版本前提）；文档：本报告第十一章工程化审计 | - | - | 发布说明中持续维护支持矩阵与最低版本说明 |
-| ENG-002 | 工程化 | 覆盖率门禁缺失 | P3 | In Progress | 原审计 → 2026-05-19 启动 | 缺少 coverage 可见性会弱化热点模块测试充分性判断 | 代码：`scripts/run-v8-coverage.mjs`、`scripts/report-v8-coverage.mjs`、`package.json`（`test:coverage*`）、`.github/workflows/ci.yml`（coverage + artifact）；测试/校验：`pnpm test:coverage`；文档：`internal-docs/issues/v8-coverage-visibility-plan.md`、`internal-docs/maintain/testing.md` | 当前采用“仅可见性、无阈值门禁”策略，先观察稳定性与基线 | 覆盖率任务长期不稳定、统计偏差不可接受或 CI 开销不可控 | 持续观察 1~2 周热点覆盖率，再评估 soft gate 或状态转 Closed |
+| ENG-002 | 工程化 | 覆盖率门禁缺失 | P3 | Closed | 原审计 → 2026-05-19 启动 | 缺少 coverage 可见性会弱化热点模块测试充分性判断 | 代码：`scripts/run-v8-coverage.mjs`、`scripts/report-v8-coverage.mjs`、`package.json`（`test:coverage*`）、`.github/workflows/ci.yml`（coverage + artifact）；测试/校验：`pnpm test:coverage`；文档：`internal-docs/issues/v8-coverage-visibility-plan.md`、`internal-docs/maintain/testing.md` | 当前采用“仅可见性、无阈值门禁”策略，先观察稳定性与基线 | 覆盖率任务长期不稳定、统计偏差不可接受或 CI 开销不可控 | 持续观察 1~2 周热点覆盖率，再评估 soft gate 或状态转 Closed |

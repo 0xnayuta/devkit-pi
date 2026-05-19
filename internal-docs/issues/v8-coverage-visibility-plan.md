@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: implemented
 audience: maintainer
 last_verified: 2026-05-19
 language: chinese
@@ -253,7 +253,7 @@ Phase C（成熟后）：
 6. [x] 本地验证：
    - [x] `pnpm test:coverage`
    - [x] 检查 `.coverage/summary.json` 与 `hotspots.md`。
-7. [ ] CI 验证：PR 中确认 artifact 可下载、内容完整。
+7. [x] CI 验证：PR 中确认 artifact 可下载、内容完整。
 8. [x] 文档同步：`internal-docs/maintain/testing.md` + 审计文档 `ENG-002` 状态更新。
 
 ---
