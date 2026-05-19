@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-19
 language: english
 ---
 
@@ -227,7 +227,9 @@ Default `web.allowPrivateNetwork=false`. `fetch_content` will reject via `src/mo
 
 Security policy rejection is currently classified as `CONTENT_FETCH_FAILED`, not a new independent blocked error code. If local development server access is needed, set `web.allowPrivateNetwork=true` in configuration.
 
-DNS rebinding / TOCTOU limitation: URL validation currently performs DNS checks before `fetch` and revalidates redirect targets, but it does not pin the checked IP address to the actual connection. Attacker-controlled DNS can still create a time-of-check/time-of-use gap. High-risk environments should disable remote fetching or keep private-network access disabled until connection-stage IP pinning is designed and implemented.
+DNS rebinding / TOCTOU hardening: URL validation performs DNS checks before each request hop, and `fetch_content` now also uses connection-stage DNS pinning for URL requests. The validated address set is bound into the request dispatcher lookup path used for the actual socket connection. Redirects remain `manual` and each hop is revalidated and repinned.
+
+Boundary note: this hardening reduces TOCTOU exposure but is not a formal guarantee against every upstream DNS poisoning scenario, malicious CA chain, or transparent proxy behavior. The built-in tool reads or cancels response bodies on all handled paths so per-request pinned dispatchers can be released.
 
 ### Content extraction behavior
 

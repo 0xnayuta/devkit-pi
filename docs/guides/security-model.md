@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-12
+last_verified: 2026-05-19
 language: english
 ---
 
@@ -42,11 +42,18 @@ Built-in `web_search`, `fetch_content`, `get_search_content` remain readonly. To
 - Max response body size and max output character count
 - Does not write project files; responseId storage follows session lifecycle restore/clear, subject to configuration limits
 
-### DNS rebinding / TOCTOU limitation
+### DNS rebinding / TOCTOU boundary
 
-URL safety checks currently validate protocol, hostname/IP, DNS resolution results, and redirect targets before the fetch/download step. This blocks common localhost/private-network targets and revalidates every redirect hop.
+URL safety checks validate protocol, hostname/IP, DNS resolution results, and redirect targets before each fetch/download hop. In addition, web/convert URL requests now use connection-stage DNS pinning: the resolved and validated address set is bound into the request dispatcher lookup path for the actual connection.
 
-However, the current implementation does **not** provide strong DNS rebinding protection. For attacker-controlled domains, there can still be a time-of-check/time-of-use (TOCTOU) gap between DNS validation and the actual network connection performed by `fetch`. High-risk environments should disable remote URL fetching/conversion, keep `web.allowPrivateNetwork=false` and `convertContent.allowPrivateNetwork=false`, or wait for a future connection-stage IP pinning design.
+This reduces the DNS rebinding / TOCTOU gap compared to validation-only flows. Redirects are still handled in `manual` mode and every hop is revalidated and repinned.
+
+Boundary notes:
+
+- This is a hardening measure, not a formal proof against all network-layer attacks.
+- It does not claim to defend against every upstream DNS poisoning scenario, malicious CA chain, or transparent proxy behavior.
+- `allowPrivateNetwork=true` relaxes private-network blocking, but requests still use the same pinned-connection flow.
+- Internal callers of the pinned fetch helper must fully read or explicitly cancel response bodies so per-request dispatchers can be closed; built-in web and convert tools do this internally.
 
 Current provider, Jina fallback, storage, and URL security boundaries are defined in [Web tools reference](../reference/web-tools.md), [Web providers reference](../reference/web-providers.md), and [Configuration reference](../reference/configuration.md). Historical design background is kept in `internal-docs/adr/0004-bundled-readonly-web-tools.md`.
 

@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-19
 language: chinese
 ---
 
@@ -227,7 +227,9 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 
 安全策略拒绝当前归入 `CONTENT_FETCH_FAILED`，不会新增独立 blocked 错误码。若确需抓取本地开发服务，可在配置中设置 `web.allowPrivateNetwork=true`。
 
-DNS rebinding / TOCTOU 限制：URL validation 当前在 `fetch` 前执行 DNS 检查，并重新校验 redirect 目标，但不会把已检查 IP 固定到实际连接。攻击者控制的 DNS 仍可能造成 time-of-check/time-of-use 窗口。高风险环境应禁用远程抓取，或保持 private-network access 关闭，直到完成 connection-stage IP pinning 设计与实现。
+DNS rebinding / TOCTOU 加固：URL validation 会在每个请求 hop 前执行 DNS 检查，`fetch_content` 现已在 URL 请求上接入 connection-stage DNS pinning。已校验地址集合会绑定到请求 dispatcher 的 lookup 路径，并用于实际 socket 连接。redirect 仍采用 `manual` 模式处理，且每一跳都会重新校验并重新 pin。
+
+边界说明：该加固可降低 TOCTOU 暴露面，但不构成对所有上游 DNS 污染场景、恶意 CA 证书链或透明代理行为的形式化防护保证。内置工具会在所有已处理路径上读取或取消 response body，以便释放每次请求创建的 pinned dispatcher。
 
 ### 内容提取行为
 

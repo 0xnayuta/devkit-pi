@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-12
+last_verified: 2026-05-19
 language: chinese
 ---
 
@@ -42,11 +42,18 @@ language: chinese
 - 设置最大响应体大小与最大输出字符数
 - 不写项目文件；responseId storage 随 session lifecycle restore/clear，并受配置限制
 
-### DNS rebinding / TOCTOU 限制
+### DNS rebinding / TOCTOU 边界
 
-当前 URL 安全检查会在 fetch/download 之前校验 protocol、hostname/IP、DNS 解析结果和 redirect 目标。这可以阻止常见 localhost/private-network 目标，并且每个 redirect hop 都会重新校验。
+URL 安全检查会在每个 fetch/download hop 前校验 protocol、hostname/IP、DNS 解析结果和 redirect 目标。除此之外，web/convert 的 URL 请求现已接入 connection-stage DNS pinning：会把已解析且已校验的地址集合绑定到请求 dispatcher 的实际连接 lookup 路径。
 
-但当前实现不提供强 DNS rebinding 防护。对于攻击者控制的域名，DNS 校验与底层 `fetch` 实际建立连接之间仍可能存在 time-of-check/time-of-use（TOCTOU）窗口。高风险环境应禁用远程 URL 抓取/转换，保持 `web.allowPrivateNetwork=false` 和 `convertContent.allowPrivateNetwork=false`，或等待后续 connection-stage IP pinning 设计。
+与仅做前置校验相比，这显著降低了 DNS rebinding / TOCTOU 窗口。redirect 仍使用 `manual` 模式处理，并且每一跳都会重新校验并重新 pin。
+
+边界说明：
+
+- 这是安全加固措施，不是覆盖所有网络层攻击的形式化证明。
+- 不承诺防御所有上游 DNS 污染场景、恶意 CA 证书链或透明代理行为。
+- `allowPrivateNetwork=true` 会放宽私网拦截，但请求仍走同一套 pinned-connection 流程。
+- pinned fetch helper 的内部调用方必须完整读取或显式取消 response body，以便关闭每次请求创建的 dispatcher；内置 web 与 convert 工具已在内部完成该处理。
 
 当前 provider、Jina fallback、storage 和 URL 安全边界以 [Web tools reference](../reference/web-tools.md)、[Web providers reference](../reference/web-providers.md) 与 [Configuration reference](../reference/configuration.md) 为准。历史设计背景保存在 `internal-docs/adr/0004-bundled-readonly-web-tools.md`。
 

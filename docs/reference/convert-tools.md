@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-12
+last_verified: 2026-05-19
 language: english
 ---
 
@@ -38,7 +38,7 @@ Execution validates that exactly one of `path` or `url` is provided. Providing b
 - `url` must use `http:` or `https:`. Other protocols return `UNSUPPORTED_PROTOCOL`.
 - Remote URLs are validated with private-network protection before download.
 - Every redirect hop is revalidated with the same private-network policy before being followed.
-- Current DNS validation happens before `fetch`; this blocks common private-network targets but does not claim to eliminate all DNS rebinding / DNS TOCTOU risks. Attacker-controlled DNS can still create a time-of-check/time-of-use gap because the checked IP is not pinned to the actual connection. High-risk environments should disable remote URL conversion or keep `convertContent.allowPrivateNetwork=false` until connection-stage IP pinning is designed and implemented.
+- URL download now uses connection-stage DNS pinning. The resolved and validated address set is bound into the request dispatcher lookup path for the actual connection, and every redirect hop is revalidated/repinned before follow. Download responses are read or cancelled on handled paths so per-request pinned dispatchers can be released.
 - Remote responses larger than `convertContent.maxResponseBytes` return `FILE_TOO_LARGE` before provider execution.
 - Temporary downloaded files are removed after conversion succeeds or fails.
 - Local and downloaded file conversion invokes the configured MarkItDown CLI provider.
@@ -47,7 +47,7 @@ Execution validates that exactly one of `path` or `url` is provided. Providing b
 - External command stdout/stderr also have hard byte limits in `src/shared/external-command.ts`; exceeding them stops the command and maps to `CONVERT_FAILED` with an output-size message.
 - Tool calls include compact/expanded TUI renderers for call/result display.
 - Successful and failed conversions are recorded in the shared toolkit activity log with `type="convert"`.
-- `allowPrivateNetwork=false` blocks localhost, loopback, private, link-local, metadata-style, and internal hostnames/IPs by default. Set `convertContent.allowPrivateNetwork=true` only for trusted environments.
+- `allowPrivateNetwork=false` blocks localhost, loopback, private, link-local, metadata-style, and internal hostnames/IPs by default. Set `convertContent.allowPrivateNetwork=true` only for trusted environments; this relaxes blocking but still uses the same pinned-connection request flow.
 - `file_path` is not a supported canonical field; use `path`.
 
 ## MarkItDown provider status

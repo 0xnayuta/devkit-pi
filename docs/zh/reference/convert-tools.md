@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-12
+last_verified: 2026-05-19
 language: chinese
 ---
 
@@ -38,7 +38,7 @@ Canonical source：`src/modules/convert/` 和 `src/config/load-config.ts`。
 - `url` 必须使用 `http:` 或 `https:`。其他协议会返回 `UNSUPPORTED_PROTOCOL`。
 - 远程 URL 会在下载前经过 private-network protection 校验。
 - 每个 redirect hop 都会在 follow 前用相同的 private-network policy 重新校验。
-- 当前 DNS 校验发生在 `fetch` 之前；这会阻止常见 private-network 目标，但不声称可以消除所有 DNS rebinding / DNS TOCTOU 风险。由于已检查 IP 不会固定到实际连接，攻击者控制的 DNS 仍可能造成 time-of-check/time-of-use 窗口。高风险环境应禁用远程 URL 转换，或保持 `convertContent.allowPrivateNetwork=false`，直到完成 connection-stage IP pinning 设计与实现。
+- URL 下载现已接入 connection-stage DNS pinning。已解析且已校验的地址集合会绑定到请求 dispatcher 的 lookup 路径，并用于实际连接；每个 redirect hop 在 follow 前都会重新校验并重新 pin。下载响应会在已处理路径上被读取或取消，以便释放每次请求创建的 pinned dispatcher。
 - 大于 `convertContent.maxResponseBytes` 的远程响应会在 provider 执行前返回 `FILE_TOO_LARGE`。
 - 临时下载文件会在转换成功或失败后被删除。
 - 本地文件和下载文件的转换都会调用已配置的 MarkItDown CLI provider。
@@ -47,7 +47,7 @@ Canonical source：`src/modules/convert/` 和 `src/config/load-config.ts`。
 - 外部命令 stdout/stderr 还会受到 `src/shared/external-command.ts` 中的硬字节上限保护；超过上限会停止命令，并以带输出大小说明的 `CONVERT_FAILED` 返回。
 - Tool calls 包含用于调用/结果展示的 compact/expanded TUI renderers。
 - 成功和失败的转换都会以 `type="convert"` 记录到共享 toolkit activity log。
-- `allowPrivateNetwork=false` 默认阻止 localhost、loopback、private、link-local、metadata-style 和 internal hostnames/IPs。仅在可信环境中设置 `convertContent.allowPrivateNetwork=true`。
+- `allowPrivateNetwork=false` 默认阻止 localhost、loopback、private、link-local、metadata-style 和 internal hostnames/IPs。仅在可信环境中设置 `convertContent.allowPrivateNetwork=true`；该配置会放宽拦截策略，但请求仍走同一套 pinned-connection 流程。
 - `file_path` 不是受支持的 canonical field；请使用 `path`。
 
 ## MarkItDown provider 状态
