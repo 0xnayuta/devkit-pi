@@ -1,9 +1,12 @@
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, it } from "node:test";
+import type { MessageConnection } from "vscode-jsonrpc/node.js";
 import { mergeConfig } from "../../src/config/load-config.ts";
+import type { LSPClient } from "../../src/modules/lsp/client-lifecycle.ts";
 import * as lspCore from "../../src/modules/lsp/core.ts";
 import {
   DEFAULT_LSP_MAX_SOURCE_FILE_BYTES,
@@ -44,7 +47,15 @@ function createPiMock() {
   };
 }
 
-function createFakeLspClient(definitionResult?: any) {
+function createFakeLspClient(definitionResult?: unknown): {
+  client: LSPClient;
+  calls: {
+    shutdownRequests: number;
+    exitNotifications: number;
+    connectionEnds: number;
+    processKills: number;
+  };
+} {
   const calls = {
     shutdownRequests: 0,
     exitNotifications: 0,
@@ -52,40 +63,44 @@ function createFakeLspClient(definitionResult?: any) {
     processKills: 0,
   };
 
-  const client = {
-    connection: {
-      sendRequest(method: string) {
-        if (method === "shutdown") {
-          calls.shutdownRequests += 1;
-          return Promise.resolve(null);
-        }
-        if (method === "textDocument/definition") {
-          return Promise.resolve(definitionResult ?? []);
-        }
+  const connection = {
+    sendRequest(method: string) {
+      if (method === "shutdown") {
+        calls.shutdownRequests += 1;
         return Promise.resolve(null);
-      },
-      sendNotification(method: string) {
-        if (method === "exit") calls.exitNotifications += 1;
-        return Promise.resolve();
-      },
-      end() {
-        calls.connectionEnds += 1;
-      },
-      onNotification() {},
-      onError() {},
-      onClose() {},
-      onRequest() {},
-      listen() {},
+      }
+      if (method === "textDocument/definition") {
+        return Promise.resolve(definitionResult ?? []);
+      }
+      return Promise.resolve(null);
     },
-    process: {
-      kill() {
-        calls.processKills += 1;
-        return true;
-      },
-      on() {
-        return undefined;
-      },
+    sendNotification(method: string) {
+      if (method === "exit") calls.exitNotifications += 1;
+      return Promise.resolve();
     },
+    end() {
+      calls.connectionEnds += 1;
+    },
+    onNotification() {},
+    onError() {},
+    onClose() {},
+    onRequest() {},
+    listen() {},
+  } as unknown as MessageConnection;
+
+  const process = {
+    kill() {
+      calls.processKills += 1;
+      return true;
+    },
+    on() {
+      return undefined;
+    },
+  } as unknown as ChildProcessWithoutNullStreams;
+
+  const client: LSPClient = {
+    connection,
+    process,
     diagnostics: new Map(),
     openFiles: new Map(),
     listeners: new Map(),
