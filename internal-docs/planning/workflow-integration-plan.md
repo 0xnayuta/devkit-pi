@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: implemented
 audience: maintainer
-last_verified: 2026-05-14
+last_verified: 2026-05-20
 language: chinese
 source_context:
   - code-quality-audit-2026-05-13.md
