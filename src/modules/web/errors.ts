@@ -3,6 +3,8 @@
  * Phase 5: Structured errors with recovery suggestions
  */
 
+import { createDevkitErrorPayload, type DevkitErrorPayload } from "../../shared/errors.ts";
+
 // ============================================================================
 // Error Codes
 // ============================================================================
@@ -240,4 +242,16 @@ export function getErrorSummary(errors: WebError[]): {
     byCode,
     retryableCount,
   };
+}
+
+export function toDevkitWebErrorPayload(error: WebError): DevkitErrorPayload {
+  return createDevkitErrorPayload({
+    code: error.code,
+    message: error.message,
+    module: "web",
+    provider: error.provider,
+    retryable: error.retryable,
+    remediation: error.recovery?.description,
+    causeSummary: error.originalError?.message,
+  });
 }

@@ -1,7 +1,7 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-12
+last_verified: 2026-05-20
 language: chinese
 ---
 
@@ -269,6 +269,26 @@ loadConfig()
 需人工确认：
 
 - `src/shared/errors.ts` 名称为 unified error codes，但当前没有纳入 web 错误码。
+
+## 阶段状态里程碑（alignment snapshot）
+
+- Phase 3：进行中（状态清单审计、状态模型测试与命令可见性已落地，后续持续收敛模块细节）。
+- Phase 4：已闭环（六模块执行链路已统一 `*.error_payload` 事件命名，且已完成“错误码 -> payload 字段 -> remediation 来源”最终对照）。
+
+## Phase 3 状态语义快照（state model snapshot）
+
+当前状态语义与恢复边界如下：
+
+- `web.responseId`：`memory + session entry`
+  - memory：进程内 `storage.ts` Map；`session_shutdown` 清理。
+  - session entry：通过 `pi.appendEntry("web-tools-results", data)` 写入 session tree；`session_start` 从 branch 恢复，并受 TTL 过滤。
+- `subagent.details`：`details-driven restore`
+  - 稳定恢复字段：`mode` / `results` / `error`。
+  - 历史记录渲染应对可选字段缺失保持降级可读。
+- `subagent.streaming`：`execution-only`
+  - 仅执行中用于增量展示；最终持久化结果中可缺省。
+
+该快照已与 `/toolkit doctor` 的 `state-model` 分类、`/toolkit modules` 的 `state model snapshot` 区块保持一致。
 
 ## 核心调用链
 

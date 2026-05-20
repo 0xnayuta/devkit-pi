@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
+import { mergeConfig } from "../../src/config/load-config.ts";
 import { addToolkitActivityEntry } from "../../src/shared/activity.ts";
 import { resetConvertToolStats } from "../../src/modules/convert/observability.ts";
 import { ActivityPanel, createActivityPanel } from "../../src/modules/subagents/commands/activity.ts";
@@ -20,11 +21,14 @@ describe("subagent commands - doctor", () => {
 
 		assert.ok(Array.isArray(report.items));
 		assert.ok(report.summary);
-		for (const category of ["config", "agents", "permissions", "web-tools", "lsp"]) {
+		for (const category of ["config", "agents", "subagents", "permissions", "web-tools", "lsp", "guards", "tool-metadata", "state-model"]) {
 			assert.ok(report.items.find((item) => item.category === category), `missing ${category}`);
 		}
 		assert.ok(report.items.some((item) => item.category === "provider"));
 		assert.ok(report.items.some((item) => item.message?.includes("DuckDuckGo")));
+		assert.ok(report.items.some((item) => item.category === "guards"));
+		assert.ok(report.items.some((item) => item.category === "tool-metadata" && item.status === "pass"));
+		assert.ok(report.items.some((item) => item.category === "state-model" && item.status === "info"));
 
 		for (const item of report.items) {
 			assert.ok(["pass", "warn", "fail", "info"].includes(item.status), `Invalid status: ${item.status}`);
@@ -56,6 +60,51 @@ describe("subagent commands - doctor", () => {
 		assert.ok(output.includes("Summary"));
 		assert.ok(output.includes("0"));
 		assert.doesNotMatch(output, /[╔╗╚╝╠╣║═]/);
+	});
+
+	it("reports subagents phase6 strategy visibility in doctor output", async () => {
+		const report = await runDoctorChecks(process.cwd(), mergeConfig({
+			subagents: {
+				projectAgentPolicy: "confirm",
+				nonInteractivePolicy: "deny",
+			},
+		}));
+
+		const strategyItem = report.items.find(
+			(item) => item.category === "subagents" && item.message.includes("requires confirmation")
+		);
+		assert.ok(strategyItem);
+		assert.equal(strategyItem?.status, "warn");
+		assert.match(strategyItem?.details ?? "", /projectAgentPolicy=confirm/);
+		assert.match(strategyItem?.details ?? "", /nonInteractivePolicy=deny/);
+
+		const validationItem = report.items.find(
+			(item) => item.category === "subagents" && item.message.includes("Frontmatter validation")
+		);
+		assert.ok(validationItem);
+	});
+
+	it("reports guards gate effective strategy in doctor output", async () => {
+		const report = await runDoctorChecks(process.cwd(), mergeConfig({
+			guards: {
+				mode: "confirm",
+				nonInteractivePolicy: "deny",
+				blockMode: "hard",
+			},
+		}));
+
+		const guardsItem = report.items.find((item) => item.category === "guards");
+		assert.ok(guardsItem);
+		assert.match(guardsItem?.message ?? "", /mode active/);
+		assert.match(guardsItem?.details ?? "", /nonInteractivePolicy=deny/);
+		assert.match(guardsItem?.details ?? "", /blockMode=hard/);
+
+		const hardBlockHint = report.items.find(
+			(item) => item.category === "guards" && item.message.includes("hard-block")
+		);
+		assert.ok(hardBlockHint);
+		assert.equal(hardBlockHint?.status, "warn");
+		assert.match(hardBlockHint?.details ?? "", /GUARD_HARD_BLOCKED/);
 	});
 
 	it("reports ddgs availability and disabled provider statuses safely", async () => {

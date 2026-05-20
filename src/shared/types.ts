@@ -241,6 +241,9 @@ export type LspReadonlyAction =
   | "workspace-diagnostics"
   | "servers";
 
+export type SubagentsProjectAgentPolicy = "allow" | "confirm";
+export type SubagentsNonInteractivePolicy = "allow" | "deny";
+
 export interface SubagentsConfig {
   enabled?: boolean;
   maxDepth?: number;
@@ -250,6 +253,16 @@ export interface SubagentsConfig {
   allowWrite?: boolean;
   allowLspTools?: boolean;
   allowedLspActions?: LspReadonlyAction[];
+  /**
+   * Project-local agent gate policy.
+   * - allow: execute directly
+   * - confirm: require interactive confirmation when UI is available
+   */
+  projectAgentPolicy?: SubagentsProjectAgentPolicy;
+  /**
+   * Fallback policy when projectAgentPolicy=confirm but no interactive UI is available.
+   */
+  nonInteractivePolicy?: SubagentsNonInteractivePolicy;
   retry?: SubagentRetryConfig;
   /**
    * Inject delegation policy + few-shot examples into the parent agent's
@@ -283,8 +296,16 @@ export interface CommandsConfig {
   enabled?: boolean;
 }
 
+export type GuardsMode = "off" | "notice" | "confirm" | "block";
+
+export type GuardsNonInteractivePolicy = "allow" | "deny";
+export type GuardsBlockMode = "preview" | "soft" | "hard";
+
 export interface GuardsConfig {
   enabled?: boolean;
+  mode?: GuardsMode;
+  nonInteractivePolicy?: GuardsNonInteractivePolicy;
+  blockMode?: GuardsBlockMode;
   gitContextNotice?: boolean;
   firstWriteReminder?: boolean;
   verificationReminder?: boolean;

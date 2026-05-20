@@ -9,8 +9,17 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseFrontmatter } from "./frontmatter.ts";
 
-export type AgentScope = "user" | "project" | "both";
+export const AGENT_SCOPES = ["user", "project", "both"] as const;
+export type AgentScope = (typeof AGENT_SCOPES)[number];
 export type AgentSource = "builtin" | "user" | "project";
+
+export function isAgentScope(value: unknown): value is AgentScope {
+  return typeof value === "string" && AGENT_SCOPES.includes(value as AgentScope);
+}
+
+export function normalizeAgentScope(value: unknown, fallback: AgentScope = "both"): AgentScope {
+  return isAgentScope(value) ? value : fallback;
+}
 
 export interface AgentConfig {
   name: string;
@@ -21,6 +30,23 @@ export interface AgentConfig {
   systemPrompt: string;
   source: AgentSource;
   filePath: string;
+}
+
+export const AGENT_DISCOVERY_DIAGNOSTIC_CODES = {
+  FRONTMATTER_NAME_MISSING: "FRONTMATTER_NAME_MISSING",
+  FRONTMATTER_READONLY_INVALID: "FRONTMATTER_READONLY_INVALID",
+  FRONTMATTER_TOOLS_INVALID: "FRONTMATTER_TOOLS_INVALID",
+  AGENT_FILE_READ_FAILED: "AGENT_FILE_READ_FAILED",
+} as const;
+
+export type AgentDiscoveryDiagnosticCode =
+  (typeof AGENT_DISCOVERY_DIAGNOSTIC_CODES)[keyof typeof AGENT_DISCOVERY_DIAGNOSTIC_CODES];
+
+export interface AgentDiscoveryDiagnostic {
+  code: AgentDiscoveryDiagnosticCode;
+  message: string;
+  filePath: string;
+  source: AgentSource;
 }
 
 // Get the project root directory - use provided cwd as primary source
@@ -87,13 +113,41 @@ function isMarkdownFile(filePath: string): boolean {
   return filePath.endsWith(".md") || filePath.endsWith(".markdown");
 }
 
-function loadAgentFromFile(filePath: string, source: AgentSource): AgentConfig | null {
+function loadAgentFromFile(
+  filePath: string,
+  source: AgentSource
+): { agent: AgentConfig | null; diagnostics: AgentDiscoveryDiagnostic[] } {
   try {
     const content = fs.readFileSync(filePath, "utf-8");
     const { frontmatter, body } = parseFrontmatter(content);
+    const diagnostics: AgentDiscoveryDiagnostic[] = [];
 
-    if (!frontmatter.name) {
-      return null;
+    const name = frontmatter.name?.trim();
+    if (!name) {
+      diagnostics.push({
+        code: AGENT_DISCOVERY_DIAGNOSTIC_CODES.FRONTMATTER_NAME_MISSING,
+        message: "Agent frontmatter requires a non-empty 'name' field.",
+        filePath,
+        source,
+      });
+      return { agent: null, diagnostics };
+    }
+
+    const readonlyRaw = frontmatter.readonly;
+    const readonlyValid =
+      readonlyRaw === undefined ||
+      readonlyRaw === "true" ||
+      readonlyRaw === "false" ||
+      readonlyRaw === "1" ||
+      readonlyRaw === "0";
+    if (!readonlyValid) {
+      diagnostics.push({
+        code: AGENT_DISCOVERY_DIAGNOSTIC_CODES.FRONTMATTER_READONLY_INVALID,
+        message: "Agent frontmatter 'readonly' must be one of: true, false, 1, 0.",
+        filePath,
+        source,
+      });
+      return { agent: null, diagnostics };
     }
 
     // Parse tools from comma-separated string
@@ -103,29 +157,55 @@ function loadAgentFromFile(filePath: string, source: AgentSource): AgentConfig |
         .split(",")
         .map((t) => t.trim())
         .filter((t) => t.length > 0);
+      if (tools.length === 0) {
+        diagnostics.push({
+          code: AGENT_DISCOVERY_DIAGNOSTIC_CODES.FRONTMATTER_TOOLS_INVALID,
+          message: "Agent frontmatter 'tools' must include at least one non-empty tool name.",
+          filePath,
+          source,
+        });
+        return { agent: null, diagnostics };
+      }
     }
 
     return {
-      name: frontmatter.name,
-      description: frontmatter.description ?? "",
-      readonly: frontmatter.readonly === "true" || frontmatter.readonly === "1",
-      tools,
-      model: frontmatter.model,
-      systemPrompt: body || frontmatter.description || "",
-      source,
-      filePath,
+      agent: {
+        name,
+        description: frontmatter.description ?? "",
+        readonly: frontmatter.readonly === "true" || frontmatter.readonly === "1",
+        tools,
+        model: frontmatter.model,
+        systemPrompt: body || frontmatter.description || "",
+        source,
+        filePath,
+      },
+      diagnostics,
     };
-  } catch {
-    return null;
+  } catch (error) {
+    return {
+      agent: null,
+      diagnostics: [
+        {
+          code: AGENT_DISCOVERY_DIAGNOSTIC_CODES.AGENT_FILE_READ_FAILED,
+          message: `Failed to read or parse agent file: ${error instanceof Error ? error.message : String(error)}`,
+          filePath,
+          source,
+        },
+      ],
+    };
   }
 }
 
-function discoverAgentsInDir(dir: string, source: AgentSource): AgentConfig[] {
+function discoverAgentsInDir(
+  dir: string,
+  source: AgentSource
+): { agents: AgentConfig[]; diagnostics: AgentDiscoveryDiagnostic[] } {
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
-    return [];
+    return { agents: [], diagnostics: [] };
   }
 
   const agents: AgentConfig[] = [];
+  const diagnostics: AgentDiscoveryDiagnostic[] = [];
   const files = fs.readdirSync(dir);
 
   for (const file of files) {
@@ -133,37 +213,51 @@ function discoverAgentsInDir(dir: string, source: AgentSource): AgentConfig[] {
     const stat = fs.statSync(filePath);
 
     if (stat.isFile() && isMarkdownFile(file)) {
-      const agent = loadAgentFromFile(filePath, source);
-      if (agent) {
-        agents.push(agent);
+      const loaded = loadAgentFromFile(filePath, source);
+      diagnostics.push(...loaded.diagnostics);
+      if (loaded.agent) {
+        agents.push(loaded.agent);
       }
     }
   }
 
-  return agents;
+  return { agents, diagnostics };
 }
 
 /**
  * Discover all agents
  */
-export function discoverAgents(cwd: string, scope: AgentScope): { agents: AgentConfig[] } {
+export function discoverAgents(
+  cwd: string,
+  scope: AgentScope
+): {
+  agents: AgentConfig[];
+  diagnostics: AgentDiscoveryDiagnostic[];
+} {
   const agents: AgentConfig[] = [];
+  const diagnostics: AgentDiscoveryDiagnostic[] = [];
 
   // Always load builtin agents
   const builtinDir = getBuiltinAgentsDir(cwd);
-  agents.push(...discoverAgentsInDir(builtinDir, "builtin"));
+  const builtin = discoverAgentsInDir(builtinDir, "builtin");
+  agents.push(...builtin.agents);
+  diagnostics.push(...builtin.diagnostics);
 
   // Load user agents if scope allows
   if (scope === "user" || scope === "both") {
     const userDir = getUserAgentsDir();
-    agents.push(...discoverAgentsInDir(userDir, "user"));
+    const user = discoverAgentsInDir(userDir, "user");
+    agents.push(...user.agents);
+    diagnostics.push(...user.diagnostics);
   }
 
   // Load project agents if scope allows
   if (scope === "project" || scope === "both") {
     const projectDir = getProjectAgentsDir(cwd);
     if (projectDir) {
-      agents.push(...discoverAgentsInDir(projectDir, "project"));
+      const project = discoverAgentsInDir(projectDir, "project");
+      agents.push(...project.agents);
+      diagnostics.push(...project.diagnostics);
     }
   }
 
@@ -176,7 +270,7 @@ export function discoverAgents(cwd: string, scope: AgentScope): { agents: AgentC
     }
   }
 
-  return { agents: [...byName.values()] };
+  return { agents: [...byName.values()], diagnostics };
 }
 
 function getSourcePriority(source: AgentSource): number {

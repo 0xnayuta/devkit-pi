@@ -1,7 +1,10 @@
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { getDevkitToolMetadata } from "../../extension/manifest.ts";
 import { clearToolkitActivityLog } from "../../shared/activity.ts";
+import { createLogger, type Logger } from "../../shared/logger.ts";
 import type { ResolvedConvertContentConfig } from "../../shared/types.ts";
+import { ConvertProviderError, toDevkitConvertErrorPayload } from "./errors.ts";
 import { resetConvertToolStats } from "./observability.ts";
 import { MarkItDownProvider } from "./provider.ts";
 import { renderConvertContentCall, renderConvertContentResult } from "./renderers.ts";
@@ -16,31 +19,47 @@ function asToolResult(details: unknown): AgentToolResult<any> {
   };
 }
 
-export function registerConvertTools(pi: ExtensionAPI, config: ResolvedConvertContentConfig): void {
+export function registerConvertTools(
+  pi: ExtensionAPI,
+  config: ResolvedConvertContentConfig,
+  options: { logger?: Logger } = {}
+): void {
+  const logger = options.logger ?? createLogger({ module: "convert.register" });
   if (!config.enabled) return;
 
   const provider = new MarkItDownProvider({ command: config.command });
-  const piAny = pi as any;
-  if (typeof piAny.on === "function") {
-    piAny.on("session_start", () => {
-      resetConvertToolStats();
-      clearToolkitActivityLog();
-    });
-    piAny.on("session_shutdown", () => {
-      resetConvertToolStats();
-      clearToolkitActivityLog();
-    });
-  }
+  pi.on("session_start", () => {
+    resetConvertToolStats();
+    clearToolkitActivityLog();
+  });
+  pi.on("session_shutdown", () => {
+    resetConvertToolStats();
+    clearToolkitActivityLog();
+  });
+
+  const convertMeta = getDevkitToolMetadata("convert_content");
 
   pi.registerTool(
     defineTool({
-      name: "convert_content",
-      label: "Convert Content",
-      description:
-        "Convert local files or safely downloaded remote files to Markdown using the configured optional provider.",
+      name: convertMeta.name,
+      label: convertMeta.label,
+      description: convertMeta.description,
+      promptSnippet: convertMeta.promptSnippet,
+      promptGuidelines: [...convertMeta.promptGuidelines],
       parameters: ConvertContentParams,
-      execute(_id: string, params: ConvertContentInput, signal: AbortSignal | undefined) {
-        return convertContent(params, config, signal, provider).then(asToolResult);
+      async execute(_id: string, params: ConvertContentInput, signal: AbortSignal | undefined) {
+        const result = await convertContent(params, config, signal, provider);
+        if ("error" in result) {
+          logger.warn("convert.error_payload", "convert_content returned structured error", {
+            payload: toDevkitConvertErrorPayload(
+              new ConvertProviderError(result.error.code, result.error.message),
+              {
+                provider: provider.name,
+              }
+            ),
+          });
+        }
+        return asToolResult(result);
       },
       renderCall(args: ConvertContentInput, theme: any) {
         return renderConvertContentCall(args, theme);
@@ -61,6 +80,7 @@ export {
   type ConvertErrorCode,
   ConvertProviderError,
   isConvertProviderError,
+  toDevkitConvertErrorPayload,
 } from "./errors.ts";
 export {
   getConvertToolStats,

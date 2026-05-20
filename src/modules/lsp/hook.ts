@@ -126,31 +126,27 @@ export function registerLspHook(pi: ExtensionAPI, config: RequiredLspHookConfig)
   const hookMode = config.mode;
   const touchedFiles: Map<string, boolean> = new Map();
 
-  const piAny = pi as any;
+  pi.registerMessageRenderer("lsp-diagnostics", (message: any, options: any, theme: any) => {
+    const content = formatDiagnosticsForDisplay(messageContentToText(message.content));
+    if (!content) return new Text("", 0, 0);
 
-  if (typeof piAny.registerMessageRenderer === "function") {
-    piAny.registerMessageRenderer("lsp-diagnostics", (message: any, options: any, theme: any) => {
-      const content = formatDiagnosticsForDisplay(messageContentToText(message.content));
-      if (!content) return new Text("", 0, 0);
+    const expanded = options?.expanded === true;
+    const lines = content.split("\n");
+    const maxLines = expanded ? lines.length : DIAGNOSTICS_PREVIEW_LINES;
+    const display = lines.slice(0, maxLines);
+    const remaining = lines.length - display.length;
 
-      const expanded = options?.expanded === true;
-      const lines = content.split("\n");
-      const maxLines = expanded ? lines.length : DIAGNOSTICS_PREVIEW_LINES;
-      const display = lines.slice(0, maxLines);
-      const remaining = lines.length - display.length;
-
-      const styledLines = display.map((line) => {
-        if (line.startsWith("File: ")) return theme.fg("muted", line);
-        return theme.fg("toolOutput", line);
-      });
-
-      if (!expanded && remaining > 0) {
-        styledLines.push(theme.fg("dim", `... (${remaining} more lines)`));
-      }
-
-      return new Text(styledLines.join("\n"), 0, 0);
+    const styledLines = display.map((line) => {
+      if (line.startsWith("File: ")) return theme.fg("muted", line);
+      return theme.fg("toolOutput", line);
     });
-  }
+
+    if (!expanded && remaining > 0) {
+      styledLines.push(theme.fg("dim", `... (${remaining} more lines)`));
+    }
+
+    return new Text(styledLines.join("\n"), 0, 0);
+  });
 
   function setActivity(next: LspActivity): void {
     activity = next;

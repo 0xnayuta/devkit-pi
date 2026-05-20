@@ -24,7 +24,9 @@
 import * as path from "node:path";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { ERROR_CODES, LspError } from "../../shared/errors.ts";
+import { getDevkitToolMetadata } from "../../extension/manifest.ts";
+import { ERROR_CODES, LspError, toDevkitErrorPayload } from "../../shared/errors.ts";
+import { createLogger, type Logger } from "../../shared/logger.ts";
 import type { LspToolConfig } from "../../shared/types.ts";
 import {
   PI_SUBAGENT_ALLOW_LSP,
@@ -270,393 +272,426 @@ function assertSubagentLspActionAllowed(action: string): void {
   }
 }
 
-export function registerLspTool(pi: ExtensionAPI, config: Required<LspToolConfig>): void {
+export function registerLspTool(
+  pi: ExtensionAPI,
+  config: Required<LspToolConfig>,
+  options: { logger?: Logger } = {}
+): void {
+  const logger = options.logger ?? createLogger({ module: "lsp.tool" });
   if (!config.enabled) return;
+
+  const lspMeta = getDevkitToolMetadata("lsp");
 
   pi.registerTool(
     defineTool({
-      name: "lsp",
-      label: "LSP",
-      description: `Query language server for definitions, references, types, symbols, diagnostics, rename, and code actions.
-
-Actions: definition, references, hover, signature, rename (require file + line/column or query), symbols (file, optional query), diagnostics (file), workspace-diagnostics (files array), codeAction (file + position), restart (restart LSP servers; optional server="clangd"|...|"all"), servers (list server ids).
-Use read/grep/find/ls to locate files before calling lsp.`,
+      name: lspMeta.name,
+      label: lspMeta.label,
+      description: lspMeta.description,
+      promptSnippet: lspMeta.promptSnippet,
+      promptGuidelines: [...lspMeta.promptGuidelines],
       parameters: LspParams,
 
       async execute(_toolCallId, params, signalArg, onUpdateArg, ctxArg) {
-        const { signal, ctx } = normalizeExecuteArgs(onUpdateArg, ctxArg, signalArg);
-        if (signal?.aborted) return cancelledToolResult();
-        const {
-          action,
-          file,
-          files,
-          line,
-          column,
-          endLine,
-          endColumn,
-          query,
-          newName,
-          severity,
-          server,
-        } = params as LspParamsType;
-        assertSubagentLspActionAllowed(action);
-        if (PRIVILEGED_ACTIONS.has(action) && !canRunPrivilegedAction(config)) {
-          const reason = isSubagentChild()
-            ? "privileged LSP actions are disabled in subagent processes"
-            : "lsp.tool.allowMutatingActions is false";
-          throw new LspError(
-            ERROR_CODES.LSP_ACTION_NOT_ALLOWED,
-            `Action "${action}" is disabled: ${reason}.`
-          );
-        }
-        const manager = getOrCreateManager(ctx.cwd);
-        const sevFilter: SeverityFilter = severity || "all";
-        const needsFile =
-          action !== "workspace-diagnostics" && action !== "restart" && action !== "servers";
-        const needsPos = [
-          "definition",
-          "references",
-          "hover",
-          "signature",
-          "rename",
-          "codeAction",
-        ].includes(action);
-
         try {
-          if (action === "servers") {
-            const ids = Array.from(SERVER_IDS).sort();
-            return {
-              content: [{ type: "text", text: `action: servers\n${ids.join("\n")}` }],
-              details: { servers: ids },
-            };
-          }
-
-          if (action === "restart") {
-            const target = (server || "all").trim();
-            if (target !== "all" && !SERVER_IDS.has(target)) {
-              throw new LspError(
-                ERROR_CODES.LSP_SERVER_NOT_FOUND,
-                `Unknown server "${target}". Use one of: all, ${Array.from(SERVER_IDS).join(", ")}`
-              );
-            }
-
-            if (target === "all") {
-              await abortable(shutdownManager(), signal);
-              // Recreate manager immediately so follow-up actions are responsive.
-              getOrCreateManager(ctx.cwd);
-              return {
-                content: [
-                  { type: "text", text: "action: restart\nserver: all\nLSP manager restarted." },
-                ],
-                details: { restarted: true, server: "all" },
-              };
-            }
-
-            const restartedCount = await abortable(manager.restartServers([target]), signal);
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: `action: restart\nserver: ${target}\nRestarted ${restartedCount} client(s).`,
-                },
-              ],
-              details: { restarted: true, server: target, restartedCount },
-            };
-          }
-
-          if (needsFile && !file)
+          const { signal, ctx } = normalizeExecuteArgs(onUpdateArg, ctxArg, signalArg);
+          if (signal?.aborted) return cancelledToolResult();
+          const {
+            action,
+            file,
+            files,
+            line,
+            column,
+            endLine,
+            endColumn,
+            query,
+            newName,
+            severity,
+            server,
+          } = params as LspParamsType;
+          assertSubagentLspActionAllowed(action);
+          if (PRIVILEGED_ACTIONS.has(action) && !canRunPrivilegedAction(config)) {
+            const reason = isSubagentChild()
+              ? "privileged LSP actions are disabled in subagent processes"
+              : "lsp.tool.allowMutatingActions is false";
             throw new LspError(
-              ERROR_CODES.INVALID_INPUT,
-              `Action "${action}" requires a file path.`
-            );
-
-          let rLine = line,
-            rCol = column,
-            fromQuery = false;
-          if (needsPos && (rLine === undefined || rCol === undefined) && query && file) {
-            const resolved = await abortable(resolvePosition(manager, file, query), signal);
-            if (resolved) {
-              rLine = resolved.line;
-              rCol = resolved.column;
-              fromQuery = true;
-            }
-          }
-          if (needsPos && (rLine === undefined || rCol === undefined)) {
-            throw new LspError(
-              ERROR_CODES.INVALID_INPUT,
-              `Action "${action}" requires line/column or a query matching a symbol.`
+              ERROR_CODES.LSP_ACTION_NOT_ALLOWED,
+              `Action "${action}" is disabled: ${reason}.`
             );
           }
+          const manager = getOrCreateManager(ctx.cwd);
+          const sevFilter: SeverityFilter = severity || "all";
+          const needsFile =
+            action !== "workspace-diagnostics" && action !== "restart" && action !== "servers";
+          const needsPos = [
+            "definition",
+            "references",
+            "hover",
+            "signature",
+            "rename",
+            "codeAction",
+          ].includes(action);
 
-          const qLine = query ? `query: ${query}\n` : "";
-          const sevLine = sevFilter !== "all" ? `severity: ${sevFilter}\n` : "";
-          const posLine = fromQuery && rLine && rCol ? `resolvedPosition: ${rLine}:${rCol}\n` : "";
+          try {
+            if (action === "servers") {
+              const ids = Array.from(SERVER_IDS).sort();
+              return {
+                content: [{ type: "text", text: `action: servers\n${ids.join("\n")}` }],
+                details: { servers: ids },
+              };
+            }
 
-          switch (action) {
-            case "definition": {
-              const results = await abortable(manager.getDefinition(file!, rLine!, rCol!), signal);
-              const capped = capItems(results);
-              const locs = capped.items.map((l) => formatLocation(l, ctx?.cwd));
-              const truncatedLine = capped.truncated
-                ? `\n[TRUNCATED: showing first ${capped.items.length} of ${results.length} definitions]`
-                : "";
-              const payload = locs.length
-                ? `${locs.join("\n")}${truncatedLine}`
-                : fromQuery
-                  ? `${file}:${rLine}:${rCol}`
-                  : "No definitions found.";
-              return {
-                content: [
-                  {
-                    type: "text",
-                    text: capText(`action: definition\n${qLine}${posLine}${payload}`),
-                  },
-                ],
-                details: {
-                  results: capped.items,
-                  truncated: capped.truncated,
-                  total: results.length,
-                },
-              };
-            }
-            case "references": {
-              const results = await abortable(manager.getReferences(file!, rLine!, rCol!), signal);
-              const capped = capItems(results);
-              const locs = capped.items.map((l) => formatLocation(l, ctx?.cwd));
-              const truncatedLine = capped.truncated
-                ? `\n[TRUNCATED: showing first ${capped.items.length} of ${results.length} references]`
-                : "";
-              return {
-                content: [
-                  {
-                    type: "text",
-                    text: capText(
-                      `action: references\n${qLine}${posLine}${locs.length ? `${locs.join("\n")}${truncatedLine}` : "No references found."}`
-                    ),
-                  },
-                ],
-                details: {
-                  results: capped.items,
-                  truncated: capped.truncated,
-                  total: results.length,
-                },
-              };
-            }
-            case "hover": {
-              const result = await abortable(manager.getHover(file!, rLine!, rCol!), signal);
-              const payload = result
-                ? formatHover(result.contents) || "No hover information."
-                : "No hover information.";
-              return {
-                content: [
-                  { type: "text", text: capText(`action: hover\n${qLine}${posLine}${payload}`) },
-                ],
-                details: result ?? null,
-              };
-            }
-            case "symbols": {
-              const symbols = await abortable(manager.getDocumentSymbols(file!), signal);
-              const lines = collectSymbols(symbols, 0, [], query);
-              const capped = capItems(lines);
-              const truncatedLine = capped.truncated
-                ? `\n[TRUNCATED: showing first ${capped.items.length} of ${lines.length} symbols]`
-                : "";
-              const payload = capped.items.length
-                ? `${capped.items.join("\n")}${truncatedLine}`
-                : query
-                  ? `No symbols matching "${query}".`
-                  : "No symbols found.";
-              return {
-                content: [{ type: "text", text: capText(`action: symbols\n${qLine}${payload}`) }],
-                details: { lines: capped.items, truncated: capped.truncated, total: lines.length },
-              };
-            }
-            case "diagnostics": {
-              const result = await abortable(
-                manager.touchFileAndWait(file!, diagnosticsWaitMsForFile(file!)),
-                signal
-              );
-              const filtered = filterDiagnosticsBySeverity(result.diagnostics, sevFilter);
-              const capped = capItems(filtered);
-              const hint = getCppCompilationDbHint(file!, ctx.cwd);
-              const truncatedLine = capped.truncated
-                ? `\n[TRUNCATED: showing first ${capped.items.length} of ${filtered.length} diagnostics]`
-                : "";
-              const payload = (result as any).unsupported
-                ? `Unsupported: ${(result as any).error || "No LSP for this file."}`
-                : !result.receivedResponse
-                  ? "Timeout: LSP server did not respond. Try again."
-                  : capped.items.length
-                    ? `${capped.items.map(formatDiagnostic).join("\n")}${truncatedLine}`
-                    : "No diagnostics.";
-              const hintLine = hint ? `\n\n${hint}` : "";
-              return {
-                content: [
-                  {
-                    type: "text",
-                    text: capText(`action: diagnostics\n${sevLine}${payload}${hintLine}`),
-                  },
-                ],
-                details: {
-                  ...result,
-                  diagnostics: capped.items,
-                  diagnosticsTruncated: capped.truncated,
-                  diagnosticsTotal: filtered.length,
-                },
-              };
-            }
-            case "workspace-diagnostics": {
-              if (!files?.length)
+            if (action === "restart") {
+              const target = (server || "all").trim();
+              if (target !== "all" && !SERVER_IDS.has(target)) {
                 throw new LspError(
-                  ERROR_CODES.INVALID_INPUT,
-                  'Action "workspace-diagnostics" requires a "files" array.'
-                );
-              if (files.length > MAX_WORKSPACE_DIAGNOSTIC_FILES) {
-                throw new LspError(
-                  ERROR_CODES.INVALID_INPUT,
-                  `Action "workspace-diagnostics" accepts at most ${MAX_WORKSPACE_DIAGNOSTIC_FILES} files.`
+                  ERROR_CODES.LSP_SERVER_NOT_FOUND,
+                  `Unknown server "${target}". Use one of: all, ${Array.from(SERVER_IDS).join(", ")}`
                 );
               }
-              const waitMs = Math.max(...files.map(diagnosticsWaitMsForFile));
-              const result = await abortable(manager.getDiagnosticsForFiles(files, waitMs), signal);
-              const out: string[] = [];
-              let errors = 0,
-                warnings = 0,
-                filesWithIssues = 0;
 
-              const hints: string[] = [];
-              for (const item of result.items) {
-                const display =
-                  ctx?.cwd && path.isAbsolute(item.file)
-                    ? path.relative(ctx.cwd, item.file)
-                    : item.file;
-                if (item.status !== "ok") {
-                  out.push(`${display}: ${item.error || item.status}`);
-                  continue;
-                }
-                const filtered = filterDiagnosticsBySeverity(item.diagnostics, sevFilter);
-                const capped = capItems(filtered);
-                if (filtered.length) {
-                  filesWithIssues++;
-                  out.push(`${display}:`);
-                  for (const d of capped.items) {
-                    if (d.severity === 1) errors++;
-                    else if (d.severity === 2) warnings++;
-                    out.push(`  ${formatDiagnostic(d)}`);
-                  }
-                  if (capped.truncated) {
-                    out.push(
-                      `  [TRUNCATED: showing first ${capped.items.length} of ${filtered.length} diagnostics]`
-                    );
-                  }
-                }
-                const hint = getCppCompilationDbHint(item.file, ctx.cwd);
-                if (hint && !hints.includes(hint)) hints.push(hint);
-              }
-
-              const summary = `Analyzed ${result.items.length} file(s): ${errors} error(s), ${warnings} warning(s) in ${filesWithIssues} file(s)`;
-              const hintBlock = hints.length ? `\n\n${hints.join("\n\n")}` : "";
-              const cappedItems = result.items.map((item) => {
-                const filtered = filterDiagnosticsBySeverity(item.diagnostics, sevFilter);
-                const capped = capItems(filtered);
+              if (target === "all") {
+                await abortable(shutdownManager(), signal);
+                // Recreate manager immediately so follow-up actions are responsive.
+                getOrCreateManager(ctx.cwd);
                 return {
-                  ...item,
-                  diagnostics: capped.items,
-                  diagnosticsTruncated: capped.truncated,
-                  diagnosticsTotal: filtered.length,
+                  content: [
+                    { type: "text", text: "action: restart\nserver: all\nLSP manager restarted." },
+                  ],
+                  details: { restarted: true, server: "all" },
                 };
-              });
+              }
+
+              const restartedCount = await abortable(manager.restartServers([target]), signal);
               return {
                 content: [
                   {
                     type: "text",
-                    text: capText(
-                      `action: workspace-diagnostics\n${sevLine}${summary}\n\n${out.length ? out.join("\n") : "No diagnostics."}${hintBlock}`
-                    ),
+                    text: `action: restart\nserver: ${target}\nRestarted ${restartedCount} client(s).`,
                   },
                 ],
-                details: { items: cappedItems },
+                details: { restarted: true, server: target, restartedCount },
               };
             }
-            case "signature": {
-              const result = await abortable(
-                manager.getSignatureHelp(file!, rLine!, rCol!),
-                signal
+
+            if (needsFile && !file)
+              throw new LspError(
+                ERROR_CODES.INVALID_INPUT,
+                `Action "${action}" requires a file path.`
               );
-              return {
-                content: [
-                  {
-                    type: "text",
-                    text: capText(
-                      `action: signature\n${qLine}${posLine}${formatSignature(result)}`
-                    ),
-                  },
-                ],
-                details: result ?? null,
-              };
+
+            let rLine = line,
+              rCol = column,
+              fromQuery = false;
+            if (needsPos && (rLine === undefined || rCol === undefined) && query && file) {
+              const resolved = await abortable(resolvePosition(manager, file, query), signal);
+              if (resolved) {
+                rLine = resolved.line;
+                rCol = resolved.column;
+                fromQuery = true;
+              }
             }
-            case "rename": {
-              if (!newName)
-                throw new LspError(
-                  ERROR_CODES.INVALID_INPUT,
-                  'Action "rename" requires a "newName" parameter.'
+            if (needsPos && (rLine === undefined || rCol === undefined)) {
+              throw new LspError(
+                ERROR_CODES.INVALID_INPUT,
+                `Action "${action}" requires line/column or a query matching a symbol.`
+              );
+            }
+
+            const qLine = query ? `query: ${query}\n` : "";
+            const sevLine = sevFilter !== "all" ? `severity: ${sevFilter}\n` : "";
+            const posLine =
+              fromQuery && rLine && rCol ? `resolvedPosition: ${rLine}:${rCol}\n` : "";
+
+            switch (action) {
+              case "definition": {
+                const results = await abortable(
+                  manager.getDefinition(file!, rLine!, rCol!),
+                  signal
                 );
-              const result = await abortable(manager.rename(file!, rLine!, rCol!, newName), signal);
-              if (!result)
+                const capped = capItems(results);
+                const locs = capped.items.map((l) => formatLocation(l, ctx?.cwd));
+                const truncatedLine = capped.truncated
+                  ? `\n[TRUNCATED: showing first ${capped.items.length} of ${results.length} definitions]`
+                  : "";
+                const payload = locs.length
+                  ? `${locs.join("\n")}${truncatedLine}`
+                  : fromQuery
+                    ? `${file}:${rLine}:${rCol}`
+                    : "No definitions found.";
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: capText(`action: definition\n${qLine}${posLine}${payload}`),
+                    },
+                  ],
+                  details: {
+                    results: capped.items,
+                    truncated: capped.truncated,
+                    total: results.length,
+                  },
+                };
+              }
+              case "references": {
+                const results = await abortable(
+                  manager.getReferences(file!, rLine!, rCol!),
+                  signal
+                );
+                const capped = capItems(results);
+                const locs = capped.items.map((l) => formatLocation(l, ctx?.cwd));
+                const truncatedLine = capped.truncated
+                  ? `\n[TRUNCATED: showing first ${capped.items.length} of ${results.length} references]`
+                  : "";
                 return {
                   content: [
                     {
                       type: "text",
                       text: capText(
-                        `action: rename\n${qLine}${posLine}No rename available at this position.`
+                        `action: references\n${qLine}${posLine}${locs.length ? `${locs.join("\n")}${truncatedLine}` : "No references found."}`
                       ),
                     },
                   ],
-                  details: null,
+                  details: {
+                    results: capped.items,
+                    truncated: capped.truncated,
+                    total: results.length,
+                  },
                 };
-              const edits = formatWorkspaceEdit(result, ctx?.cwd);
-              return {
-                content: [
-                  {
-                    type: "text",
-                    text: capText(
-                      `action: rename\n${qLine}${posLine}newName: ${newName}\n\n${edits}`
-                    ),
+              }
+              case "hover": {
+                const result = await abortable(manager.getHover(file!, rLine!, rCol!), signal);
+                const payload = result
+                  ? formatHover(result.contents) || "No hover information."
+                  : "No hover information.";
+                return {
+                  content: [
+                    { type: "text", text: capText(`action: hover\n${qLine}${posLine}${payload}`) },
+                  ],
+                  details: result ?? null,
+                };
+              }
+              case "symbols": {
+                const symbols = await abortable(manager.getDocumentSymbols(file!), signal);
+                const lines = collectSymbols(symbols, 0, [], query);
+                const capped = capItems(lines);
+                const truncatedLine = capped.truncated
+                  ? `\n[TRUNCATED: showing first ${capped.items.length} of ${lines.length} symbols]`
+                  : "";
+                const payload = capped.items.length
+                  ? `${capped.items.join("\n")}${truncatedLine}`
+                  : query
+                    ? `No symbols matching "${query}".`
+                    : "No symbols found.";
+                return {
+                  content: [{ type: "text", text: capText(`action: symbols\n${qLine}${payload}`) }],
+                  details: {
+                    lines: capped.items,
+                    truncated: capped.truncated,
+                    total: lines.length,
                   },
-                ],
-                details: result,
-              };
-            }
-            case "codeAction": {
-              const result = await abortable(
-                manager.getCodeActions(file!, rLine!, rCol!, endLine, endColumn),
-                signal
-              );
-              const capped = capItems(result);
-              const actions = formatCodeActions(capped.items);
-              const truncatedLine = capped.truncated
-                ? `\n[TRUNCATED: showing first ${capped.items.length} of ${result.length} code actions]`
-                : "";
-              return {
-                content: [
-                  {
-                    type: "text",
-                    text: capText(
-                      `action: codeAction\n${qLine}${posLine}${actions.length ? `${actions.join("\n")}${truncatedLine}` : "No code actions available."}`
-                    ),
+                };
+              }
+              case "diagnostics": {
+                const result = await abortable(
+                  manager.touchFileAndWait(file!, diagnosticsWaitMsForFile(file!)),
+                  signal
+                );
+                const filtered = filterDiagnosticsBySeverity(result.diagnostics, sevFilter);
+                const capped = capItems(filtered);
+                const hint = getCppCompilationDbHint(file!, ctx.cwd);
+                const truncatedLine = capped.truncated
+                  ? `\n[TRUNCATED: showing first ${capped.items.length} of ${filtered.length} diagnostics]`
+                  : "";
+                const payload = (result as any).unsupported
+                  ? `Unsupported: ${(result as any).error || "No LSP for this file."}`
+                  : !result.receivedResponse
+                    ? "Timeout: LSP server did not respond. Try again."
+                    : capped.items.length
+                      ? `${capped.items.map(formatDiagnostic).join("\n")}${truncatedLine}`
+                      : "No diagnostics.";
+                const hintLine = hint ? `\n\n${hint}` : "";
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: capText(`action: diagnostics\n${sevLine}${payload}${hintLine}`),
+                    },
+                  ],
+                  details: {
+                    ...result,
+                    diagnostics: capped.items,
+                    diagnosticsTruncated: capped.truncated,
+                    diagnosticsTotal: filtered.length,
                   },
-                ],
-                details: {
-                  actions: capped.items,
-                  truncated: capped.truncated,
-                  total: result.length,
-                },
-              };
+                };
+              }
+              case "workspace-diagnostics": {
+                if (!files?.length)
+                  throw new LspError(
+                    ERROR_CODES.INVALID_INPUT,
+                    'Action "workspace-diagnostics" requires a "files" array.'
+                  );
+                if (files.length > MAX_WORKSPACE_DIAGNOSTIC_FILES) {
+                  throw new LspError(
+                    ERROR_CODES.INVALID_INPUT,
+                    `Action "workspace-diagnostics" accepts at most ${MAX_WORKSPACE_DIAGNOSTIC_FILES} files.`
+                  );
+                }
+                const waitMs = Math.max(...files.map(diagnosticsWaitMsForFile));
+                const result = await abortable(
+                  manager.getDiagnosticsForFiles(files, waitMs),
+                  signal
+                );
+                const out: string[] = [];
+                let errors = 0,
+                  warnings = 0,
+                  filesWithIssues = 0;
+
+                const hints: string[] = [];
+                for (const item of result.items) {
+                  const display =
+                    ctx?.cwd && path.isAbsolute(item.file)
+                      ? path.relative(ctx.cwd, item.file)
+                      : item.file;
+                  if (item.status !== "ok") {
+                    out.push(`${display}: ${item.error || item.status}`);
+                    continue;
+                  }
+                  const filtered = filterDiagnosticsBySeverity(item.diagnostics, sevFilter);
+                  const capped = capItems(filtered);
+                  if (filtered.length) {
+                    filesWithIssues++;
+                    out.push(`${display}:`);
+                    for (const d of capped.items) {
+                      if (d.severity === 1) errors++;
+                      else if (d.severity === 2) warnings++;
+                      out.push(`  ${formatDiagnostic(d)}`);
+                    }
+                    if (capped.truncated) {
+                      out.push(
+                        `  [TRUNCATED: showing first ${capped.items.length} of ${filtered.length} diagnostics]`
+                      );
+                    }
+                  }
+                  const hint = getCppCompilationDbHint(item.file, ctx.cwd);
+                  if (hint && !hints.includes(hint)) hints.push(hint);
+                }
+
+                const summary = `Analyzed ${result.items.length} file(s): ${errors} error(s), ${warnings} warning(s) in ${filesWithIssues} file(s)`;
+                const hintBlock = hints.length ? `\n\n${hints.join("\n\n")}` : "";
+                const cappedItems = result.items.map((item) => {
+                  const filtered = filterDiagnosticsBySeverity(item.diagnostics, sevFilter);
+                  const capped = capItems(filtered);
+                  return {
+                    ...item,
+                    diagnostics: capped.items,
+                    diagnosticsTruncated: capped.truncated,
+                    diagnosticsTotal: filtered.length,
+                  };
+                });
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: capText(
+                        `action: workspace-diagnostics\n${sevLine}${summary}\n\n${out.length ? out.join("\n") : "No diagnostics."}${hintBlock}`
+                      ),
+                    },
+                  ],
+                  details: { items: cappedItems },
+                };
+              }
+              case "signature": {
+                const result = await abortable(
+                  manager.getSignatureHelp(file!, rLine!, rCol!),
+                  signal
+                );
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: capText(
+                        `action: signature\n${qLine}${posLine}${formatSignature(result)}`
+                      ),
+                    },
+                  ],
+                  details: result ?? null,
+                };
+              }
+              case "rename": {
+                if (!newName)
+                  throw new LspError(
+                    ERROR_CODES.INVALID_INPUT,
+                    'Action "rename" requires a "newName" parameter.'
+                  );
+                const result = await abortable(
+                  manager.rename(file!, rLine!, rCol!, newName),
+                  signal
+                );
+                if (!result)
+                  return {
+                    content: [
+                      {
+                        type: "text",
+                        text: capText(
+                          `action: rename\n${qLine}${posLine}No rename available at this position.`
+                        ),
+                      },
+                    ],
+                    details: null,
+                  };
+                const edits = formatWorkspaceEdit(result, ctx?.cwd);
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: capText(
+                        `action: rename\n${qLine}${posLine}newName: ${newName}\n\n${edits}`
+                      ),
+                    },
+                  ],
+                  details: result,
+                };
+              }
+              case "codeAction": {
+                const result = await abortable(
+                  manager.getCodeActions(file!, rLine!, rCol!, endLine, endColumn),
+                  signal
+                );
+                const capped = capItems(result);
+                const actions = formatCodeActions(capped.items);
+                const truncatedLine = capped.truncated
+                  ? `\n[TRUNCATED: showing first ${capped.items.length} of ${result.length} code actions]`
+                  : "";
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: capText(
+                        `action: codeAction\n${qLine}${posLine}${actions.length ? `${actions.join("\n")}${truncatedLine}` : "No code actions available."}`
+                      ),
+                    },
+                  ],
+                  details: {
+                    actions: capped.items,
+                    truncated: capped.truncated,
+                    total: result.length,
+                  },
+                };
+              }
             }
+          } catch (e) {
+            if (signal?.aborted || isAbortedError(e)) return cancelledToolResult();
+            throw e;
           }
-        } catch (e) {
-          if (signal?.aborted || isAbortedError(e)) return cancelledToolResult();
-          throw e;
+        } catch (error) {
+          const payload = toDevkitErrorPayload(error, { moduleHint: "lsp" });
+          if (error instanceof LspError) {
+            logger.warn("lsp.error_payload", "LSP tool returned structured error", { payload });
+          } else {
+            logger.error("lsp.error_payload", "LSP tool execution failed", { payload }, error);
+          }
+          throw error;
         }
       },
 

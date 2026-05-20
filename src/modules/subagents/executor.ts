@@ -138,6 +138,36 @@ function readSessionDiagnostics(sessionFile: string): { error?: string; partialO
   }
 }
 
+function getUiConfirm(
+  ui: ExtensionContext["ui"] | undefined
+): ((message: string) => Promise<boolean>) | null {
+  const candidate = (ui as unknown as { confirm?: unknown } | undefined)?.confirm;
+  return typeof candidate === "function"
+    ? (message: string) =>
+        Promise.resolve(
+          (candidate as (message: string) => boolean | Promise<boolean>)(message)
+        ).then(Boolean)
+    : null;
+}
+
+async function shouldAllowProjectAgentExecution(
+  agent: AgentConfig,
+  ctx: ExtensionContext,
+  config: ResolvedSubagentsConfig
+): Promise<boolean> {
+  if (agent.source !== "project") return true;
+  if (config.projectAgentPolicy === "allow") return true;
+
+  const confirm = getUiConfirm(ctx.ui);
+  if (ctx.hasUI && confirm) {
+    return confirm(
+      `Allow execution of project-local agent '${agent.name}' from ${agent.filePath}?`
+    );
+  }
+
+  return config.nonInteractivePolicy === "allow";
+}
+
 function mergeUniqueText(...values: Array<string | undefined>): string | undefined {
   const parts: string[] = [];
   for (const value of values) {
@@ -260,6 +290,25 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
     }
 
     const agent = agentResult;
+
+    if (!(await shouldAllowProjectAgentExecution(agent, ctx, deps.config))) {
+      const message =
+        deps.config.nonInteractivePolicy === "deny"
+          ? `Project-local agent execution denied by non-interactive policy: ${agent.name}`
+          : `Project-local agent execution cancelled: ${agent.name}`;
+      return {
+        content: [{ type: "text", text: message }],
+        details: {
+          mode: "single",
+          results: [],
+          error: {
+            code: SUBAGENT_ERROR_CODES.SUBAGENT_DISABLED,
+            message,
+          },
+        },
+      };
+    }
+
     const runId = randomUUID().slice(0, 8);
     const parentSessionFile = ctx.sessionManager.getSessionFile() ?? null;
 

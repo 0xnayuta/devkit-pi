@@ -1,5 +1,8 @@
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { getDevkitToolMetadata } from "../../extension/manifest.ts";
+import { createDevkitErrorPayload } from "../../shared/errors.ts";
+import { createLogger, type Logger } from "../../shared/logger.ts";
 import type { ResolvedWebConfig } from "../../shared/types.ts";
 import { initializeSearchCache } from "./cache.ts";
 import { initializeRequestThrottler } from "./concurrency.ts";
@@ -56,6 +59,7 @@ export {
   mapHttpStatusToError,
   mapNetworkErrorToWebError,
   type RecoverySuggestion,
+  toDevkitWebErrorPayload,
   WEB_ERROR_CODES,
   type WebError,
   type WebErrorCode,
@@ -92,7 +96,12 @@ function asToolResult(details: unknown): AgentToolResult<any> {
 /**
  * Register bundled readonly web tools.
  */
-export function registerWebTools(pi: ExtensionAPI, config: ResolvedWebConfig): void {
+export function registerWebTools(
+  pi: ExtensionAPI,
+  config: ResolvedWebConfig,
+  options: { logger?: Logger } = {}
+): void {
+  const logger = options.logger ?? createLogger({ module: "web.register" });
   if (!config.enabled) return;
 
   // Initialize performance optimization modules
@@ -106,40 +115,50 @@ export function registerWebTools(pi: ExtensionAPI, config: ResolvedWebConfig): v
     maxStoredContentChars: config.maxStoredContentChars,
   });
 
-  const piAny = pi as any;
-  if (typeof piAny.appendEntry === "function") {
-    setSessionResultAppender((data) => {
-      piAny.appendEntry(WEB_RESULTS_CUSTOM_TYPE, data);
-    });
-  } else {
-    setSessionResultAppender(null);
-  }
+  setSessionResultAppender((data) => {
+    pi.appendEntry(WEB_RESULTS_CUSTOM_TYPE, data);
+  });
 
-  if (typeof piAny.on === "function") {
-    piAny.on("session_start", (_event: unknown, ctx: any) => {
-      const branch = ctx?.sessionManager?.getBranch?.();
-      if (Array.isArray(branch)) {
-        restoreResultsFromSession(branch);
-      } else {
-        clearResults();
-      }
-      resetWebToolStats();
-    });
-
-    piAny.on("session_shutdown", () => {
+  pi.on("session_start", (_event, ctx) => {
+    const branch = ctx?.sessionManager?.getBranch?.();
+    if (Array.isArray(branch)) {
+      restoreResultsFromSession(branch);
+    } else {
       clearResults();
-      resetWebToolStats();
-    });
-  }
+    }
+    resetWebToolStats();
+  });
+
+  pi.on("session_shutdown", () => {
+    clearResults();
+    resetWebToolStats();
+  });
+
+  const webSearchMeta = getDevkitToolMetadata("web_search");
+  const fetchContentMeta = getDevkitToolMetadata("fetch_content");
+  const getSearchContentMeta = getDevkitToolMetadata("get_search_content");
 
   pi.registerTool(
     defineTool({
-      name: "web_search",
-      label: "Web Search",
-      description: "Search the web with the configured readonly search provider.",
+      name: webSearchMeta.name,
+      label: webSearchMeta.label,
+      description: webSearchMeta.description,
+      promptSnippet: webSearchMeta.promptSnippet,
+      promptGuidelines: [...webSearchMeta.promptGuidelines],
       parameters: WebSearchParams,
-      execute(_id: string, params: WebSearchInput, signal: AbortSignal | undefined) {
-        return webSearch(params, config, signal ?? new AbortController().signal).then(asToolResult);
+      async execute(_id: string, params: WebSearchInput, signal: AbortSignal | undefined) {
+        const result = await webSearch(params, config, signal ?? new AbortController().signal);
+        if ("error" in result) {
+          logger.warn("web.error_payload", "web_search returned structured error", {
+            payload: createDevkitErrorPayload({
+              code: result.error.code,
+              message: result.error.message,
+              module: "web",
+              retryable: false,
+            }),
+          });
+        }
+        return asToolResult(result);
       },
       renderCall(args: WebSearchInput, theme: any) {
         return renderWebSearchCall(args, theme);
@@ -156,14 +175,25 @@ export function registerWebTools(pi: ExtensionAPI, config: ResolvedWebConfig): v
 
   pi.registerTool(
     defineTool({
-      name: "fetch_content",
-      label: "Fetch Content",
-      description: "Fetch HTTP/HTTPS URL content and extract readable text. Readonly.",
+      name: fetchContentMeta.name,
+      label: fetchContentMeta.label,
+      description: fetchContentMeta.description,
+      promptSnippet: fetchContentMeta.promptSnippet,
+      promptGuidelines: [...fetchContentMeta.promptGuidelines],
       parameters: FetchContentParams,
-      execute(_id: string, params: FetchContentInput, signal: AbortSignal | undefined) {
-        return fetchContent(params, config, signal ?? new AbortController().signal).then(
-          asToolResult
-        );
+      async execute(_id: string, params: FetchContentInput, signal: AbortSignal | undefined) {
+        const result = await fetchContent(params, config, signal ?? new AbortController().signal);
+        if ("error" in result) {
+          logger.warn("web.error_payload", "fetch_content returned structured error", {
+            payload: createDevkitErrorPayload({
+              code: result.error.code,
+              message: result.error.message,
+              module: "web",
+              retryable: false,
+            }),
+          });
+        }
+        return asToolResult(result);
       },
       renderCall(args: FetchContentInput, theme: any) {
         return renderFetchContentCall(args, theme);
@@ -180,9 +210,11 @@ export function registerWebTools(pi: ExtensionAPI, config: ResolvedWebConfig): v
 
   pi.registerTool(
     defineTool({
-      name: "get_search_content",
-      label: "Get Search Content",
-      description: "Retrieve stored web_search or fetch_content results by responseId. Readonly.",
+      name: getSearchContentMeta.name,
+      label: getSearchContentMeta.label,
+      description: getSearchContentMeta.description,
+      promptSnippet: getSearchContentMeta.promptSnippet,
+      promptGuidelines: [...getSearchContentMeta.promptGuidelines],
       parameters: GetSearchContentParams,
       async execute(_id: string, params: GetSearchContentInput) {
         const result = getSearchContent(params, config.maxContentChars);
@@ -190,6 +222,16 @@ export function registerWebTools(pi: ExtensionAPI, config: ResolvedWebConfig): v
           "error" in result ? "error" : "success",
           "error" in result ? result.error.code : undefined
         );
+        if ("error" in result) {
+          logger.warn("web.error_payload", "get_search_content returned structured error", {
+            payload: createDevkitErrorPayload({
+              code: result.error.code,
+              message: result.error.message,
+              module: "web",
+              retryable: false,
+            }),
+          });
+        }
         return asToolResult(result);
       },
       renderCall(args: GetSearchContentInput, theme: any) {

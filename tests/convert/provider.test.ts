@@ -13,6 +13,7 @@ import {
   CONVERT_ERROR_CODES,
   ConvertProviderError,
   MarkItDownProvider,
+  toDevkitConvertErrorPayload,
 } from "../../src/modules/convert/index.ts";
 
 let tempDir = "";
@@ -241,5 +242,26 @@ describe("MarkItDownProvider", () => {
 
     assert.equal(result.content, "abcdefghij");
     assert.equal(result.truncated, true);
+  });
+
+  it("bridges ConvertProviderError to DevkitErrorPayload without breaking current shape", () => {
+    const error = new ConvertProviderError(
+      CONVERT_ERROR_CODES.CONVERT_FAILED,
+      "conversion failed",
+      "stderr: parser crashed"
+    );
+
+    const payload = toDevkitConvertErrorPayload(error, {
+      provider: "markitdown",
+      remediation: "Verify input format and retry with a smaller file",
+    });
+
+    assert.equal(payload.module, "convert");
+    assert.equal(payload.code, CONVERT_ERROR_CODES.CONVERT_FAILED);
+    assert.equal(payload.message, "conversion failed");
+    assert.equal(payload.provider, "markitdown");
+    assert.equal(payload.causeSummary, "stderr: parser crashed");
+    assert.equal(payload.retryable, false);
+    assert.match(payload.remediation ?? "", /Verify input format/);
   });
 });

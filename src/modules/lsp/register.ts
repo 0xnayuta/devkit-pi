@@ -5,15 +5,28 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ResourceScope } from "../../extension/runtime.ts";
+import { createLogger, type Logger } from "../../shared/logger.ts";
 import { PI_SUBAGENT_CHILD, type ResolvedLspConfig } from "../../shared/types.ts";
 import { shutdownManager } from "./core.ts";
 import { registerLspHook } from "./hook.ts";
 import { registerLspTool } from "./tool.ts";
 
-export function registerLspModule(pi: ExtensionAPI, config: ResolvedLspConfig): void {
+export interface RegisterLspModuleOptions {
+  resources?: ResourceScope;
+  logger?: Logger;
+}
+
+export function registerLspModule(
+  pi: ExtensionAPI,
+  config: ResolvedLspConfig,
+  options: RegisterLspModuleOptions = {}
+): void {
   if (!config.enabled) return;
 
-  registerLspTool(pi, config.tool);
+  const logger = options.logger ?? createLogger({ module: "lsp.register" });
+
+  registerLspTool(pi, config.tool, { logger: logger.child("tool") });
 
   const isMainProcess = process.env[PI_SUBAGENT_CHILD] !== "1";
   const hookRegistersShutdown =
@@ -26,11 +39,14 @@ export function registerLspModule(pi: ExtensionAPI, config: ResolvedLspConfig): 
   // When the hook is active it already owns session_shutdown cleanup.
   // Register a standalone shutdown handler only when the hook is absent.
   if (!hookRegistersShutdown) {
-    const piAny = pi as any;
-    if (typeof piAny.on === "function") {
-      piAny.on("session_shutdown", () => {
-        void shutdownManager();
-      });
-    }
+    pi.on("session_shutdown", () => {
+      void shutdownManager();
+    });
   }
+
+  options.resources?.add({
+    async dispose() {
+      await shutdownManager();
+    },
+  });
 }

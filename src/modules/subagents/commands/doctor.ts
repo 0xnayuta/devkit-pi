@@ -3,9 +3,9 @@
  */
 
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import { getConfigPath, loadConfig, mergeConfig } from "../../../config/load-config.ts";
+import { DEVKIT_TOOL_MANIFEST } from "../../../extension/manifest.ts";
 import {
   RESULTS_DIR,
   type ResolvedToolkitConfig,
@@ -118,6 +118,7 @@ export async function runDoctorChecks(
   resolvedConfig?: ResolvedToolkitConfig
 ): Promise<DoctorReport> {
   const items: DiagnosticItem[] = [];
+  let discoveredAgentsDiagnosticsCount = 0;
 
   // 1. Configuration check
   try {
@@ -150,7 +151,8 @@ export async function runDoctorChecks(
 
   // 2. Agent discovery check
   try {
-    const { agents: allAgents } = discoverAgents(cwd, "both");
+    const { agents: allAgents, diagnostics } = discoverAgents(cwd, "both");
+    discoveredAgentsDiagnosticsCount = diagnostics.length;
     const builtinAgents = allAgents.filter((a) => a.source === "builtin");
     const userAgents = allAgents.filter((a) => a.source === "user");
     const projectAgents = allAgents.filter((a) => a.source === "project");
@@ -179,20 +181,12 @@ export async function runDoctorChecks(
       });
     }
 
-    // Check for parse errors in user/project agents
-    const userAgentsDir = path.join(os.homedir(), ".pi", "agent", "agents");
-    if (fs.existsSync(userAgentsDir)) {
-      const files = fs
-        .readdirSync(userAgentsDir)
-        .filter((f) => f.endsWith(".md") || f.endsWith(".markdown"));
-      const skippedCount = files.length - userAgents.length;
-      if (skippedCount > 0) {
-        items.push({
-          status: "warn",
-          category: "agents",
-          message: `${skippedCount} user agents skipped (parse error)`,
-        });
-      }
+    if (discoveredAgentsDiagnosticsCount > 0) {
+      items.push({
+        status: "warn",
+        category: "agents",
+        message: `${discoveredAgentsDiagnosticsCount} agent definitions skipped (frontmatter/file validation)`,
+      });
     }
   } catch (error) {
     items.push({
@@ -300,6 +294,135 @@ export async function runDoctorChecks(
         : "LSP diagnostics hook disabled",
     });
   }
+
+  // 7. Subagents strategy visibility (Phase 6)
+  items.push({
+    status: "info",
+    category: "subagents",
+    message: "Subagent scope semantics aligned (user/project/both)",
+    details: "Discovery supports user-only, project-only, and both scopes.",
+  });
+
+  items.push({
+    status: resolved.subagents.projectAgentPolicy === "confirm" ? "warn" : "pass",
+    category: "subagents",
+    message:
+      resolved.subagents.projectAgentPolicy === "confirm"
+        ? "Project-local agent execution requires confirmation"
+        : "Project-local agent execution allows direct run",
+    details: `projectAgentPolicy=${resolved.subagents.projectAgentPolicy}, nonInteractivePolicy=${resolved.subagents.nonInteractivePolicy}`,
+  });
+
+  items.push({
+    status: discoveredAgentsDiagnosticsCount > 0 ? "warn" : "pass",
+    category: "subagents",
+    message:
+      discoveredAgentsDiagnosticsCount > 0
+        ? "Frontmatter validation found invalid agent files"
+        : "Frontmatter validation passed for discovered agent files",
+    details: `diagnostics=${discoveredAgentsDiagnosticsCount}`,
+  });
+
+  // 8. Guards gate mode visibility (Phase 5)
+  if (!resolved.guards.enabled || resolved.guards.mode === "off") {
+    items.push({
+      status: "info",
+      category: "guards",
+      message: "Guards gate disabled",
+      details: `enabled=${resolved.guards.enabled}, mode=${resolved.guards.mode}`,
+    });
+  } else {
+    const gateModeActive = resolved.guards.mode !== "notice";
+    const hardBlockActive = gateModeActive && resolved.guards.blockMode === "hard";
+
+    items.push({
+      status: hardBlockActive ? "warn" : resolved.guards.mode === "notice" ? "info" : "pass",
+      category: "guards",
+      message:
+        resolved.guards.mode === "notice"
+          ? "Guards running in notice mode"
+          : `Guards gate mode active (${resolved.guards.mode})`,
+      details:
+        resolved.guards.mode === "notice"
+          ? "No gate decision is enforced in notice mode"
+          : `nonInteractivePolicy=${resolved.guards.nonInteractivePolicy}, blockMode=${resolved.guards.blockMode}`,
+    });
+
+    if (hardBlockActive) {
+      items.push({
+        status: "warn",
+        category: "guards",
+        message: "Guards hard-block is active and may block write tool calls",
+        details:
+          "Current config can throw GUARD_HARD_BLOCKED on deny decisions. Use blockMode=soft/preview to avoid hard blocking.",
+      });
+    }
+  }
+
+  // 9. Tool metadata health check
+  const duplicateNames = new Set<string>();
+  const seenNames = new Set<string>();
+  for (const tool of DEVKIT_TOOL_MANIFEST) {
+    if (seenNames.has(tool.name)) duplicateNames.add(tool.name);
+    seenNames.add(tool.name);
+  }
+
+  if (duplicateNames.size > 0) {
+    items.push({
+      status: "fail",
+      category: "tool-metadata",
+      message: "Tool manifest contains duplicate tool names",
+      details: [...duplicateNames].sort().join(", "),
+    });
+  } else if (DEVKIT_TOOL_MANIFEST.length === 0) {
+    items.push({
+      status: "fail",
+      category: "tool-metadata",
+      message: "Tool manifest is empty",
+    });
+  } else {
+    const invalidEntries = DEVKIT_TOOL_MANIFEST.filter(
+      (tool) =>
+        tool.name.trim().length === 0 ||
+        tool.label.trim().length === 0 ||
+        tool.description.trim().length === 0 ||
+        tool.promptSnippet.trim().length === 0 ||
+        tool.promptGuidelines.length === 0 ||
+        tool.promptGuidelines.some((line) => line.trim().length === 0)
+    );
+
+    if (invalidEntries.length > 0) {
+      items.push({
+        status: "fail",
+        category: "tool-metadata",
+        message: "Tool manifest has incomplete metadata",
+        details: invalidEntries.map((tool) => tool.name).join(", "),
+      });
+    } else {
+      items.push({
+        status: "pass",
+        category: "tool-metadata",
+        message: `${DEVKIT_TOOL_MANIFEST.length} tools have complete metadata`,
+      });
+    }
+  }
+
+  // 10. State-model semantics (Phase 3 minimal visibility)
+  items.push({
+    status: "info",
+    category: "state-model",
+    message: "Web responseId state uses memory + session-entry restore",
+    details:
+      "In-memory results are cleared on session shutdown; branch restore uses custom entries (web-tools-results) with TTL filtering.",
+  });
+
+  items.push({
+    status: "info",
+    category: "state-model",
+    message: "Subagent execution restore is details-driven",
+    details:
+      "Stable recovery fields come from tool result details (mode/results/error); streaming is execution-only and optional in final results.",
+  });
 
   // Calculate summary
   const summary = {

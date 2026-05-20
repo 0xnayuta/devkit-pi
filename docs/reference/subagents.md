@@ -91,10 +91,10 @@ The current parser is a simple `key: value` parser, not a full YAML parser. Supp
 
 | Field | Required | Behavior |
 |---|---:|---|
-| `name` | Yes | Agent name; if missing, the file is not loaded |
+| `name` | Yes | Agent name; must be non-empty; missing/empty files are skipped with structured diagnostics |
 | `description` | No | Description; defaults to empty string |
-| `readonly` | No | Only string `true` or `1` parses as true; otherwise false |
-| `tools` | No | Comma-separated tool name list |
+| `readonly` | No | Valid values: `true`, `false`, `1`, `0`; invalid values are rejected with structured diagnostics |
+| `tools` | No | Comma-separated tool name list; if present but resolves to empty list, file is rejected with structured diagnostics |
 | `model` | No | Passed to child pi as `--model` |
 
 Prompt body becomes `systemPrompt`. If body is empty, uses description; if also empty, child prompt falls back to default role text.
@@ -302,6 +302,8 @@ Default configuration summary:
       "definition", "references", "hover", "signature",
       "symbols", "diagnostics", "workspace-diagnostics", "servers"
     ],
+    "projectAgentPolicy": "confirm",
+    "nonInteractivePolicy": "allow",
     "injectDelegationPolicy": true,
     "retry": {
       "enabled": true,
@@ -319,6 +321,8 @@ Configuration effects:
 - `subagents.idleTimeoutMs`: maximum idle time since the last valid structured child activity event, such as `message_end`, `tool_result_end`, or `turn_end`. Plain stdout text and transient streaming events such as `message_update` do not reset this timer. Default: 180000ms.
 - `subagents.allowWrite`: experimental/advanced/unsafe switch; only affects tool filtering for non-readonly custom agents, does not change built-in agents' readonly definition, does not provide complete permission sandbox, audit log, automatic rollback, or stable write-capability contract.
 - `subagents.allowLspTools` / `allowedLspActions`: controls whether subagents can use readonly LSP actions.
+- `subagents.projectAgentPolicy`: `allow|confirm`. `confirm` requires confirmation before executing project-local agents.
+- `subagents.nonInteractivePolicy`: fallback for `projectAgentPolicy=confirm` when interactive confirm is unavailable. `allow|deny`.
 - `subagents.injectDelegationPolicy`: controls whether to inject delegation policy into main agent prompt.
 - `subagents.retry.*`: limited retry for subagent transient failures.
 
@@ -346,7 +350,7 @@ Failure behavior:
 - Child process non-0 exit forms failure summary including exit code, error, partial output, and session file.
 - Child stdout JSONL processing does not persist high-frequency streaming events such as `message_update` and `tool_execution_update`; final output is collected from lifecycle/final events such as `message_end`, `turn_end`, and tool/error completion events. Persisted JSONL and transient/drop JSONL lines have separate hard limits.
 - When the installed child pi runtime supports a future compact JSON stream profile, devkit-pi may prefer it for subagent transport. If the child pi rejects `--json-stream compact`, devkit-pi falls back to full JSON mode and retains the local stdout event filter as a compatibility layer.
-- Agent definition parse failure or files missing `name` are silently skipped; `/toolkit doctor` may report user agents skipped.
+- Agent definition validation failures (e.g., missing name, invalid readonly value, empty tools declaration when present) are skipped and surfaced via structured diagnostics; `/toolkit doctor` reports these through the `subagents` category.
 
 ## Stability notes
 

@@ -19,6 +19,8 @@ import {
   keyHint,
 } from "@earendil-works/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
+import { getDevkitToolMetadata } from "../../extension/manifest.ts";
+import type { ResourceScope } from "../../extension/runtime.ts";
 import { DELEGATION_EXAMPLES, DELEGATION_POLICY } from "../../shared/delegation-policy.ts";
 import { createLogger, type Logger } from "../../shared/logger.ts";
 import { resolveCurrentSessionId } from "../../shared/session-identity.ts";
@@ -35,6 +37,7 @@ import {
   type Usage,
 } from "../../shared/types.ts";
 import { discoverAgents } from "./agents.ts";
+import { toDevkitSubagentErrorPayload } from "./errors.ts";
 import { createSubagentExecutor, type SubagentParamsLike } from "./executor.ts";
 import { SubagentParams } from "./schemas.ts";
 
@@ -114,6 +117,12 @@ type RenderItem =
 const PREVIEW_TOOL_CALLS = 5;
 const PREVIEW_LINES = 5;
 
+function formatStatusLabel(status: "running" | "success" | "failed", theme: any): string {
+  if (status === "running") return theme.fg("warning", "running");
+  if (status === "failed") return theme.fg("error", "failed");
+  return theme.fg("success", "success");
+}
+
 function expandKeyHintFn(theme: any): string {
   try {
     return keyHint("app.tools.expand", "to expand");
@@ -185,7 +194,7 @@ function ensureAccessibleDir(dirPath: string): void {
 export function registerSubagentsModule(
   pi: ExtensionAPI,
   config: ResolvedSubagentsConfig,
-  options: { logger?: Logger } = {}
+  options: { logger?: Logger; resources?: ResourceScope } = {}
 ): void {
   const logger = options.logger ?? createLogger({ module: "subagents.register" });
   // Prevent child processes from registering the subagent tool.
@@ -216,6 +225,8 @@ export function registerSubagentsModule(
     discoverAgents,
   });
 
+  const activeControllers = new Set<AbortController>();
+
   const executeSubagent = (
     id: string,
     params: SubagentParamsLike,
@@ -223,10 +234,17 @@ export function registerSubagentsModule(
     onUpdate: ((result: AgentToolResult<Details>) => void) | undefined,
     ctx: ExtensionContext
   ): Promise<AgentToolResult<Details>> => {
+    const logSubagentErrorPayload = (details: Details | undefined) => {
+      if (!details?.error) return;
+      const payload = toDevkitSubagentErrorPayload(details.error, { provider: "pi" });
+      logger.warn("subagents.error_payload", "Subagent execution returned structured error", {
+        payload,
+      });
+    };
     // Check recursion depth
     const depthCheck = checkSubagentDepth(config.maxDepth);
     if (depthCheck.blocked) {
-      return Promise.resolve({
+      const result: AgentToolResult<Details> = {
         content: [
           {
             type: "text",
@@ -241,7 +259,9 @@ export function registerSubagentsModule(
             message: `Subagent depth exceeded (${depthCheck.depth}/${depthCheck.maxDepth}). Nested subagents are not allowed.`,
           },
         },
-      });
+      };
+      logSubagentErrorPayload(result.details);
+      return Promise.resolve(result);
     }
 
     // Collapse UI when executing
@@ -249,28 +269,33 @@ export function registerSubagentsModule(
       ctx.ui.setToolsExpanded(false);
     }
 
-    return executor.execute(id, params, signal, onUpdate, ctx);
+    const executionController = new AbortController();
+    activeControllers.add(executionController);
+    const forwardAbort = () => {
+      executionController.abort();
+    };
+    signal.addEventListener("abort", forwardAbort, { once: true });
+
+    return executor
+      .execute(id, params, executionController.signal, onUpdate, ctx)
+      .then((result) => {
+        logSubagentErrorPayload(result.details as Details | undefined);
+        return result;
+      })
+      .finally(() => {
+        signal.removeEventListener("abort", forwardAbort);
+        activeControllers.delete(executionController);
+      });
   };
 
   // Define the subagent tool
+  const subagentMeta = getDevkitToolMetadata("subagent");
   const tool = defineTool({
-    name: "subagent",
-    label: "Subagent",
-    description: `Delegate a focused task to a specialized readonly agent.
-
-Available agents:
-• explorer - Codebase navigation and file search (readonly)
-• researcher - Web research and information synthesis (readonly)
-• reviewer - Code review and quality assessment (readonly)
-• implementer - Implementation planning (readonly)
-• tester - Test planning and strategy (readonly)
-
-Parameters:
-• agent: Agent name to use
-• task: Task description
-
-Example:
-  subagent({ agent: "explorer", task: "Find where authentication is implemented" })`,
+    name: subagentMeta.name,
+    label: subagentMeta.label,
+    description: subagentMeta.description,
+    promptSnippet: subagentMeta.promptSnippet,
+    promptGuidelines: [...subagentMeta.promptGuidelines],
     parameters: SubagentParams,
     execute(
       id: string,
@@ -302,7 +327,7 @@ Example:
           (i: RenderItem) => i.type === "toolCall"
         );
 
-        let text = theme.fg("warning", "Running...");
+        let text = `Status: ${formatStatusLabel("running", theme)}`;
         const callsText = renderToolCalls(toolCalls, theme, PREVIEW_TOOL_CALLS);
         if (callsText) text += `\n${callsText}`;
 
@@ -320,16 +345,21 @@ Example:
       }
 
       const isError = _context?.isError || r.exitCode !== 0 || Boolean(details?.error);
-      const agentLabel =
-        theme.fg("toolTitle", theme.bold(r.agent)) +
-        (isError ? ` ${theme.fg("error", `[exit ${r.exitCode}]`)}` : "");
+      const statusLabel = isError
+        ? formatStatusLabel("failed", theme)
+        : formatStatusLabel("success", theme);
+      const statusLine = `Status: ${statusLabel}${isError ? ` ${theme.fg("error", `[exit ${r.exitCode}]`)}` : ""}`;
+      const agentLine = `Agent: ${theme.fg("toolTitle", theme.bold(r.agent))}`;
+      const taskLine = r.task ? `Task: ${theme.fg("dim", r.task)}` : undefined;
       const toolCalls: RenderItem[] = (r.displayItems || []).filter(
         (i: RenderItem) => i.type === "toolCall"
       );
 
       // --- Collapsed ---
       if (!expanded) {
-        let text = agentLabel;
+        let text = [statusLine, agentLine, taskLine]
+          .filter((line) => typeof line === "string")
+          .join("\n");
 
         // Tool calls summary
         const callsText = renderToolCalls(toolCalls, theme, PREVIEW_TOOL_CALLS);
@@ -358,7 +388,11 @@ Example:
       const container = new Container();
       const mdTheme = getMarkdownTheme();
 
-      container.addChild(new Text(agentLabel, 0, 0));
+      container.addChild(new Text(statusLine, 0, 0));
+      container.addChild(new Text(agentLine, 0, 0));
+      if (taskLine) {
+        container.addChild(new Text(taskLine, 0, 0));
+      }
 
       // Tool calls
       if (toolCalls.length > 0) {
@@ -425,7 +459,20 @@ Example:
   });
 
   pi.on("session_shutdown", () => {
+    for (const controller of activeControllers) {
+      controller.abort();
+    }
+    activeControllers.clear();
     state.lastUiContext = null;
     state.currentSessionId = null;
+  });
+
+  options.resources?.add({
+    dispose() {
+      for (const controller of activeControllers) {
+        controller.abort();
+      }
+      activeControllers.clear();
+    },
   });
 }
