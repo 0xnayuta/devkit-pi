@@ -11,4 +11,6 @@ language: chinese
 
 当前审计：
 
+- [项目代码质量审计报告 · 模板](./code-quality-audit-template.md)
 - [项目代码质量审计报告 · 2026-05-13](./code-quality-audit-2026-05-13.md)
+- [项目代码质量审计报告 · 2026-05-21](./code-quality-audit-2026-05-21.md)

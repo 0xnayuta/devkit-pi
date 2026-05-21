@@ -13,6 +13,7 @@ ADR 是历史决策记录。它们解释过去设计选择的背景和取舍，�
 
 | ADR | 标题 |
 |-----|------|
+| [0000](./0000-adr-template.md) | ADR 模板（新建 ADR 时复制并替换） |
 | [0001](./0001-lightweight-foreground-subagents.md) | 采用轻量 foreground subagent 设计 |
 | [0002](./0002-mvp-boundary-decisions.md) | MVP 边界决策 |
 | [0003](./0003-autonomous-subagent-triggering.md) | 自主触发子代理的改进方案 |
@@ -20,3 +21,4 @@ ADR 是历史决策记录。它们解释过去设计选择的背景和取舍，�
 | [0005](./0005-evolve-into-devkit-pi.md) | 从 pi-subagents 演进为 devkit-pi |
 | [0006](./0006-architecture-consistency-over-legacy-layout.md) | 架构一致性优先于 legacy layout |
 | [0007](./0007-lsp-load-sync-no-go.md) | LSP load/sync 实现迁移 NO-GO（当前阶段） |
+| [0008](./0008-align-with-pi-native-extension-paradigm.md) | devkit-pi 向 Pi 官方/原生扩展范式收敛 |
