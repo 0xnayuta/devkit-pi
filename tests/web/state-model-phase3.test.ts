@@ -109,6 +109,26 @@ describe("phase3 state model - web responseId layers", () => {
 		assert.equal("error" in expired, true);
 	});
 
+	it("session entry: malformed payloads are ignored without throwing", () => {
+		const now = Date.now();
+		const branch = [
+			null,
+			{},
+			{ type: "tool_result", customType: WEB_RESULTS_CUSTOM_TYPE, data: {} },
+			{ type: "custom", customType: WEB_RESULTS_CUSTOM_TYPE, data: null },
+			{ type: "custom", customType: WEB_RESULTS_CUSTOM_TYPE, data: { id: "x", type: "fetch", timestamp: Number.NaN, urls: [] } },
+			{ type: "custom", customType: WEB_RESULTS_CUSTOM_TYPE, data: { id: "x", type: "fetch", timestamp: now, urls: "not-array" } },
+			{ type: "custom", customType: WEB_RESULTS_CUSTOM_TYPE, data: { id: "x", type: "search", timestamp: now, queries: "not-array" } },
+			{ type: "custom", customType: WEB_RESULTS_CUSTOM_TYPE, data: { id: "ok", type: "fetch", timestamp: now, urls: [{ url: "https://example.com", content: "ok", truncated: false }] } },
+		];
+
+		assert.doesNotThrow(() => restoreResultsFromSession(branch as unknown[]));
+		const restored = restoreResultsFromSession(branch as unknown[]);
+		assert.equal(restored, 1);
+		assert.equal("result" in getSearchContent({ responseId: "ok", urlIndex: 0 }, 30000), true);
+		assert.equal("error" in getSearchContent({ responseId: "x" }, 30000), true);
+	});
+
 	it("provider cache: cache hit semantics remain independent from session restore", () => {
 		const cache = new SearchResultCache({ enabled: true, maxEntries: 10, ttlMs: 60000 });
 		cache.set("alpha", "ddgs", 5, [{ query: "alpha", results: [] }]);

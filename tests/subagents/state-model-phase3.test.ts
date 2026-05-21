@@ -209,4 +209,23 @@ describe("phase3 state model - subagent details restoration", () => {
 		);
 		assert.equal(finalResult.details?.streaming, undefined);
 	});
+
+	it("render gracefully handles malformed legacy details shape", () => {
+		const pi = createPiMock();
+		registerSubagentsModule(pi as any, mergeConfig({}).subagents);
+		const tool = pi.tools.find((candidate) => candidate.name === "subagent");
+		assert.ok(tool);
+
+		const malformedLegacyResult = {
+			content: [{ type: "text", text: "fallback output" }],
+			details: {
+				mode: "single",
+				results: null,
+			},
+		};
+
+		assert.doesNotThrow(() => {
+			renderText(tool.renderResult(malformedLegacyResult, { expanded: false }, createTheme(), { isError: false }));
+		});
+	});
 });
