@@ -68,6 +68,18 @@ async function assertProviderNetworkError(provider: SearchProviderAdapter, confi
 	await assert.rejects(() => provider.search({ query: "test", numResults: 1 }, config), /ECONNREFUSED/);
 }
 
+async function assertProviderEmptyAndCommonErrors(
+	provider: SearchProviderAdapter,
+	config: ResolvedWebConfig,
+	setup?: () => void
+) {
+	setup?.();
+	globalThis.fetch = (() => Promise.resolve(jsonResponse({}))) as typeof fetch;
+	assert.equal((await provider.search({ query: "test", numResults: 5 }, config)).length, 0);
+	await assertProviderHttpError(provider, config);
+	await assertProviderNetworkError(provider, config);
+}
+
 afterEach(() => {
 	globalThis.fetch = originalFetch;
 	resetConnectionPool();
@@ -288,11 +300,7 @@ describe("brave provider", () => {
 	});
 
 	it("handles empty response and errors", async () => {
-		setApiKey(ENV.brave);
-		globalThis.fetch = (() => Promise.resolve(jsonResponse({}))) as typeof fetch;
-		assert.equal((await braveProvider.search({ query: "test", numResults: 5 }, config)).length, 0);
-		await assertProviderHttpError(braveProvider, config);
-		await assertProviderNetworkError(braveProvider, config);
+		await assertProviderEmptyAndCommonErrors(braveProvider, config, () => setApiKey(ENV.brave));
 	});
 });
 
@@ -331,11 +339,7 @@ describe("openserp provider", () => {
 	});
 
 	it("handles empty response and errors", async () => {
-		setApiKey(ENV.openserp);
-		globalThis.fetch = (() => Promise.resolve(jsonResponse({}))) as typeof fetch;
-		assert.equal((await openserpProvider.search({ query: "test", numResults: 5 }, config)).length, 0);
-		await assertProviderHttpError(openserpProvider, config);
-		await assertProviderNetworkError(openserpProvider, config);
+		await assertProviderEmptyAndCommonErrors(openserpProvider, config, () => setApiKey(ENV.openserp));
 	});
 });
 
@@ -377,10 +381,7 @@ describe("searxng provider", () => {
 	});
 
 	it("handles empty response and errors", async () => {
-		globalThis.fetch = (() => Promise.resolve(jsonResponse({}))) as typeof fetch;
-		assert.equal((await searxngProvider.search({ query: "test", numResults: 5 }, config)).length, 0);
-		await assertProviderHttpError(searxngProvider, config);
-		await assertProviderNetworkError(searxngProvider, config);
+		await assertProviderEmptyAndCommonErrors(searxngProvider, config);
 	});
 });
 
@@ -412,11 +413,7 @@ describe("serper provider", () => {
 	});
 
 	it("handles empty response and errors", async () => {
-		setApiKey(ENV.serper);
-		globalThis.fetch = (() => Promise.resolve(jsonResponse({}))) as typeof fetch;
-		assert.equal((await serperProvider.search({ query: "test", numResults: 5 }, config)).length, 0);
-		await assertProviderHttpError(serperProvider, config);
-		await assertProviderNetworkError(serperProvider, config);
+		await assertProviderEmptyAndCommonErrors(serperProvider, config, () => setApiKey(ENV.serper));
 	});
 });
 
@@ -446,10 +443,6 @@ describe("tavily provider", () => {
 	});
 
 	it("handles empty response and errors", async () => {
-		setApiKey(ENV.tavily);
-		globalThis.fetch = (() => Promise.resolve(jsonResponse({}))) as typeof fetch;
-		assert.equal((await tavilyProvider.search({ query: "test", numResults: 5 }, config)).length, 0);
-		await assertProviderHttpError(tavilyProvider, config);
-		await assertProviderNetworkError(tavilyProvider, config);
+		await assertProviderEmptyAndCommonErrors(tavilyProvider, config, () => setApiKey(ENV.tavily));
 	});
 });
