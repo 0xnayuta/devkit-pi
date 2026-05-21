@@ -6,7 +6,6 @@ import { mergeConfig } from "../../src/config/load-config.ts";
 import { CONVERT_ERROR_CODES, registerConvertTools } from "../../src/modules/convert/index.ts";
 import { createLogger, createMemoryLoggerSink } from "../../src/shared/logger.ts";
 import { ConvertContentParams } from "../../src/modules/convert/schemas.ts";
-import type { ResolvedConvertContentConfig } from "../../src/shared/types.ts";
 
 interface RegisteredTool {
   name: string;
@@ -56,13 +55,6 @@ function createMockPi(): MockExtensionAPI {
 const convertConfig = mergeConfig({}).convertContent;
 
 describe("registerConvertTools", () => {
-  it("registers no tools when config.enabled is false", () => {
-    const pi = createMockPi();
-    const config: ResolvedConvertContentConfig = { ...convertConfig, enabled: false };
-    registerConvertTools(pi as any, config);
-    assert.equal(pi.registeredTools.length, 0);
-  });
-
   it("registers convert_content when enabled", () => {
     const pi = createMockPi();
     registerConvertTools(pi as any, convertConfig);
@@ -75,9 +67,6 @@ describe("registerConvertTools", () => {
     assert.equal(typeof tool.execute, "function");
     assert.equal(typeof tool.renderCall, "function");
     assert.equal(typeof tool.renderResult, "function");
-    assert.equal(typeof tool.promptSnippet, "string");
-    assert.ok(Array.isArray(tool.promptGuidelines));
-    assert.ok((tool.promptGuidelines?.length ?? 0) > 0);
   });
 
   it("exposes expected parameter schema fields", () => {

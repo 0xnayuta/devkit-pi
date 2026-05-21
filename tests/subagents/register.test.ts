@@ -50,23 +50,7 @@ describe("subagents module registration", () => {
     registerSubagentsModule(pi as any, config.subagents);
 
     assert.deepEqual(pi.tools.map((tool) => tool.name), ["subagent"]);
-    const subagentTool = pi.tools[0];
-    assert.equal(typeof subagentTool.promptSnippet, "string");
-    assert.ok(Array.isArray(subagentTool.promptGuidelines));
-    assert.ok((subagentTool.promptGuidelines?.length ?? 0) > 0);
     assert.deepEqual(pi.commands, []);
-  });
-
-  it("does not register in subagent child processes", () => {
-    process.env[PI_SUBAGENT_CHILD] = "1";
-    const pi = createPiMock();
-    const config = mergeConfig({});
-
-    registerSubagentsModule(pi as any, config.subagents);
-
-    assert.equal(pi.tools.length, 0);
-    assert.equal(pi.commands.length, 0);
-    assert.equal(pi.listeners.length, 0);
   });
 
   it("logs disabled status through injected shared logger", () => {

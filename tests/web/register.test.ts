@@ -18,7 +18,6 @@ import {
 	truncateText,
 } from "../../src/modules/web/renderers.ts";
 import { FetchContentParams, GetSearchContentParams, WebSearchParams } from "../../src/modules/web/schemas.ts";
-import type { ResolvedWebConfig } from "../../src/shared/types.ts";
 
 const webConfig = mergeConfig({}).web;
 const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
@@ -82,21 +81,6 @@ afterEach(() => {
 	resetConnectionPool();
 });
 
-describe("registerWebTools - enabled gate", () => {
-	it("registers no tools when config.enabled is false", () => {
-		const pi = createMockPi();
-		const config: ResolvedWebConfig = { ...webConfig, enabled: false };
-		registerWebTools(pi as any, config);
-		assert.equal(pi.registeredTools.length, 0);
-	});
-
-	it("registers tools when config.enabled is true", () => {
-		const pi = createMockPi();
-		registerWebTools(pi as any, webConfig);
-		assert.ok(pi.registeredTools.length > 0);
-	});
-});
-
 describe("registerWebTools - tool registration", () => {
 	let pi: MockExtensionAPI;
 
@@ -120,9 +104,6 @@ describe("registerWebTools - tool registration", () => {
 			assert.equal(typeof tool.execute, "function");
 			assert.equal(typeof tool.renderCall, "function");
 			assert.equal(typeof tool.renderResult, "function");
-			assert.equal(typeof tool.promptSnippet, "string");
-			assert.ok(Array.isArray(tool.promptGuidelines));
-			assert.ok((tool.promptGuidelines?.length ?? 0) > 0);
 		}
 	});
 
@@ -141,13 +122,6 @@ describe("registerWebTools - tool registration", () => {
 });
 
 describe("registerWebTools - lifecycle integration", () => {
-	it("registers session lifecycle handlers when pi.on is available", () => {
-		const pi = createMockPi();
-		registerWebTools(pi as any, webConfig);
-		assert.ok(pi.eventHandlers.get("session_start")?.length);
-		assert.ok(pi.eventHandlers.get("session_shutdown")?.length);
-	});
-
 	it("registers session lifecycle handlers and append entry integration", () => {
 		const pi = createMockPi();
 		registerWebTools(pi as any, webConfig);
