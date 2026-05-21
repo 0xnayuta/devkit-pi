@@ -345,6 +345,56 @@ describe("web_search", () => {
     }
   });
 
+  it("maps an already-aborted signal to WEB_SEARCH_TIMEOUT with stable guidance", async () => {
+    globalThis.fetch = ((_input: string | URL, init?: RequestInit) => {
+      if (init?.signal?.aborted) {
+        return Promise.reject(new DOMException("The operation was aborted", "AbortError"));
+      }
+      return Promise.resolve(braveResponse());
+    }) as typeof fetch;
+
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await webSearch(
+      { query: "typescript" },
+      mergeWebConfig({ web: { provider: "brave", brave: { enabled: true } } }),
+      controller.signal
+    );
+
+    assert.equal("error" in result, true);
+    if ("error" in result) {
+      assert.equal(result.error.code, "WEB_SEARCH_TIMEOUT");
+      assert.match(result.error.message, /timed out or was aborted/i);
+    }
+  });
+
+  it("keeps successful search results when includeContent fetches are aborted", async () => {
+    globalThis.fetch = ((input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith("https://api.search.brave.com/")) {
+        return Promise.resolve(braveResponse(["https://93.184.216.34/a"]));
+      }
+      if (init?.signal?.aborted) {
+        return Promise.reject(new DOMException("The operation was aborted", "AbortError"));
+      }
+      return Promise.reject(new DOMException("The operation was aborted", "AbortError"));
+    }) as typeof fetch;
+
+    const result = await webSearch(
+      { query: "typescript", includeContent: true, numResults: 1 },
+      mergeWebConfig({ web: { provider: "brave", brave: { enabled: true } } }),
+      new AbortController().signal
+    );
+
+    assert.equal("responseId" in result, true);
+    if ("responseId" in result) {
+      assert.equal(result.queries[0].results.length, 1);
+      assert.equal(result.queries[0].results[0].url, "https://93.184.216.34/a");
+      assert.equal(result.queries[0].results[0].content, undefined);
+    }
+  });
+
   it("limits includeContent fetch concurrency", async () => {
     let active = 0;
     let maxActive = 0;
