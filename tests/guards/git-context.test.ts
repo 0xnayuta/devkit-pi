@@ -5,11 +5,13 @@ import {
   formatFirstWriteNotice,
   formatGitContextNotice,
   getGitContext,
+  GuardsGateBlockedError,
   isPotentialWriteTool,
   isVerificationCommand,
   registerGuardsModule,
 } from "../../src/modules/guards/index.ts";
 import type { ExternalCommandResult, ExternalCommandRunner, ExternalCommandSpec, ExternalCommandRunOptions } from "../../src/shared/external-command.ts";
+import { createLogger, createMemoryLoggerSink } from "../../src/shared/logger.ts";
 import { PI_SUBAGENT_CHILD } from "../../src/shared/types.ts";
 
 class FakeGitRunner implements ExternalCommandRunner {
@@ -52,13 +54,13 @@ function createRunner(options: { branch?: string; status?: string; inside?: bool
   return runner;
 }
 
-function createPiMock() {
-  const listeners: Record<string, Array<(event: any, ctx: any) => unknown>> = {};
+function createPiMock(options: { confirm?: boolean | null } = {}) {
+  const listeners: Record<string, Array<(event: unknown, ctx: unknown) => unknown>> = {};
   const notifications: Array<{ message: string; level: string }> = [];
   return {
     listeners,
     notifications,
-    on(event: string, handler: (event: any, ctx: any) => unknown) {
+    on(event: string, handler: (event: unknown, ctx: unknown) => unknown) {
       listeners[event] ??= [];
       listeners[event].push(handler);
     },
@@ -69,6 +71,11 @@ function createPiMock() {
         notify(message: string, level: string) {
           notifications.push({ message, level });
         },
+        ...(options.confirm === null
+          ? {}
+          : {
+              confirm: (_message: string) => options.confirm ?? true,
+            }),
       },
     },
   };
@@ -164,6 +171,44 @@ describe("guards git context", () => {
     await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
 
     assert.equal(pi.notifications.length, 0);
+  });
+
+  it("resets first-write tracking on session lifecycle events", async () => {
+    const pi = createPiMock();
+    registerGuardsModule(pi as any, mergeConfig({}).guards, { runner: createRunner() });
+
+    await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
+    await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
+    assert.equal(pi.notifications.filter((item) => item.message.includes("First write in this session")).length, 1);
+
+    await emit(pi, "session_start");
+    await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
+    assert.equal(pi.notifications.filter((item) => item.message.includes("First write in this session")).length, 2);
+
+    await emit(pi, "session_shutdown");
+    await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
+    assert.equal(pi.notifications.filter((item) => item.message.includes("First write in this session")).length, 3);
+  });
+
+  it("is branch-agnostic: branch change alone does not re-arm first-write notice", async () => {
+    const pi = createPiMock();
+    const runner = createRunner({ branch: "feature/one" });
+    registerGuardsModule(pi as any, mergeConfig({}).guards, { runner });
+
+    await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
+    assert.equal(pi.notifications.filter((item) => item.message.includes("First write in this session")).length, 1);
+    assert.match(pi.notifications[0]?.message ?? "", /Current branch: feature\/one/);
+
+    runner.responses.set("rev-parse --abbrev-ref HEAD", result(0, "feature/two\n"));
+    runner.responses.set("branch --show-current", result(0, "feature/two\n"));
+
+    await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
+    assert.equal(pi.notifications.filter((item) => item.message.includes("First write in this session")).length, 1);
+
+    await emit(pi, "session_start");
+    await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
+    assert.equal(pi.notifications.filter((item) => item.message.includes("First write in this session")).length, 2);
+    assert.match(pi.notifications.at(-1)?.message ?? "", /Current branch: feature\/two/);
   });
 
   it("classifies verification commands conservatively", () => {
@@ -263,6 +308,105 @@ describe("guards git context", () => {
     assert.equal(pi.notifications.length, 0);
   });
 
+  it("does not register when guards mode is off", () => {
+    const pi = createPiMock();
+
+    registerGuardsModule(pi as any, mergeConfig({ guards: { mode: "off" } }).guards, {
+      runner: createRunner(),
+    });
+
+    assert.deepEqual(pi.listeners, {});
+  });
+
+  it("confirm mode uses interactive confirm and allows when approved", async () => {
+    const pi = createPiMock({ confirm: true });
+    registerGuardsModule(pi as any, mergeConfig({ guards: { mode: "confirm" } }).guards, {
+      runner: createRunner(),
+    });
+
+    await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
+
+    assert.match(pi.notifications.map((item) => item.message).join("\n"), /Guard confirm: allowed/);
+  });
+
+  it("confirm mode non-interactive policy deny emits soft deny decision", async () => {
+    const pi = createPiMock({ confirm: null });
+    registerGuardsModule(
+      pi as any,
+      mergeConfig({ guards: { mode: "confirm", nonInteractivePolicy: "deny", blockMode: "soft" } })
+        .guards,
+      {
+        runner: createRunner(),
+      }
+    );
+
+    await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
+
+    assert.match(
+      pi.notifications.map((item) => item.message).join("\n"),
+      /non-interactive.*decision=deny_soft/
+    );
+  });
+
+  it("block mode emits configurable soft deny notice", async () => {
+    const pi = createPiMock();
+    registerGuardsModule(
+      pi as any,
+      mergeConfig({ guards: { mode: "block", blockMode: "preview" } }).guards,
+      {
+        runner: createRunner(),
+      }
+    );
+
+    await emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } });
+
+    assert.match(pi.notifications.map((item) => item.message).join("\n"), /mode=block \(preview\)/);
+    assert.match(pi.notifications.map((item) => item.message).join("\n"), /decision=deny_soft/);
+  });
+
+  it("confirm mode non-interactive deny + hard enforces hard block", async () => {
+    const pi = createPiMock({ confirm: null });
+    registerGuardsModule(
+      pi as any,
+      mergeConfig({ guards: { mode: "confirm", nonInteractivePolicy: "deny", blockMode: "hard" } })
+        .guards,
+      {
+        runner: createRunner(),
+      }
+    );
+
+    await assert.rejects(
+      emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } }),
+      (error: unknown) => error instanceof GuardsGateBlockedError && error.code === "GUARD_HARD_BLOCKED"
+    );
+  });
+
+  it("block mode hard enforces hard block", async () => {
+    const pi = createPiMock();
+    registerGuardsModule(pi as any, mergeConfig({ guards: { mode: "block", blockMode: "hard" } }).guards, {
+      runner: createRunner(),
+    });
+
+    await assert.rejects(
+      emit(pi, "tool_call", { toolName: "write", input: { path: "README.md" } }),
+      (error: unknown) => error instanceof GuardsGateBlockedError && error.code === "GUARD_HARD_BLOCKED"
+    );
+  });
+
+  it("gate flow ignores non-write tools", async () => {
+    const pi = createPiMock();
+    registerGuardsModule(pi as any, mergeConfig({ guards: { mode: "confirm" } }).guards, {
+      runner: createRunner(),
+    });
+
+    await emit(pi, "tool_call", { toolName: "read", input: { path: "README.md" } });
+
+    assert.equal(
+      pi.notifications.some((item) => item.message.includes("mode=confirm")),
+      false
+    );
+  });
+
   it("does not register in subagent child processes", () => {
     process.env[PI_SUBAGENT_CHILD] = "1";
     const pi = createPiMock();
@@ -270,5 +414,27 @@ describe("guards git context", () => {
     registerGuardsModule(pi as any, mergeConfig({}).guards, { runner: createRunner() });
 
     assert.deepEqual(pi.listeners, {});
+  });
+
+  it("logs normalized payload when guard notification path throws", async () => {
+    const pi = createPiMock();
+    const sink = createMemoryLoggerSink();
+    pi.ctx.ui.notify = () => {
+      throw new Error("notify failed");
+    };
+
+    registerGuardsModule(pi as any, mergeConfig({}).guards, {
+      runner: createRunner({ status: " M README.md\n" }),
+      logger: createLogger({ module: "test.guards", sink }),
+    });
+
+    await emit(pi, "tool_result", { toolName: "read" });
+
+    const event = sink.events.find((item) => item.event === "guards.error_payload");
+    assert.ok(event);
+    assert.equal(event?.level, "warn");
+    const payload = event?.metadata?.payload as Record<string, unknown> | undefined;
+    assert.equal(payload?.code, "INTERNAL_ERROR");
+    assert.equal(payload?.module, "guards");
   });
 });
