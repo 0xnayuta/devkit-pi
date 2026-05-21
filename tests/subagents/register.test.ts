@@ -25,6 +25,16 @@ function createPiMock() {
   };
 }
 
+function createExecutionContext() {
+  return {
+    cwd: process.cwd(),
+    hasUI: false,
+    sessionManager: {
+      getSessionFile: () => null,
+    },
+  };
+}
+
 describe("subagents module registration", () => {
   const originalChild = process.env[PI_SUBAGENT_CHILD];
 
@@ -40,6 +50,10 @@ describe("subagents module registration", () => {
     registerSubagentsModule(pi as any, config.subagents);
 
     assert.deepEqual(pi.tools.map((tool) => tool.name), ["subagent"]);
+    const subagentTool = pi.tools[0];
+    assert.equal(typeof subagentTool.promptSnippet, "string");
+    assert.ok(Array.isArray(subagentTool.promptGuidelines));
+    assert.ok((subagentTool.promptGuidelines?.length ?? 0) > 0);
     assert.deepEqual(pi.commands, []);
   });
 
@@ -67,5 +81,36 @@ describe("subagents module registration", () => {
     assert.equal(sink.events.length, 1);
     assert.equal(sink.events[0]?.level, "info");
     assert.equal(sink.events[0]?.event, "module.disabled");
+  });
+
+  it("emits bridged subagent error payload in execution path without changing tool result shape", async () => {
+    const pi = createPiMock();
+    const config = mergeConfig({});
+    const sink = createMemoryLoggerSink();
+    const logger = createLogger({ module: "test", sink });
+
+    registerSubagentsModule(pi as any, config.subagents, { logger });
+
+    const subagentTool = pi.tools.find((tool) => tool.name === "subagent");
+    assert.ok(subagentTool);
+
+    const result = await subagentTool.execute(
+      "subagent-error-payload-test",
+      { agent: "", task: "hello" },
+      new AbortController().signal,
+      undefined,
+      createExecutionContext()
+    );
+
+    assert.equal(result.details?.error?.code, "INVALID_INPUT");
+    assert.equal(typeof result.details?.error?.message, "string");
+
+    const payloadEvent = sink.events.find((event) => event.event === "subagents.error_payload");
+    assert.ok(payloadEvent);
+    assert.equal(payloadEvent?.level, "warn");
+    const payload = payloadEvent?.metadata?.payload as Record<string, unknown> | undefined;
+    assert.equal(payload?.module, "subagents");
+    assert.equal(payload?.code, "INVALID_INPUT");
+    assert.equal(payload?.provider, "pi");
   });
 });

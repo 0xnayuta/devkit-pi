@@ -13,21 +13,21 @@ export type ChildEventPersistence = "persist" | "transient" | "drop";
 type JsonRecord = Record<string, unknown>;
 
 const TRANSIENT_EVENT_TYPES = new Set([
-  // High-frequency assistant streaming updates. These can carry cumulative
-  // `message` and `assistantMessageEvent.partial` snapshots.
-  "message_update",
-  // High-frequency tool execution partial updates. Final result/error is kept
-  // through tool_execution_end / tool_result_end.
-  "tool_execution_update",
+	// High-frequency assistant streaming updates. These can carry cumulative
+	// `message` and `assistantMessageEvent.partial` snapshots.
+	"message_update",
+	// High-frequency tool execution partial updates. Final result/error is kept
+	// through tool_execution_end / tool_result_end.
+	"tool_execution_update",
 ]);
 
 const DROP_EVENT_TYPES = new Set([
-  // Startup/current-state events are not needed for final result extraction and
-  // may duplicate message snapshots.
-  "message_start",
-  // Queue updates are only useful for interactive UI and are not meaningful for
-  // foreground single-shot subagent collection.
-  "queue_update",
+	// Startup/current-state events are not needed for final result extraction and
+	// may duplicate message snapshots.
+	"message_start",
+	// Queue updates are only useful for interactive UI and are not meaningful for
+	// foreground single-shot subagent collection.
+	"queue_update",
 ]);
 
 /**
@@ -39,17 +39,17 @@ const DROP_EVENT_TYPES = new Set([
  * types until this filter is taught otherwise.
  */
 export function classifyChildJsonlEvent(event: unknown): ChildEventPersistence {
-  if (!isRecord(event)) return "persist";
+	if (!isRecord(event)) return "persist";
 
-  const eventType = event.type;
-  if (typeof eventType !== "string") return "persist";
+	const eventType = event.type;
+	if (typeof eventType !== "string") return "persist";
 
-  if (TRANSIENT_EVENT_TYPES.has(eventType)) return "transient";
-  if (DROP_EVENT_TYPES.has(eventType)) return "drop";
+	if (TRANSIENT_EVENT_TYPES.has(eventType)) return "transient";
+	if (DROP_EVENT_TYPES.has(eventType)) return "drop";
 
-  return "persist";
+	return "persist";
 }
 
 function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -14,129 +14,126 @@ export const PI_SUBAGENT_MAX_DEPTH = "PI_SUBAGENT_MAX_DEPTH";
 const TASK_ARG_LIMIT = 8000;
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
 
-export function applyThinkingSuffix(
-  model: string | undefined,
-  thinking: string | undefined
-): string | undefined {
-  if (!model || !thinking || thinking === "off") return model;
-  const colonIdx = model.lastIndexOf(":");
-  if (colonIdx !== -1 && THINKING_LEVELS.includes(model.substring(colonIdx + 1))) return model;
-  return `${model}:${thinking}`;
+export function applyThinkingSuffix(model: string | undefined, thinking: string | undefined): string | undefined {
+	if (!model || !thinking || thinking === "off") return model;
+	const colonIdx = model.lastIndexOf(":");
+	if (colonIdx !== -1 && THINKING_LEVELS.includes(model.substring(colonIdx + 1))) return model;
+	return `${model}:${thinking}`;
 }
 
 /**
  * Build arguments for spawning a pi child process
  */
 export function buildSubagentChildArgs(input: {
-  mode: "json" | "text";
-  jsonStreamProfile?: PiJsonStreamProfile;
-  systemPrompt: string;
-  task: string;
-  cwd: string;
-  sessionFile?: string;
-  model?: string;
-  tools?: string[];
-  env?: Record<string, string>;
+	mode: "json" | "text";
+	jsonStreamProfile?: PiJsonStreamProfile;
+	systemPrompt: string;
+	task: string;
+	cwd: string;
+	sessionFile?: string;
+	model?: string;
+	tools?: string[];
+	env?: Record<string, string>;
 }): { args: string[]; env: Record<string, string | undefined>; tempDir?: string } {
-  const args: string[] = [];
+	const args: string[] = [];
 
-  // Set output mode
-  if (input.mode === "json") {
-    args.push(...getPiJsonModeArgs(input.jsonStreamProfile ?? "full"));
-  }
+	// Set output mode
+	if (input.mode === "json") {
+		args.push(...getPiJsonModeArgs(input.jsonStreamProfile ?? "full"));
+	}
 
-  // Session file
-  const tempDir = input.sessionFile
-    ? path.dirname(input.sessionFile)
-    : fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagent-"));
+	// Session file
+	const tempDir = input.sessionFile
+		? path.dirname(input.sessionFile)
+		: fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagent-"));
 
-  if (input.sessionFile) {
-    fs.mkdirSync(path.dirname(input.sessionFile), { recursive: true });
-    args.push("--session", input.sessionFile);
-  } else {
-    args.push("--no-session");
-  }
+	if (input.sessionFile) {
+		fs.mkdirSync(path.dirname(input.sessionFile), { recursive: true });
+		args.push("--session", input.sessionFile);
+	} else {
+		args.push("--no-session");
+	}
 
-  // Model
-  if (input.model) {
-    args.push("--model", input.model);
-  }
+	// Model
+	if (input.model) {
+		args.push("--model", input.model);
+	}
 
-  // Tools
-  if (input.tools?.length) {
-    args.push("--tools", input.tools.join(","));
-  }
+	// Tools
+	if (input.tools?.length) {
+		args.push("--tools", input.tools.join(","));
+	}
 
-  // System prompt (written to temp file)
-  const promptPath = path.join(tempDir, "prompt.md");
-  fs.writeFileSync(promptPath, input.systemPrompt, { mode: 0o600 });
-  args.push("--system-prompt", promptPath);
+	// System prompt (written to temp file)
+	const promptPath = path.join(tempDir, "prompt.md");
+	fs.writeFileSync(promptPath, input.systemPrompt, { mode: 0o600 });
+	args.push("--system-prompt", promptPath);
 
-  // Task: include an explicit user prompt so the child CLI runs one agent turn.
-  // The task is also present in the system prompt for role/constraint context.
-  if (input.task.length > TASK_ARG_LIMIT) {
-    const taskFilePath = path.join(tempDir, "task.md");
-    fs.writeFileSync(taskFilePath, `Task: ${input.task}`, { mode: 0o600 });
-    args.push(`@${taskFilePath}`);
-  } else {
-    args.push(`Task: ${input.task}`);
-  }
+	// Task: include an explicit user prompt so the child CLI runs one agent turn.
+	// The task is also present in the system prompt for role/constraint context.
+	if (input.task.length > TASK_ARG_LIMIT) {
+		const taskFilePath = path.join(tempDir, "task.md");
+		fs.writeFileSync(taskFilePath, `Task: ${input.task}`, { mode: 0o600 });
+		args.push(`@${taskFilePath}`);
+	} else {
+		args.push(`Task: ${input.task}`);
+	}
 
-  // Environment
-  const env: Record<string, string | undefined> = {
-    ...process.env,
-    ...input.env,
-    [PI_SUBAGENT_CHILD]: "1",
-  };
+	// Environment
+	const env: Record<string, string | undefined> = {
+		...process.env,
+		...input.env,
+		[PI_SUBAGENT_CHILD]: "1",
+	};
 
-  return { args, env, tempDir };
+	return { args, env, tempDir };
 }
 
 /**
  * Build a simple pi command line
  */
 export function buildPiCommand(
-  task: string,
-  options: {
-    mode?: "json" | "text";
-    jsonStreamProfile?: PiJsonStreamProfile;
-    model?: string;
-    tools?: string[];
-    sessionFile?: string;
-  } = {}
+	task: string,
+	options: {
+		mode?: "json" | "text";
+		jsonStreamProfile?: PiJsonStreamProfile;
+		model?: string;
+		tools?: string[];
+		sessionFile?: string;
+	} = {}
 ): string[] {
-  const args: string[] = [];
+	const args: string[] = [];
 
-  if (options.mode === "json") {
-    args.push(...getPiJsonModeArgs(options.jsonStreamProfile ?? "full"));
-  }
+	if (options.mode === "json") {
+		args.push(...getPiJsonModeArgs(options.jsonStreamProfile ?? "full"));
+	}
 
-  if (options.sessionFile) {
-    args.push("--session", options.sessionFile);
-  }
+	if (options.sessionFile) {
+		args.push("--session", options.sessionFile);
+	}
 
-  if (options.model) {
-    args.push("--model", options.model);
-  }
+	if (options.model) {
+		args.push("--model", options.model);
+	}
 
-  if (options.tools?.length) {
-    args.push("--tools", options.tools.join(","));
-  }
+	if (options.tools?.length) {
+		args.push("--tools", options.tools.join(","));
+	}
 
-  // Append task
-  args.push(task);
+	// Append task
+	args.push(task);
 
-  return args;
+	return args;
 }
 
 /**
  * Cleanup temp directory
  */
 export function cleanupTempDir(tempDir: string | null | undefined): void {
-  if (!tempDir) return;
-  try {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  } catch {
-    // Best effort cleanup
-  }
+	if (!tempDir) return;
+	try {
+		fs.rmSync(tempDir, { recursive: true, force: true });
+	} catch {
+		// Best effort cleanup
+	}
 }
