@@ -1,70 +1,65 @@
 import {
-  addToolkitActivityEntry,
-  clearToolkitActivityLog,
-  getToolkitActivityLog,
-  type ToolkitActivityEntry,
+	addToolkitActivityEntry,
+	clearToolkitActivityLog,
+	getToolkitActivityLog,
+	type ToolkitActivityEntry,
 } from "../../shared/activity.ts";
-import {
-  createConsoleLoggerSink,
-  createLogger,
-  type Logger,
-  type LoggerSink,
-} from "../../shared/logger.ts";
+import { createConsoleLoggerSink, createLogger, type Logger, type LoggerSink } from "../../shared/logger.ts";
 import type { DebugLevel } from "../../shared/types.ts";
 
 export type ActivityEntry = ToolkitActivityEntry;
 
 export interface ProviderStats {
-  requests: number;
-  errors: number;
-  rateLimited: number;
-  totalLatencyMs: number;
-  successRate: number;
+	requests: number;
+	errors: number;
+	rateLimited: number;
+	totalLatencyMs: number;
+	successRate: number;
 }
 
 export interface WebToolStats {
-  totalRequests: number;
-  successCount: number;
-  errorCount: number;
-  rateLimitedCount: number;
-  averageLatencyMs: number;
-  providerStats: Record<string, ProviderStats>;
+	totalRequests: number;
+	successCount: number;
+	errorCount: number;
+	rateLimitedCount: number;
+	averageLatencyMs: number;
+	providerStats: Record<string, ProviderStats>;
 }
 
 interface RawProviderStats {
-  calls: number;
-  success: number;
-  failure: number;
-  latencyMsTotal: number;
+	calls: number;
+	success: number;
+	failure: number;
+	latencyMsTotal: number;
 }
 
 interface RawStats {
-  search: { calls: number; success: number; failure: number };
-  fetch: { calls: number; success: number; failure: number };
-  getContent: { calls: number; success: number; failure: number };
-  providers: Record<string, RawProviderStats>;
-  errorCodes: Record<string, number>;
+	search: { calls: number; success: number; failure: number };
+	fetch: { calls: number; success: number; failure: number };
+	getContent: { calls: number; success: number; failure: number };
+	providers: Record<string, RawProviderStats>;
+	errorCodes: Record<string, number>;
 }
 
 const stats: RawStats = {
-  search: { calls: 0, success: 0, failure: 0 },
-  fetch: { calls: 0, success: 0, failure: 0 },
-  getContent: { calls: 0, success: 0, failure: 0 },
-  providers: {},
-  errorCodes: {},
+	search: { calls: 0, success: 0, failure: 0 },
+	fetch: { calls: 0, success: 0, failure: 0 },
+	getContent: { calls: 0, success: 0, failure: 0 },
+	providers: {},
+	errorCodes: {},
 };
 
 let debugEnabled: DebugLevel = false;
 let debugLogger: Logger = createLogger({
-  module: "web.observability",
-  sink: createConsoleLoggerSink(),
+	module: "web.observability",
+	sink: createConsoleLoggerSink(),
 });
 
 function ensureRawProvider(provider: string): RawProviderStats {
-  if (!stats.providers[provider]) {
-    stats.providers[provider] = { calls: 0, success: 0, failure: 0, latencyMsTotal: 0 };
-  }
-  return stats.providers[provider];
+	if (!stats.providers[provider]) {
+		stats.providers[provider] = { calls: 0, success: 0, failure: 0, latencyMsTotal: 0 };
+	}
+	return stats.providers[provider];
 }
 
 // ============================================================================
@@ -72,21 +67,21 @@ function ensureRawProvider(provider: string): RawProviderStats {
 // ============================================================================
 
 export function configureWebObservability(
-  debug: DebugLevel,
-  options: { logger?: Logger; loggerSink?: LoggerSink } = {}
+	debug: DebugLevel,
+	options: { logger?: Logger; loggerSink?: LoggerSink } = {}
 ): void {
-  debugEnabled = debug;
-  if (options.logger) {
-    debugLogger = options.logger;
-    return;
-  }
-  if (options.loggerSink) {
-    debugLogger = createLogger({ module: "web.observability", sink: options.loggerSink });
-  }
+	debugEnabled = debug;
+	if (options.logger) {
+		debugLogger = options.logger;
+		return;
+	}
+	if (options.loggerSink) {
+		debugLogger = createLogger({ module: "web.observability", sink: options.loggerSink });
+	}
 }
 
 export function getDebugLevel(): DebugLevel {
-  return debugEnabled;
+	return debugEnabled;
 }
 
 // ============================================================================
@@ -94,11 +89,11 @@ export function getDebugLevel(): DebugLevel {
 // ============================================================================
 
 export function getActivityLog(limit?: number): ActivityEntry[] {
-  return getToolkitActivityLog(limit);
+	return getToolkitActivityLog(limit);
 }
 
 export function clearActivityLog(): void {
-  clearToolkitActivityLog();
+	clearToolkitActivityLog();
 }
 
 // ============================================================================
@@ -106,46 +101,46 @@ export function clearActivityLog(): void {
 // ============================================================================
 
 export function resetWebToolStats(): void {
-  stats.search = { calls: 0, success: 0, failure: 0 };
-  stats.fetch = { calls: 0, success: 0, failure: 0 };
-  stats.getContent = { calls: 0, success: 0, failure: 0 };
-  stats.providers = {};
-  stats.errorCodes = {};
+	stats.search = { calls: 0, success: 0, failure: 0 };
+	stats.fetch = { calls: 0, success: 0, failure: 0 };
+	stats.getContent = { calls: 0, success: 0, failure: 0 };
+	stats.providers = {};
+	stats.errorCodes = {};
 }
 
 export function getWebToolStats(): WebToolStats {
-  const total = stats.search.calls + stats.fetch.calls + stats.getContent.calls;
-  const totalSuccess = stats.search.success + stats.fetch.success + stats.getContent.success;
-  const totalError = stats.search.failure + stats.fetch.failure + stats.getContent.failure;
+	const total = stats.search.calls + stats.fetch.calls + stats.getContent.calls;
+	const totalSuccess = stats.search.success + stats.fetch.success + stats.getContent.success;
+	const totalError = stats.search.failure + stats.fetch.failure + stats.getContent.failure;
 
-  // Calculate total latency from all providers
-  let totalLatencyMs = 0;
-  for (const p of Object.values(stats.providers)) {
-    totalLatencyMs += p.latencyMsTotal;
-  }
+	// Calculate total latency from all providers
+	let totalLatencyMs = 0;
+	for (const p of Object.values(stats.providers)) {
+		totalLatencyMs += p.latencyMsTotal;
+	}
 
-  const averageLatencyMs = total > 0 ? totalLatencyMs / total : 0;
+	const averageLatencyMs = total > 0 ? totalLatencyMs / total : 0;
 
-  // Convert raw provider stats to structured format
-  const providerStats: Record<string, ProviderStats> = {};
-  for (const [name, p] of Object.entries(stats.providers)) {
-    providerStats[name] = {
-      requests: p.calls,
-      errors: p.failure,
-      rateLimited: stats.errorCodes.PROVIDER_RATE_LIMITED ?? 0,
-      totalLatencyMs: p.latencyMsTotal,
-      successRate: p.calls > 0 ? p.success / p.calls : 0,
-    };
-  }
+	// Convert raw provider stats to structured format
+	const providerStats: Record<string, ProviderStats> = {};
+	for (const [name, p] of Object.entries(stats.providers)) {
+		providerStats[name] = {
+			requests: p.calls,
+			errors: p.failure,
+			rateLimited: stats.errorCodes.PROVIDER_RATE_LIMITED ?? 0,
+			totalLatencyMs: p.latencyMsTotal,
+			successRate: p.calls > 0 ? p.success / p.calls : 0,
+		};
+	}
 
-  return {
-    totalRequests: total,
-    successCount: totalSuccess,
-    errorCount: totalError,
-    rateLimitedCount: stats.errorCodes.PROVIDER_RATE_LIMITED ?? 0,
-    averageLatencyMs: Math.round(averageLatencyMs),
-    providerStats,
-  };
+	return {
+		totalRequests: total,
+		successCount: totalSuccess,
+		errorCount: totalError,
+		rateLimitedCount: stats.errorCodes.PROVIDER_RATE_LIMITED ?? 0,
+		averageLatencyMs: Math.round(averageLatencyMs),
+		providerStats,
+	};
 }
 
 // ============================================================================
@@ -153,38 +148,38 @@ export function getWebToolStats(): WebToolStats {
 // ============================================================================
 
 export function recordSearchCall(provider: string): number {
-  stats.search.calls += 1;
-  const p = ensureRawProvider(provider);
-  p.calls += 1;
-  return Date.now();
+	stats.search.calls += 1;
+	const p = ensureRawProvider(provider);
+	p.calls += 1;
+	return Date.now();
 }
 
 export function recordSearchSuccess(provider: string, startTs: number): void {
-  stats.search.success += 1;
-  const p = ensureRawProvider(provider);
-  p.success += 1;
-  p.latencyMsTotal += Math.max(0, Date.now() - startTs);
+	stats.search.success += 1;
+	const p = ensureRawProvider(provider);
+	p.success += 1;
+	p.latencyMsTotal += Math.max(0, Date.now() - startTs);
 }
 
 export function recordSearchFailure(provider: string, code: string, startTs: number): void {
-  stats.search.failure += 1;
-  const p = ensureRawProvider(provider);
-  p.failure += 1;
-  p.latencyMsTotal += Math.max(0, Date.now() - startTs);
-  stats.errorCodes[code] = (stats.errorCodes[code] ?? 0) + 1;
+	stats.search.failure += 1;
+	const p = ensureRawProvider(provider);
+	p.failure += 1;
+	p.latencyMsTotal += Math.max(0, Date.now() - startTs);
+	stats.errorCodes[code] = (stats.errorCodes[code] ?? 0) + 1;
 }
 
 export function recordFetchCall(): void {
-  stats.fetch.calls += 1;
+	stats.fetch.calls += 1;
 }
 
 export function recordFetchSuccess(): void {
-  stats.fetch.success += 1;
+	stats.fetch.success += 1;
 }
 
 export function recordFetchFailure(code: string): void {
-  stats.fetch.failure += 1;
-  stats.errorCodes[code] = (stats.errorCodes[code] ?? 0) + 1;
+	stats.fetch.failure += 1;
+	stats.errorCodes[code] = (stats.errorCodes[code] ?? 0) + 1;
 }
 
 // ============================================================================
@@ -192,139 +187,130 @@ export function recordFetchFailure(code: string): void {
 // ============================================================================
 
 function normalizeDebugMetadata(level: DebugLevel, details?: unknown): Record<string, unknown> {
-  if (details === undefined) return { level };
-  if (typeof details === "object" && details !== null) {
-    return { level, ...(details as Record<string, unknown>) };
-  }
-  return { level, detail: details };
+	if (details === undefined) return { level };
+	if (typeof details === "object" && details !== null) {
+		return { level, ...(details as Record<string, unknown>) };
+	}
+	return { level, detail: details };
 }
 
 function isWarningOrErrorMessage(message: string): boolean {
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes("fail") ||
-    normalized.includes("error") ||
-    normalized.includes("warn") ||
-    normalized.includes("timeout") ||
-    normalized.includes("abort") ||
-    normalized.includes("rate") ||
-    normalized.includes("limit")
-  );
+	const normalized = message.toLowerCase();
+	return (
+		normalized.includes("fail") ||
+		normalized.includes("error") ||
+		normalized.includes("warn") ||
+		normalized.includes("timeout") ||
+		normalized.includes("abort") ||
+		normalized.includes("rate") ||
+		normalized.includes("limit")
+	);
 }
 
 export function webDebugLog(message: string, details?: unknown): void {
-  if (debugEnabled === false) return;
-  if (debugEnabled === "minimal" && !isWarningOrErrorMessage(message)) return;
+	if (debugEnabled === false) return;
+	if (debugEnabled === "minimal" && !isWarningOrErrorMessage(message)) return;
 
-  const metadata = normalizeDebugMetadata(debugEnabled, details);
-  if (debugEnabled === "verbose") {
-    debugLogger.debug("debug.log", message, metadata);
-    return;
-  }
-  debugLogger.warn("debug.log", message, metadata);
+	const metadata = normalizeDebugMetadata(debugEnabled, details);
+	if (debugEnabled === "verbose") {
+		debugLogger.debug("debug.log", message, metadata);
+		return;
+	}
+	debugLogger.warn("debug.log", message, metadata);
 }
 
 // ============================================================================
 // High-level Activity Recording (combines stats + activity log)
 // ============================================================================
 
+export function recordSearchActivity(entry: Omit<ActivityEntry, "timestamp"> & { timestamp?: number }): void;
 export function recordSearchActivity(
-  entry: Omit<ActivityEntry, "timestamp"> & { timestamp?: number }
+	provider: string,
+	status: "success" | "error" | "rate_limited",
+	startTs: number,
+	errorCode?: string
 ): void;
 export function recordSearchActivity(
-  provider: string,
-  status: "success" | "error" | "rate_limited",
-  startTs: number,
-  errorCode?: string
-): void;
-export function recordSearchActivity(
-  providerOrEntry: string | (Omit<ActivityEntry, "timestamp"> & { timestamp?: number }),
-  status?: "success" | "error" | "rate_limited",
-  startTs?: number,
-  errorCode?: string
+	providerOrEntry: string | (Omit<ActivityEntry, "timestamp"> & { timestamp?: number }),
+	status?: "success" | "error" | "rate_limited",
+	startTs?: number,
+	errorCode?: string
 ): void {
-  if (typeof providerOrEntry === "object") {
-    addToolkitActivityEntry({
-      timestamp: providerOrEntry.timestamp ?? Date.now(),
-      type: providerOrEntry.type,
-      provider: providerOrEntry.provider,
-      status: providerOrEntry.status,
-      duration: providerOrEntry.duration,
-      error: providerOrEntry.error,
-      requestId: providerOrEntry.requestId,
-    });
-    return;
-  }
+	if (typeof providerOrEntry === "object") {
+		addToolkitActivityEntry({
+			timestamp: providerOrEntry.timestamp ?? Date.now(),
+			type: providerOrEntry.type,
+			provider: providerOrEntry.provider,
+			status: providerOrEntry.status,
+			duration: providerOrEntry.duration,
+			error: providerOrEntry.error,
+			requestId: providerOrEntry.requestId,
+		});
+		return;
+	}
 
-  const provider = providerOrEntry;
-  const effectiveStatus = status ?? "error";
-  const effectiveStartTs = startTs ?? Date.now();
-  const duration = Date.now() - effectiveStartTs;
+	const provider = providerOrEntry;
+	const effectiveStatus = status ?? "error";
+	const effectiveStartTs = startTs ?? Date.now();
+	const duration = Date.now() - effectiveStartTs;
 
-  // Stats call must happen first to increment counter
-  recordSearchCall(provider);
-  if (effectiveStatus === "success") {
-    recordSearchSuccess(provider, effectiveStartTs);
-  } else {
-    recordSearchFailure(provider, errorCode ?? "UNKNOWN", effectiveStartTs);
-  }
+	// Stats call must happen first to increment counter
+	recordSearchCall(provider);
+	if (effectiveStatus === "success") {
+		recordSearchSuccess(provider, effectiveStartTs);
+	} else {
+		recordSearchFailure(provider, errorCode ?? "UNKNOWN", effectiveStartTs);
+	}
 
-  // Activity log
-  const code =
-    effectiveStatus === "rate_limited"
-      ? "PROVIDER_RATE_LIMITED"
-      : (errorCode ?? "WEB_SEARCH_FAILED");
+	// Activity log
+	const code = effectiveStatus === "rate_limited" ? "PROVIDER_RATE_LIMITED" : (errorCode ?? "WEB_SEARCH_FAILED");
 
-  addToolkitActivityEntry({
-    timestamp: effectiveStartTs,
-    type: "search",
-    provider,
-    status: effectiveStatus,
-    duration,
-    error: effectiveStatus !== "success" ? code : undefined,
-  });
+	addToolkitActivityEntry({
+		timestamp: effectiveStartTs,
+		type: "search",
+		provider,
+		status: effectiveStatus,
+		duration,
+		error: effectiveStatus !== "success" ? code : undefined,
+	});
 }
 
-export function recordFetchActivity(
-  status: "success" | "error" | "rate_limited",
-  errorCode?: string
-): void {
-  const startTs = Date.now();
+export function recordFetchActivity(status: "success" | "error" | "rate_limited", errorCode?: string): void {
+	const startTs = Date.now();
 
-  // Stats call must happen first to increment counter
-  recordFetchCall();
-  if (status === "success") {
-    recordFetchSuccess();
-  } else {
-    recordFetchFailure(errorCode ?? "CONTENT_FETCH_FAILED");
-  }
+	// Stats call must happen first to increment counter
+	recordFetchCall();
+	if (status === "success") {
+		recordFetchSuccess();
+	} else {
+		recordFetchFailure(errorCode ?? "CONTENT_FETCH_FAILED");
+	}
 
-  // Activity log
-  const code =
-    status === "rate_limited" ? "PROVIDER_RATE_LIMITED" : (errorCode ?? "CONTENT_FETCH_FAILED");
+	// Activity log
+	const code = status === "rate_limited" ? "PROVIDER_RATE_LIMITED" : (errorCode ?? "CONTENT_FETCH_FAILED");
 
-  addToolkitActivityEntry({
-    timestamp: startTs,
-    type: "fetch",
-    status,
-    error: status !== "success" ? code : undefined,
-  });
+	addToolkitActivityEntry({
+		timestamp: startTs,
+		type: "fetch",
+		status,
+		error: status !== "success" ? code : undefined,
+	});
 }
 
 export function recordGetContentActivity(status: "success" | "error", errorCode?: string): void {
-  stats.getContent.calls += 1;
-  if (status === "success") {
-    stats.getContent.success += 1;
-  } else {
-    stats.getContent.failure += 1;
-    stats.errorCodes[errorCode ?? "GET_SEARCH_CONTENT_FAILED"] =
-      (stats.errorCodes[errorCode ?? "GET_SEARCH_CONTENT_FAILED"] ?? 0) + 1;
-  }
+	stats.getContent.calls += 1;
+	if (status === "success") {
+		stats.getContent.success += 1;
+	} else {
+		stats.getContent.failure += 1;
+		stats.errorCodes[errorCode ?? "GET_SEARCH_CONTENT_FAILED"] =
+			(stats.errorCodes[errorCode ?? "GET_SEARCH_CONTENT_FAILED"] ?? 0) + 1;
+	}
 
-  addToolkitActivityEntry({
-    timestamp: Date.now(),
-    type: "get_content",
-    status,
-    error: status !== "success" ? (errorCode ?? "GET_SEARCH_CONTENT_FAILED") : undefined,
-  });
+	addToolkitActivityEntry({
+		timestamp: Date.now(),
+		type: "get_content",
+		status,
+		error: status !== "success" ? (errorCode ?? "GET_SEARCH_CONTENT_FAILED") : undefined,
+	});
 }
