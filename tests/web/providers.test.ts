@@ -33,11 +33,12 @@ function webConfig(overrides: Partial<ResolvedWebConfig> = {}): ResolvedWebConfi
 	return { ...mergeConfig({}).web, ...overrides };
 }
 
-const BRAVE_CONFIG = webConfig({ brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV.brave } });
-const OPENSERP_CONFIG = webConfig({ openserp: { enabled: true, baseUrl: "http://localhost:7000", apiKeyEnv: ENV.openserp } });
-const SEARXNG_CONFIG = webConfig({ searxng: { enabled: true, baseUrl: "http://localhost:8888", defaultEngine: "google" } });
-const SERPER_CONFIG = webConfig({ serper: { enabled: true, baseUrl: "https://google.serper.dev/search", apiKeyEnv: ENV.serper } });
-const TAVILY_CONFIG = webConfig({ tavily: { enabled: true, baseUrl: "https://api.tavily.com/search", apiKeyEnv: ENV.tavily } });
+const PUBLIC_TEST_HOST = "https://93.184.216.34";
+const BRAVE_CONFIG = webConfig({ brave: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/brave`, apiKeyEnv: ENV.brave } });
+const OPENSERP_CONFIG = webConfig({ openserp: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/openserp`, apiKeyEnv: ENV.openserp } });
+const SEARXNG_CONFIG = webConfig({ searxng: { enabled: true, baseUrl: PUBLIC_TEST_HOST, defaultEngine: "google" } });
+const SERPER_CONFIG = webConfig({ serper: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/serper`, apiKeyEnv: ENV.serper } });
+const TAVILY_CONFIG = webConfig({ tavily: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/tavily`, apiKeyEnv: ENV.tavily } });
 
 function setApiKey(envName: string, value = "test-key") {
 	process.env[envName] = value;
@@ -199,8 +200,8 @@ describe("ddgs provider", () => {
 		let capturedUrl = "";
 		let capturedMethod = "";
 		let capturedAccept = "";
-		globalThis.fetch = ((url: string, opts?: any) => {
-			capturedUrl = url;
+		globalThis.fetch = ((url: string | URL, opts?: any) => {
+			capturedUrl = String(url);
 			capturedMethod = opts?.method;
 			capturedAccept = opts?.headers?.accept;
 			return Promise.resolve(new Response(mockDdgHtml(Array.from({ length: 10 }, (_, i) => ({ title: `R${i}`, url: `https://example.com/${i}` }))), { status: 200 }));
@@ -230,11 +231,11 @@ describe("provider response body limits", () => {
 
 	it("rejects oversized JSON provider responses before parsing", async () => {
 		const providers = [
-			{ provider: braveProvider, env: ENV.brave, config: webConfig({ brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV.brave }, maxResponseBytes: 8 }) },
-			{ provider: openserpProvider, env: ENV.openserp, config: webConfig({ openserp: { enabled: true, baseUrl: "https://api.openserp.com", apiKeyEnv: ENV.openserp }, maxResponseBytes: 8 }) },
-			{ provider: searxngProvider, config: webConfig({ searxng: { enabled: true, baseUrl: "http://localhost:8888", defaultEngine: "google" }, maxResponseBytes: 8 }) },
-			{ provider: serperProvider, env: ENV.serper, config: webConfig({ serper: { enabled: true, baseUrl: "https://google.serper.dev/search", apiKeyEnv: ENV.serper }, maxResponseBytes: 8 }) },
-			{ provider: tavilyProvider, env: ENV.tavily, config: webConfig({ tavily: { enabled: true, baseUrl: "https://api.tavily.com/search", apiKeyEnv: ENV.tavily }, maxResponseBytes: 8 }) },
+			{ provider: braveProvider, env: ENV.brave, config: webConfig({ brave: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/brave`, apiKeyEnv: ENV.brave }, maxResponseBytes: 8 }) },
+			{ provider: openserpProvider, env: ENV.openserp, config: webConfig({ openserp: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/openserp`, apiKeyEnv: ENV.openserp }, maxResponseBytes: 8 }) },
+			{ provider: searxngProvider, config: webConfig({ searxng: { enabled: true, baseUrl: PUBLIC_TEST_HOST, defaultEngine: "google" }, maxResponseBytes: 8 }) },
+			{ provider: serperProvider, env: ENV.serper, config: webConfig({ serper: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/serper`, apiKeyEnv: ENV.serper }, maxResponseBytes: 8 }) },
+			{ provider: tavilyProvider, env: ENV.tavily, config: webConfig({ tavily: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/tavily`, apiKeyEnv: ENV.tavily }, maxResponseBytes: 8 }) },
 		];
 
 		for (const item of providers) {
@@ -246,6 +247,39 @@ describe("provider response body limits", () => {
 				/response body exceeded the configured maxResponseBytes limit \(8 bytes\)/,
 				`${item.provider.name} should reject oversized responses`,
 			);
+		}
+	});
+});
+
+describe("provider private network safety", () => {
+	it("blocks configured provider base URLs on private networks by default before fetch", async () => {
+		const cases: Array<{
+			provider: SearchProviderAdapter;
+			config: ResolvedWebConfig;
+			env?: string;
+		}> = [
+			{ provider: braveProvider, env: ENV.brave, config: webConfig({ brave: { enabled: true, baseUrl: "http://127.0.0.1:7001/brave", apiKeyEnv: ENV.brave } }) },
+			{ provider: openserpProvider, env: ENV.openserp, config: webConfig({ openserp: { enabled: true, baseUrl: "http://127.0.0.1:7002/openserp", apiKeyEnv: ENV.openserp } }) },
+			{ provider: searxngProvider, config: webConfig({ searxng: { enabled: true, baseUrl: "http://127.0.0.1:7003", defaultEngine: "google" } }) },
+			{ provider: serperProvider, env: ENV.serper, config: webConfig({ serper: { enabled: true, baseUrl: "http://127.0.0.1:7004/serper", apiKeyEnv: ENV.serper } }) },
+			{ provider: tavilyProvider, env: ENV.tavily, config: webConfig({ tavily: { enabled: true, baseUrl: "http://127.0.0.1:7005/tavily", apiKeyEnv: ENV.tavily } }) },
+		];
+
+		for (const item of cases) {
+			clearApiKeys();
+			if (item.env) setApiKey(item.env);
+			let fetchCalled = false;
+			globalThis.fetch = (() => {
+				fetchCalled = true;
+				return Promise.resolve(jsonResponse({}));
+			}) as typeof fetch;
+
+			await assert.rejects(
+				() => item.provider.search({ query: "test", numResults: 1 }, item.config),
+				/Blocked private address/,
+				`${item.provider.name} should block private provider baseUrl`
+			);
+			assert.equal(fetchCalled, false, `${item.provider.name} should reject before fetch`);
 		}
 	});
 });
@@ -335,8 +369,8 @@ describe("openserp provider", () => {
 		setApiKey(ENV.openserp, "my-key");
 		let capturedUrl = "";
 		let capturedHeaders: Record<string, string> = {};
-		globalThis.fetch = ((url: string, opts?: any) => {
-			capturedUrl = url;
+		globalThis.fetch = ((url: string | URL, opts?: any) => {
+			capturedUrl = String(url);
 			capturedHeaders = opts?.headers ?? {};
 			return Promise.resolve(jsonResponse({ organic_results: [
 				{ title: "A", url: "https://example.com/url-field", link: "https://example.com/link-field", snippet: "Snip", description: "Desc" },
@@ -369,8 +403,8 @@ describe("searxng provider", () => {
 
 	it("sends GET request, preserves path semantics, and normalizes results", async () => {
 		let capturedUrl = "";
-		globalThis.fetch = ((url: string) => {
-			capturedUrl = url;
+		globalThis.fetch = ((url: string | URL) => {
+			capturedUrl = String(url);
 			return Promise.resolve(jsonResponse({ results: [
 				{ title: "Result 1", url: "https://example.com/1", content: "Snippet 1", engine: "google" },
 				{ title: "Result 2", url: "https://example.com/2", content: "Snippet 2" },
@@ -390,9 +424,9 @@ describe("searxng provider", () => {
 		assert.equal(results[1].source, "searxng");
 		assert.equal(results[0].snippet, "Snippet 1");
 
-		const customConfig = webConfig({ searxng: { enabled: true, baseUrl: "http://localhost:8888/custom", defaultEngine: "duckduckgo" } });
-		globalThis.fetch = ((url: string) => {
-			capturedUrl = url;
+		const customConfig = webConfig({ searxng: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/custom`, defaultEngine: "duckduckgo" } });
+		globalThis.fetch = ((url: string | URL) => {
+			capturedUrl = String(url);
 			return Promise.resolve(jsonResponse({ results: [] }));
 		}) as typeof fetch;
 		await searxngProvider.search({ query: "test", numResults: 1 }, customConfig);

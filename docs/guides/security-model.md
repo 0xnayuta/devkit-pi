@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-20
+last_verified: 2026-05-21
 language: english
 ---
 
@@ -40,6 +40,7 @@ Built-in `web_search`, `fetch_content`, `get_search_content` remain readonly. To
 - Block `file:` and other local protocols
 - Request timeout configured
 - Max response body size and max output character count
+- `web_search` provider endpoint requests use the same private-network blocking and pinned-connection flow as other web URL requests
 - Does not write project files; responseId storage follows session lifecycle restore/clear, subject to configuration limits
 
 ### DNS rebinding / TOCTOU boundary
@@ -63,13 +64,14 @@ Current provider, Jina fallback, storage, and URL security boundaries are define
 
 Current boundaries:
 
-- Local `path` conversion is restricted to files inside the active workspace.
+- Local `path` conversion is restricted to files inside the active workspace from the tool execution context (`ctx.cwd`).
 - Remote `url` conversion only supports `http:` and `https:`.
 - Private-network targets are blocked by default via `convertContent.allowPrivateNetwork=false`.
 - Redirect hops are revalidated with the same private-network policy and repinned before follow.
 - Downloads are bounded by `convertContent.maxResponseBytes`.
 - Returned Markdown is bounded by `convertContent.maxContentChars`.
 - Provider execution is bounded by `convertContent.timeoutMs` and shared external-command stdout/stderr hard limits.
+- Non-zero-exit stderr summaries are redacted before entering user-visible errors or logs.
 - MarkItDown is an external optional CLI dependency; devkit-pi does not bundle heavy PDF/Office/OCR/browser/Tika/Pandoc conversion stacks in the core package.
 - The configured CLI is executed through shared external-command infrastructure with structured arguments and without shell interpolation.
 

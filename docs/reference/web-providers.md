@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-21
 language: english
 ---
 
@@ -22,6 +22,12 @@ ddgs, brave, tavily, serper, openserp, searxng
 Providers are only used for `web_search`. `fetch_content`'s Jina Reader fallback is not a regular search provider; see [Jina fallback](#jina-fallback) below.
 
 Provider implementations follow the architecture consistency policy: each search provider should use the shared provider adapter interface, provider registry, selection flow, configuration naming pattern, and provider-focused tests unless a documented exception exists.
+
+## Provider network safety
+
+All provider endpoint requests use the shared pinned DNS fetch path. The request URL must be HTTP(S), is validated against `web.allowPrivateNetwork`, and is pinned at connection time after DNS resolution. With the default `web.allowPrivateNetwork=false`, provider `baseUrl` values pointing to `localhost`, loopback, link-local, private IP ranges, private hostnames, or DNS results resolving to private addresses are rejected before `fetch` is called.
+
+Set `web.allowPrivateNetwork=true` only when intentionally querying a trusted local or self-hosted provider, such as a local SearXNG instance.
 
 ## Provider matrix
 

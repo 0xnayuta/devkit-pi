@@ -1,7 +1,7 @@
 ---
 status: current
 audience: user
-last_verified: 2026-05-12
+last_verified: 2026-05-21
 language: chinese
 ---
 
@@ -22,6 +22,12 @@ ddgs, brave, tavily, serper, openserp, searxng
 Provider 只用于 `web_search`。`fetch_content` 的 Jina Reader fallback 不是普通 search provider，见下方 [Jina fallback](#jina-fallback)。
 
 Provider 实现遵循架构一致性策略：每个 search provider 应使用共享 provider adapter interface、provider registry、selection flow、配置命名模式和 provider-focused tests，除非存在已记录的例外。
+
+## Provider 网络安全
+
+所有 provider endpoint 请求都使用 shared pinned DNS fetch 路径。请求 URL 必须是 HTTP(S)，会按 `web.allowPrivateNetwork` 校验，并在 DNS 解析后于连接阶段 pin 到已校验地址。默认 `web.allowPrivateNetwork=false` 时，指向 `localhost`、loopback、link-local、private IP range、private hostname，或 DNS 解析到私网地址的 provider `baseUrl` 会在调用 `fetch` 前被拒绝。
+
+仅在明确需要访问可信本地或自托管 provider（例如本地 SearXNG instance）时设置 `web.allowPrivateNetwork=true`。
 
 ## Provider 矩阵
 

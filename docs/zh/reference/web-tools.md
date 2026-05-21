@@ -78,7 +78,7 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 
 - 默认 provider 来自 `web.provider`，默认值是 `ddgs`。
 - search cache 仅在 `web.cache.enabled=true` 时生效。
-- 搜索请求受 `web.timeoutMs`、`web.concurrency.*` 与 connection pool 配置影响。
+- 搜索请求受 `web.timeoutMs`、`web.concurrency.*`、`web.maxResponseBytes` 与 `web.allowPrivateNetwork` 影响。
 - 成功结果会存入 responseId storage，可用 `get_search_content` 检索。
 
 ### Provider selection 行为
@@ -87,6 +87,7 @@ TypeBox schema 中字段均为 optional，但运行时要求至少提供一个�
 - `web.provider` 为显式 provider 时：selection 要求该 provider 已启用且技术上可用；只使用该 provider，provider 失败不会 fallback 到其他 provider。
 - `web.provider="auto"`：按 config enabled gate 和 provider 技术可用性过滤候选 provider，并按分层顺序尝试：commercial（`tavily`、`serper`、`brave`）→ self-host/open（`openserp`、`searxng`）→ zero-config（`ddgs`）。每层内部按 `web.providerPriority` 排序。
 - provider 详细配置见 [`web-providers.md`](./web-providers.md)。
+- Provider endpoint 请求仅允许 HTTP(S)，默认阻止私网目标，并使用 connection-stage DNS pinning。仅在明确需要访问可信本地/自托管 provider 时设置 `web.allowPrivateNetwork=true`。
 
 ### 成功响应结构
 

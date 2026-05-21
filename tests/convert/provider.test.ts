@@ -178,12 +178,13 @@ describe("MarkItDownProvider", () => {
     );
   });
 
-  it("throws CONVERT_FAILED with stderr summary on non-zero exit", async () => {
+  it("throws CONVERT_FAILED with redacted stderr summary on non-zero exit", async () => {
+    const secret = "abcdefghijklmnopqrstuvwxyz123456";
     const runner = createRunner({
       result: commandResult({
         exitCode: 7,
         stdout: "",
-        stderr: "very bad conversion failure",
+        stderr: `very bad conversion failure api_key=${secret} https://example.com/doc.pdf?token=${secret}`,
       }),
     });
     const input = writeInput();
@@ -200,7 +201,10 @@ describe("MarkItDownProvider", () => {
         error.code === CONVERT_ERROR_CODES.CONVERT_FAILED &&
         /exit code 7/.test(error.message) &&
         /very bad conversion failure/.test(error.message) &&
-        error.causeSummary === "very bad conversion failure"
+        !error.message.includes(secret) &&
+        error.message.includes("api_key=[REDACTED]") &&
+        error.message.includes("token=[REDACTED]") &&
+        error.causeSummary === "very bad conversion failure api_key=[REDACTED] https://example.com/doc.pdf?token=[REDACTED]"
     );
   });
 

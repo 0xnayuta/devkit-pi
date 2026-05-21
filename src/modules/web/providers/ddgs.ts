@@ -1,7 +1,7 @@
 import type { ResolvedWebConfig } from "../../../shared/types.ts";
 import { withTimeoutSignal } from "../abort.ts";
 import { normalizeWhitespace } from "../extract.ts";
-import { pooledFetch } from "../http-pool.ts";
+import { fetchWithPinnedDns } from "../network.ts";
 import { readLimitedText, readLimitedTextOrThrow } from "../read-limited.ts";
 import type { SearchResultItem } from "../types.ts";
 import type { ProviderSearchParams, SearchProviderAdapter } from "./types.ts";
@@ -100,9 +100,11 @@ async function search(params: ProviderSearchParams, config: ResolvedWebConfig): 
 		const url = new URL(DDGS_LITE_ENDPOINT);
 		url.searchParams.set("q", params.query);
 
-		const response = await pooledFetch(url, {
+		const response = await fetchWithPinnedDns(url, {
 			method: "GET",
 			signal: withTimeoutSignal(config.timeoutMs, params.signal),
+			timeoutMs: config.timeoutMs,
+			allowPrivateNetwork: config.allowPrivateNetwork,
 			headers: {
 				accept: "text/html,application/xhtml+xml",
 			},

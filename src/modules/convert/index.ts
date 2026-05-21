@@ -49,8 +49,8 @@ export function registerConvertTools(
 			promptSnippet: convertMeta.promptSnippet,
 			promptGuidelines: [...convertMeta.promptGuidelines],
 			parameters: ConvertContentParams,
-			async execute(_id: string, params: ConvertContentInput, signal: AbortSignal | undefined) {
-				const result = await convertContent(params, config, signal, provider);
+			async execute(_id, params, signal, _onUpdate, ctx) {
+				const result = await convertContent(params, config, signal, provider, { workspaceRoot: ctx.cwd });
 				if ("error" in result) {
 					logger.warn("convert.error_payload", "convert_content returned structured error", {
 						payload: toDevkitConvertErrorPayload(

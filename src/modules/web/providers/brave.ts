@@ -1,6 +1,6 @@
 import type { ResolvedWebConfig } from "../../../shared/types.ts";
 import { withTimeoutSignal } from "../abort.ts";
-import { pooledFetch } from "../http-pool.ts";
+import { fetchWithPinnedDns } from "../network.ts";
 import { readLimitedJson, readLimitedText } from "../read-limited.ts";
 import type { SearchResultItem } from "../types.ts";
 import type { ProviderSearchParams, SearchProviderAdapter } from "./types.ts";
@@ -62,9 +62,11 @@ async function search(params: ProviderSearchParams, config: ResolvedWebConfig): 
 	endpoint.searchParams.set("count", String(params.numResults));
 
 	try {
-		const response = await pooledFetch(endpoint, {
+		const response = await fetchWithPinnedDns(endpoint, {
 			method: "GET",
 			signal: withTimeoutSignal(config.timeoutMs, params.signal),
+			timeoutMs: config.timeoutMs,
+			allowPrivateNetwork: config.allowPrivateNetwork,
 			headers: {
 				accept: "application/json",
 				"accept-encoding": "gzip",

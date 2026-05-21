@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-20
+last_verified: 2026-05-21
 language: english
 ---
 
@@ -33,7 +33,7 @@ Execution validates that exactly one of `path` or `url` is provided. Providing b
 ## Current tool behavior
 
 - `convertContent.enabled=false` disables tool registration.
-- `path` must point to an existing local file inside the active workspace (`process.cwd()` for the extension process). Missing paths and directories return `FILE_NOT_FOUND`; paths outside the workspace return `INVALID_INPUT`.
+- `path` must point to an existing local file inside the active workspace from the tool execution context (`ctx.cwd`). Missing paths and directories return `FILE_NOT_FOUND`; paths outside that workspace return `INVALID_INPUT`.
 - Local files larger than `convertContent.maxResponseBytes` return `FILE_TOO_LARGE` before provider execution.
 - `url` must use `http:` or `https:`. Other protocols return `UNSUPPORTED_PROTOCOL`.
 - Remote URLs are validated with private-network protection before download.
@@ -61,6 +61,7 @@ MarkItDown CLI is an external optional dependency. devkit-pi does not bundle Mar
 - Applies conversion timeout through the shared external command runner.
 - Checks input file size against `maxResponseBytes` in the convert provider before execution.
 - Receives stdout/stderr from the shared runner, capped by the runner's stdout/stderr hard byte limits.
+- Redacts secret-like stderr summaries before returning non-zero-exit errors to users or logs.
 - Maps missing command, timeout, output-size limit, non-zero exit, and file-too-large failures to convert error codes.
 - Truncates stdout to `maxContentChars` and returns `truncated=true`.
 

@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-20
+last_verified: 2026-05-21
 language: chinese
 ---
 
@@ -40,6 +40,7 @@ language: chinese
 - 禁止 `file:` 等本地协议
 - 设置请求 timeout
 - 设置最大响应体大小与最大输出字符数
+- `web_search` provider endpoint 请求与其他 web URL 请求使用相同的私网拦截和 pinned-connection 流程
 - 不写项目文件；responseId storage 随 session lifecycle restore/clear，并受配置限制
 
 ### DNS rebinding / TOCTOU 边界
@@ -63,13 +64,14 @@ URL 安全检查会在每个 fetch/download hop 前校验 protocol、hostname/IP
 
 当前边界：
 
-- 本地 `path` 转换限制在 active workspace 内。
+- 本地 `path` 转换限制在工具执行上下文 active workspace（`ctx.cwd`）内。
 - 远程 `url` 转换只支持 `http:` 和 `https:`。
 - 默认通过 `convertContent.allowPrivateNetwork=false` 阻止私网目标。
 - 每个 redirect hop 都会使用相同 private-network policy 重新校验，并在 follow 前重新 pin。
 - 下载受 `convertContent.maxResponseBytes` 限制。
 - 返回 Markdown 受 `convertContent.maxContentChars` 限制。
 - Provider 执行受 `convertContent.timeoutMs` 和 shared external-command stdout/stderr hard limits 限制。
+- 非零退出的 stderr 摘要进入用户可见错误或日志前会先 redaction。
 - MarkItDown 是外部可选 CLI 依赖；devkit-pi 核心包不捆绑重型 PDF/Office/OCR/browser/Tika/Pandoc 转换栈。
 - 已配置 CLI 通过 shared external-command 基础设施以结构化参数执行，不使用 shell interpolation。
 

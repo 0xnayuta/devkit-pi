@@ -86,7 +86,9 @@ describe("registerConvertTools", () => {
     const result = (await pi.registeredTools[0].execute(
       "call-1",
       {},
-      undefined
+      undefined,
+      undefined,
+      { cwd: process.cwd() }
     )) as AgentToolResult<any>;
 
     assert.equal(result.details.error.code, CONVERT_ERROR_CODES.INVALID_INPUT);
@@ -99,7 +101,7 @@ describe("registerConvertTools", () => {
       logger: createLogger({ module: "test.convert", sink }),
     });
 
-    await pi.registeredTools[0].execute("call-1", {}, undefined);
+    await pi.registeredTools[0].execute("call-1", {}, undefined, undefined, { cwd: process.cwd() });
 
     const event = sink.events.find((item) => item.event === "convert.error_payload");
     assert.ok(event);

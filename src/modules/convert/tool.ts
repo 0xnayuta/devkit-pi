@@ -13,11 +13,16 @@ function positiveOverride(value: unknown, fallback: number): number {
 	return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
+export interface ConvertContentRuntimeOptions {
+	workspaceRoot?: string;
+}
+
 export async function convertContent(
 	params: ConvertContentInput,
 	config: ResolvedConvertContentConfig,
 	signal: AbortSignal | undefined,
-	provider: ConvertProvider
+	provider: ConvertProvider,
+	runtimeOptions: ConvertContentRuntimeOptions = {}
 ): Promise<ConvertContentResult> {
 	const startTs = Date.now();
 	const hasPath = typeof params.path === "string" && params.path.trim().length > 0;
@@ -76,7 +81,7 @@ export async function convertContent(
 
 	let localFile: Awaited<ReturnType<typeof validateLocalFilePath>>;
 	try {
-		localFile = await validateLocalFilePath(params.path!.trim());
+		localFile = await validateLocalFilePath(params.path!.trim(), runtimeOptions.workspaceRoot);
 	} catch (caught) {
 		if (isConvertProviderError(caught)) {
 			recordConvertActivity(provider.name, "error", startTs, caught.code);

@@ -1,7 +1,7 @@
 ---
 status: current
 audience: all
-last_verified: 2026-05-20
+last_verified: 2026-05-21
 language: chinese
 ---
 
@@ -33,7 +33,7 @@ Canonical source：`src/modules/convert/` 和 `src/config/load-config.ts`。
 ## 当前工具行为
 
 - `convertContent.enabled=false` 会禁用工具注册。
-- `path` 必须指向 active workspace（扩展进程的 `process.cwd()`）内一个已存在的本地文件。缺失路径和目录会返回 `FILE_NOT_FOUND`；workspace 外的路径会返回 `INVALID_INPUT`。
+- `path` 必须指向工具执行上下文 active workspace（`ctx.cwd`）内一个已存在的本地文件。缺失路径和目录会返回 `FILE_NOT_FOUND`；workspace 外的路径会返回 `INVALID_INPUT`。
 - 大于 `convertContent.maxResponseBytes` 的本地文件会在 provider 执行前返回 `FILE_TOO_LARGE`。
 - `url` 必须使用 `http:` 或 `https:`。其他协议会返回 `UNSUPPORTED_PROTOCOL`。
 - 远程 URL 会在下载前经过 private-network protection 校验。
@@ -61,6 +61,7 @@ MarkItDown CLI 是外部可选依赖。devkit-pi 核心包不捆绑 MarkItDown�
 - 通过 shared external command runner 应用转换 timeout。
 - 在 convert provider 内根据 `maxResponseBytes` 于执行前检查输入文件大小。
 - 从 shared runner 接收 stdout/stderr，且这些输出受到 runner 的 stdout/stderr 硬字节上限保护。
+- 对非零退出返回给用户或日志的 stderr 摘要先进行 secret redaction。
 - 将命令缺失、timeout、输出大小超限、非零退出和文件过大失败映射到 convert error codes。
 - 将 stdout 截断到 `maxContentChars`，并返回 `truncated=true`。
 

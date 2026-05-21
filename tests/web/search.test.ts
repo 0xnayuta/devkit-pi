@@ -250,6 +250,7 @@ describe("web_search", () => {
         web: {
           provider: "auto",
           providerPriority: ["searxng", "ddgs"],
+          allowPrivateNetwork: true,
           searxng: { enabled: true, baseUrl: "http://127.0.0.1:8080" },
         },
       })
@@ -523,6 +524,7 @@ describe("web_search", () => {
       mergeWebConfig({
         web: {
           provider: "searxng",
+          allowPrivateNetwork: true,
           searxng: { enabled: true, baseUrl: "http://127.0.0.1:9999" },
         },
       })

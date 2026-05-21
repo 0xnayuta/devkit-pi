@@ -6,6 +6,7 @@ import {
 	type ExternalCommandSpec,
 	NodeExternalCommandRunner,
 } from "../../shared/external-command.ts";
+import { sanitizeOutput } from "../../shared/output-sanitize.ts";
 import { CONVERT_ERROR_CODES, ConvertProviderError } from "./errors.ts";
 import type { ConvertContentMetadata } from "./types.ts";
 
@@ -37,7 +38,7 @@ export interface MarkItDownProviderOptions {
 }
 
 function summarizeStderr(stderr: string): string {
-	const normalized = stderr.trim().replace(/\s+/g, " ");
+	const normalized = sanitizeOutput(stderr).trim().replace(/\s+/g, " ");
 	if (!normalized) return "";
 	if (normalized.length <= STDERR_SUMMARY_CHARS) return normalized;
 	return `${normalized.slice(0, STDERR_SUMMARY_CHARS)}...`;
@@ -118,7 +119,7 @@ export class MarkItDownProvider implements ConvertProvider {
 			}
 			throw new ConvertProviderError(
 				CONVERT_ERROR_CODES.CONVERT_FAILED,
-				`Failed to execute MarkItDown CLI: ${nodeError.message}`
+				`Failed to execute MarkItDown CLI: ${sanitizeOutput(nodeError.message)}`
 			);
 		}
 

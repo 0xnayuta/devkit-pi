@@ -118,6 +118,28 @@ describe("convertContent local path", () => {
     }
   });
 
+  it("validates local paths against the tool context workspace root instead of process cwd", async () => {
+    const provider = new MockProvider();
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-convert-workspace-"));
+    const cwdRoot = fs.mkdtempSync(path.join(os.tmpdir(), "devkit-pi-convert-cwd-"));
+    try {
+      const workspaceFile = path.join(workspaceRoot, "doc.pdf");
+      fs.writeFileSync(workspaceFile, "pdf", "utf8");
+      process.chdir(cwdRoot);
+      const config = mergeConfig({}).convertContent;
+
+      const result = await convertContent({ path: "doc.pdf" }, config, undefined, provider, { workspaceRoot });
+
+      assert.equal("error" in result, false);
+      assert.equal(provider.calls.length, 1);
+      assert.equal(provider.calls[0].filePath, fs.realpathSync(workspaceFile));
+    } finally {
+      process.chdir(tempDir);
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+      fs.rmSync(cwdRoot, { recursive: true, force: true });
+    }
+  });
+
   it("returns FILE_TOO_LARGE before calling provider", async () => {
     const provider = new MockProvider();
     const filePath = writeFile("large.pdf", "1234567890");

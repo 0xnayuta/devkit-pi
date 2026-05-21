@@ -78,7 +78,7 @@ All fields are optional in the TypeBox schema, but at runtime at least one non-e
 
 - Default provider comes from `web.provider`, default value is `ddgs`.
 - Search cache only takes effect when `web.cache.enabled=true`.
-- Search requests are affected by `web.timeoutMs`, `web.concurrency.*`, and connection pool configuration.
+- Search requests are affected by `web.timeoutMs`, `web.concurrency.*`, `web.maxResponseBytes`, and `web.allowPrivateNetwork`.
 - Successful results are stored in responseId storage, retrievable via `get_search_content`.
 
 ### Provider selection behavior
@@ -87,6 +87,7 @@ All fields are optional in the TypeBox schema, but at runtime at least one non-e
 - `web.provider` is an explicit provider: selection requires that provider to be enabled and technically available; only that provider is used, and provider failure does not fall back to other providers.
 - `web.provider="auto"`: filters candidates by config enabled gates plus provider technical availability, then tries in tiered order: commercial (`tavily`, `serper`, `brave`) → self-host/open (`openserp`, `searxng`) → zero-config (`ddgs`). Within each tier, sorted by `web.providerPriority`.
 - Provider configuration details: [`web-providers.md`](./web-providers.md).
+- Provider endpoint requests are restricted to HTTP(S), block private-network targets by default, and use connection-stage DNS pinning. Set `web.allowPrivateNetwork=true` only when intentionally querying a trusted local/self-hosted provider.
 
 ### Success response shape
 
