@@ -5,32 +5,47 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ResourceScope } from "../../extension/runtime.ts";
+import { createLogger, type Logger } from "../../shared/logger.ts";
 import { PI_SUBAGENT_CHILD, type ResolvedLspConfig } from "../../shared/types.ts";
 import { shutdownManager } from "./core.ts";
 import { registerLspHook } from "./hook.ts";
 import { registerLspTool } from "./tool.ts";
 
-export function registerLspModule(pi: ExtensionAPI, config: ResolvedLspConfig): void {
-  if (!config.enabled) return;
+export interface RegisterLspModuleOptions {
+	resources?: ResourceScope;
+	logger?: Logger;
+}
 
-  registerLspTool(pi, config.tool);
+export function registerLspModule(
+	pi: ExtensionAPI,
+	config: ResolvedLspConfig,
+	options: RegisterLspModuleOptions = {}
+): void {
+	if (!config.enabled) return;
 
-  const isMainProcess = process.env[PI_SUBAGENT_CHILD] !== "1";
-  const hookRegistersShutdown =
-    isMainProcess && config.hook.enabled && config.hook.mode !== "disabled";
+	const logger = options.logger ?? createLogger({ module: "lsp.register" });
 
-  if (isMainProcess) {
-    registerLspHook(pi, config.hook);
-  }
+	registerLspTool(pi, config.tool, { logger: logger.child("tool") });
 
-  // When the hook is active it already owns session_shutdown cleanup.
-  // Register a standalone shutdown handler only when the hook is absent.
-  if (!hookRegistersShutdown) {
-    const piAny = pi as any;
-    if (typeof piAny.on === "function") {
-      piAny.on("session_shutdown", () => {
-        void shutdownManager();
-      });
-    }
-  }
+	const isMainProcess = process.env[PI_SUBAGENT_CHILD] !== "1";
+	const hookRegistersShutdown = isMainProcess && config.hook.enabled && config.hook.mode !== "disabled";
+
+	if (isMainProcess) {
+		registerLspHook(pi, config.hook);
+	}
+
+	// When the hook is active it already owns session_shutdown cleanup.
+	// Register a standalone shutdown handler only when the hook is absent.
+	if (!hookRegistersShutdown) {
+		pi.on("session_shutdown", () => {
+			void shutdownManager();
+		});
+	}
+
+	options.resources?.add({
+		async dispose() {
+			await shutdownManager();
+		},
+	});
 }

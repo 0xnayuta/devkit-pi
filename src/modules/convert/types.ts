@@ -7,25 +7,25 @@ export type ConvertProviderName = "markitdown";
 export type ConvertContentInput = Static<typeof ConvertContentParams>;
 
 export interface ConvertContentMetadata {
-  contentType?: string;
-  fileName?: string;
-  fileSize?: number;
-  durationMs?: number;
+	contentType?: string;
+	fileName?: string;
+	fileSize?: number;
+	durationMs?: number;
 }
 
 export interface ConvertContentSuccess {
-  source: string;
-  provider: ConvertProviderName;
-  content: string;
-  truncated: boolean;
-  metadata?: ConvertContentMetadata;
+	source: string;
+	provider: ConvertProviderName;
+	content: string;
+	truncated: boolean;
+	metadata?: ConvertContentMetadata;
 }
 
 export interface ConvertContentError {
-  error: {
-    code: ConvertErrorCode;
-    message: string;
-  };
+	error: {
+		code: ConvertErrorCode;
+		message: string;
+	};
 }
 
 export type ConvertContentResult = ConvertContentSuccess | ConvertContentError;

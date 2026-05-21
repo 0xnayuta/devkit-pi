@@ -15,6 +15,7 @@ import {
 } from "../../src/modules/lsp/core.ts";
 import { registerLspModule } from "../../src/modules/lsp/register.ts";
 import { LSP_ACTIONS } from "../../src/modules/lsp/tool.ts";
+import { createMemoryLoggerSink, createLogger } from "../../src/shared/logger.ts";
 import {
   PI_SUBAGENT_ALLOW_LSP,
   PI_SUBAGENT_CHILD,
@@ -45,6 +46,12 @@ function createPiMock() {
       listeners[event].push(handler);
     },
   };
+}
+
+async function emit(pi: ReturnType<typeof createPiMock>, eventName: string, event: unknown = {}, ctx: unknown = {}): Promise<void> {
+  for (const listener of pi.listeners[eventName] ?? []) {
+    await listener(event, ctx);
+  }
 }
 
 function createFakeLspClient(definitionResult?: unknown): {
@@ -130,7 +137,13 @@ describe("lsp module", () => {
     const pi = createPiMock();
     registerLspModule(pi as any, mergeConfig({}).lsp);
 
-    assert.deepEqual(pi.tools.map((tool) => tool.name), ["lsp"]);
+    assert.deepEqual(
+      pi.tools.map((tool) => tool.name),
+      ["lsp"]
+    );
+    assert.equal(typeof pi.tools[0]?.promptSnippet, "string");
+    assert.ok(Array.isArray(pi.tools[0]?.promptGuidelines));
+    assert.ok((pi.tools[0]?.promptGuidelines?.length ?? 0) > 0);
     assert.equal(pi.listeners.agent_end?.length, 1);
     assert.equal(pi.listeners.tool_result?.length, 1);
     assert.equal(pi.listeners.session_shutdown?.length, 1);
@@ -141,17 +154,52 @@ describe("lsp module", () => {
     const pi = createPiMock();
     registerLspModule(pi as any, mergeConfig({ lsp: { hook: { enabled: false } } }).lsp);
 
-    assert.deepEqual(pi.tools.map((tool) => tool.name), ["lsp"]);
+    assert.deepEqual(
+      pi.tools.map((tool) => tool.name),
+      ["lsp"]
+    );
     assert.equal(pi.listeners.agent_end, undefined);
     assert.equal(pi.listeners.session_shutdown?.length, 1);
     assert.equal(pi.renderers.length, 0);
+  });
+
+  it("session_start handler is branch-agnostic for lsp runtime state", async () => {
+    const pi = createPiMock();
+    registerLspModule(pi as any, mergeConfig({}).lsp);
+
+    assert.ok((pi.listeners.session_start?.length ?? 0) >= 1);
+    assert.equal(pi.listeners.session_shutdown?.length, 1);
+
+    await assert.doesNotReject(async () => {
+      await emit(pi, "session_start", {}, {
+        cwd: process.cwd(),
+        sessionManager: {
+          getBranch: () => {
+            throw new Error("should not be called");
+          },
+        },
+      });
+    });
+  });
+
+  it("session_shutdown handler is branch-agnostic and safe across repeated calls", async () => {
+    const pi = createPiMock();
+    registerLspModule(pi as any, mergeConfig({}).lsp);
+
+    await assert.doesNotReject(async () => {
+      await emit(pi, "session_shutdown", {}, { sessionManager: { getBranch: () => [{ type: "tool_result" }] } });
+      await emit(pi, "session_shutdown", {}, { sessionManager: { getBranch: () => { throw new Error("should not be called"); } } });
+    });
   });
 
   it("does not register hook events when lsp hook mode is disabled", () => {
     const pi = createPiMock();
     registerLspModule(pi as any, mergeConfig({ lsp: { hook: { mode: "disabled" } } }).lsp);
 
-    assert.deepEqual(pi.tools.map((tool) => tool.name), ["lsp"]);
+    assert.deepEqual(
+      pi.tools.map((tool) => tool.name),
+      ["lsp"]
+    );
     assert.equal(pi.listeners.agent_end, undefined);
     assert.equal(pi.listeners.session_shutdown?.length, 1);
     assert.equal(pi.renderers.length, 0);
@@ -161,7 +209,10 @@ describe("lsp module", () => {
     const pi = createPiMock();
     registerLspModule(pi as any, mergeConfig({ lsp: { hook: { mode: "edit_write" } } }).lsp);
 
-    assert.deepEqual(pi.tools.map((tool) => tool.name), ["lsp"]);
+    assert.deepEqual(
+      pi.tools.map((tool) => tool.name),
+      ["lsp"]
+    );
     assert.equal(pi.listeners.tool_result?.length, 1);
     assert.equal(pi.listeners.agent_end?.length, 1);
     assert.deepEqual(pi.renderers, ["lsp-diagnostics"]);
@@ -172,7 +223,10 @@ describe("lsp module", () => {
     const pi = createPiMock();
     registerLspModule(pi as any, mergeConfig({}).lsp);
 
-    assert.deepEqual(pi.tools.map((tool) => tool.name), ["lsp"]);
+    assert.deepEqual(
+      pi.tools.map((tool) => tool.name),
+      ["lsp"]
+    );
     assert.equal(pi.listeners.agent_end, undefined);
     assert.equal(pi.listeners.session_shutdown?.length, 1);
   });
@@ -658,15 +712,52 @@ describe("lsp module", () => {
 
     await assert.rejects(
       () =>
-        pi.tools[0].execute(
-          "call-1",
-          { action: "restart", server: "all" },
-          undefined,
-          undefined,
-          { cwd: process.cwd() }
-        ),
+        pi.tools[0].execute("call-1", { action: "restart", server: "all" }, undefined, undefined, {
+          cwd: process.cwd(),
+        }),
       /allowMutatingActions is false/
     );
+  });
+
+  it("logs bridged payload for LspError without changing thrown behavior", async () => {
+    const pi = createPiMock();
+    const sink = createMemoryLoggerSink();
+    const logger = createLogger({ module: "test", sink });
+    registerLspModule(pi as any, mergeConfig({}).lsp, { logger });
+
+    await assert.rejects(
+      () =>
+        pi.tools[0].execute("call-1", { action: "restart", server: "all" }, undefined, undefined, {
+          cwd: process.cwd(),
+        }),
+      /allowMutatingActions is false/
+    );
+
+    const event = sink.events.find((item) => item.event === "lsp.error_payload");
+    assert.ok(event);
+    assert.equal(event?.level, "warn");
+    const payload = event?.metadata?.payload as Record<string, unknown> | undefined;
+    assert.equal(payload?.module, "lsp");
+    assert.equal(payload?.code, "LSP_ACTION_NOT_ALLOWED");
+  });
+
+  it("logs normalized payload for non-Lsp execute failures", async () => {
+    const pi = createPiMock();
+    const sink = createMemoryLoggerSink();
+    const logger = createLogger({ module: "test", sink });
+    registerLspModule(pi as any, mergeConfig({}).lsp, { logger });
+
+    await assert.rejects(
+      () => pi.tools[0].execute("call-1", { action: "servers" }, undefined, undefined, undefined),
+      /Invalid tool execution context/
+    );
+
+    const event = sink.events.find((item) => item.event === "lsp.error_payload");
+    assert.ok(event);
+    assert.equal(event?.level, "error");
+    const payload = event?.metadata?.payload as Record<string, unknown> | undefined;
+    assert.equal(payload?.module, "lsp");
+    assert.equal(payload?.code, "INTERNAL_ERROR");
   });
 
   it("rejects file paths outside the active workspace", async () => {
@@ -749,7 +840,10 @@ describe("lsp module", () => {
       () =>
         pi.tools[0].execute(
           "call-1",
-          { action: "workspace-diagnostics", files: Array.from({ length: 65 }, (_, i) => `f${i}.ts`) },
+          {
+            action: "workspace-diagnostics",
+            files: Array.from({ length: 65 }, (_, i) => `f${i}.ts`),
+          },
           undefined,
           undefined,
           { cwd: process.cwd() }
@@ -808,13 +902,9 @@ describe("lsp module", () => {
 
     await assert.rejects(
       () =>
-        pi.tools[0].execute(
-          "call-1",
-          { action: "restart", server: "all" },
-          undefined,
-          undefined,
-          { cwd: process.cwd() }
-        ),
+        pi.tools[0].execute("call-1", { action: "restart", server: "all" }, undefined, undefined, {
+          cwd: process.cwd(),
+        }),
       /disabled in subagent processes/
     );
   });
