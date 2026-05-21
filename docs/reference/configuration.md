@@ -592,37 +592,16 @@ Example:
 
 Source: `DEFAULT_GUARDS_CONFIG`, `normalizeGuardsConfig()`, `src/modules/guards/*`.
 
-Guards provide lightweight notices plus optional gate modes. They use UI notification/status channels when available.
+Guards are lightweight session notices. They use UI notification/status channels when available, do not block tool calls, and do not trigger follow-up agent turns.
 
 | Key | Type | Default | Required | Purpose | Related source |
 |---|---|---:|---|---|---|
-| `guards.enabled` | boolean | `true` | No | Whether to register guards in the main agent process | `src/modules/guards/index.ts` |
-| `guards.mode` | `"off" \| "notice" \| "confirm" \| "block"` | `"notice"` | No | Guard operating mode (`off` disables all guards, `notice` keeps reminders only, `confirm`/`block` enable gate flow) | `src/modules/guards/policies/mode.ts`, `src/modules/guards/gates/register.ts` |
-| `guards.nonInteractivePolicy` | `"allow" \| "deny"` | `"allow"` | No | Decision policy for `mode="confirm"` when interactive confirm UI is unavailable | `src/modules/guards/gates/register.ts` |
-| `guards.blockMode` | `"preview" \| "soft" \| "hard"` | `"soft"` | No | Deny behavior for gate flow (`hard` throws structured hard-block error) | `src/modules/guards/gates/register.ts`, `src/modules/guards/errors.ts` |
+| `guards.enabled` | boolean | `true` | No | Whether to register lightweight session guard notices in the main agent process | `src/modules/guards/index.ts` |
 | `guards.gitContextNotice` | boolean | `true` | No | After the first tool result in a session, show repo/branch/worktree context once when the current cwd is inside a git worktree | `src/modules/guards/git-context.ts` |
 | `guards.firstWriteReminder` | boolean | `true` | No | Before the first likely write tool call in a session, show current branch/worktree context once | `src/modules/guards/index.ts`, `src/modules/guards/tool-classifier.ts` |
 | `guards.verificationReminder` | boolean | `true` | No | At agent end, if the current turn appears to have modified files but no verification command was detected, show a soft reminder | `src/modules/guards/index.ts`, `src/modules/guards/command-classifier.ts` |
 
 Current behavior: `gitContextNotice`, `firstWriteReminder`, and `verificationReminder` are implemented. Git commands use a short timeout and silently degrade when git is unavailable, the cwd is not a git repo, or git commands fail. Write classification is conservative: explicit file-editing tools are treated as writes, and `bash`/`shell` are only treated as writes for obvious mutating commands such as redirection, `rm`, `mv`, `cp`, `sed -i`, `tee`, `apply_patch`, selected `git` mutating commands, or package installs. Verification classification is also conservative and recognizes common test/lint/typecheck/build commands. Examples include, but are not limited to: `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm run test`, `pnpm run lint`, `pnpm run typecheck`, `npm test`, `npm run test`, `npm run lint`, `npm run typecheck`, `yarn test`, `yarn lint`, `yarn typecheck`, `tsc --noEmit`, `cargo test`, `cargo check`, `pytest`, `uv run pytest`, `go test`, `cmake --build`, `ctest`, and `biome check`. Subagent child processes do not register guards.
-
-### Guards mode combination matrix
-
-| mode | nonInteractivePolicy | blockMode | Effective behavior |
-|---|---|---|---|
-| `off` | any | any | Guards not registered |
-| `notice` | any | any | Reminder-only flow (`gitContextNotice` / `firstWriteReminder` / `verificationReminder`) |
-| `confirm` | `allow` | `preview`/`soft` | Non-interactive fallback allows potential write tool calls |
-| `confirm` | `deny` | `preview`/`soft` | Non-interactive fallback emits deny decision (`deny_soft`), no hard throw |
-| `confirm` | `deny` | `hard` | Non-interactive fallback emits hard deny and throws `GUARD_HARD_BLOCKED` |
-| `block` | any | `preview`/`soft` | Gate emits deny decision (`deny_soft`), no hard throw |
-| `block` | any | `hard` | Gate hard-blocks and throws `GUARD_HARD_BLOCKED` |
-
-Misconfiguration guidance:
-
-- If you want no interruption, keep `mode="notice"` (recommended default path).
-- If you enable `mode="confirm"` in non-interactive environments, set `nonInteractivePolicy` explicitly.
-- Use `blockMode="hard"` only when explicit hard-block behavior is intended in automation/CI.
 
 Example:
 

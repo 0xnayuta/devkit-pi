@@ -592,37 +592,16 @@ doctor, modules, logs, agents, lsp, activity, help
 
 对应源码：`DEFAULT_GUARDS_CONFIG`、`normalizeGuardsConfig()`、`src/modules/guards/*`。
 
-Guards 提供轻量提醒与可选 gate 模式，优先使用 UI notification/status channel。
+Guards 是轻量 session notices。它们优先使用 UI notification/status channel，不阻止 tool calls，也不触发 follow-up agent turn。
 
 | Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
 |---|---|---:|---|---|---|
-| `guards.enabled` | boolean | `true` | 否 | 是否在主代理进程注册 guards | `src/modules/guards/index.ts` |
-| `guards.mode` | `"off" \| "notice" \| "confirm" \| "block"` | `"notice"` | 否 | guards 运行模式（`off` 关闭、`notice` 仅提醒、`confirm`/`block` 启用 gate 流程） | `src/modules/guards/policies/mode.ts`, `src/modules/guards/gates/register.ts` |
-| `guards.nonInteractivePolicy` | `"allow" \| "deny"` | `"allow"` | 否 | `mode="confirm"` 且无交互 confirm UI 时的决策策略 | `src/modules/guards/gates/register.ts` |
-| `guards.blockMode` | `"preview" \| "soft" \| "hard"` | `"soft"` | 否 | gate 拒绝行为（`hard` 会抛出结构化 hard-block 错误） | `src/modules/guards/gates/register.ts`, `src/modules/guards/errors.ts` |
+| `guards.enabled` | boolean | `true` | 否 | 是否在主代理进程注册轻量 session guard notices | `src/modules/guards/index.ts` |
 | `guards.gitContextNotice` | boolean | `true` | 否 | session 第一次 tool result 后，如果当前 cwd 位于 git worktree 中，则显示一次 repo/branch/worktree context | `src/modules/guards/git-context.ts` |
 | `guards.firstWriteReminder` | boolean | `true` | 否 | session 第一次疑似写入 tool call 前，显示一次当前 branch/worktree context | `src/modules/guards/index.ts`, `src/modules/guards/tool-classifier.ts` |
 | `guards.verificationReminder` | boolean | `true` | 否 | agent end 时，如果当前 turn 疑似修改了文件但没有检测到 verification command，则显示 soft reminder | `src/modules/guards/index.ts`, `src/modules/guards/command-classifier.ts` |
 
 当前行为：`gitContextNotice`、`firstWriteReminder` 和 `verificationReminder` 已实现。Git commands 使用短 timeout；当 git 不可用、cwd 不在 git repo 中或 git 命令失败时会静默降级。写入分类是保守的：显式文件编辑工具会被视为写入，`bash`/`shell` 仅在明显 mutating commands 时视为写入，例如 redirection、`rm`、`mv`、`cp`、`sed -i`、`tee`、`apply_patch`、部分 mutating `git` 命令或 package installs。验证命令分类同样保守，识别常见 test/lint/typecheck/build 命令。示例包括但不限于：`pnpm test`、`pnpm lint`、`pnpm typecheck`、`pnpm run test`、`pnpm run lint`、`pnpm run typecheck`、`npm test`、`npm run test`、`npm run lint`、`npm run typecheck`、`yarn test`、`yarn lint`、`yarn typecheck`、`tsc --noEmit`、`cargo test`、`cargo check`、`pytest`、`uv run pytest`、`go test`、`cmake --build`、`ctest` 和 `biome check`。子代理进程不注册 guards。
-
-### Guards 模式组合矩阵
-
-| mode | nonInteractivePolicy | blockMode | 生效行为 |
-|---|---|---|---|
-| `off` | 任意 | 任意 | 不注册 guards |
-| `notice` | 任意 | 任意 | 仅提醒流程（`gitContextNotice` / `firstWriteReminder` / `verificationReminder`） |
-| `confirm` | `allow` | `preview`/`soft` | 非交互回退允许潜在写入工具调用 |
-| `confirm` | `deny` | `preview`/`soft` | 非交互回退给出拒绝决策（`deny_soft`），不抛 hard-block |
-| `confirm` | `deny` | `hard` | 非交互回退给出硬拒绝并抛出 `GUARD_HARD_BLOCKED` |
-| `block` | 任意 | `preview`/`soft` | gate 给出拒绝决策（`deny_soft`），不抛 hard-block |
-| `block` | 任意 | `hard` | gate 硬阻断并抛出 `GUARD_HARD_BLOCKED` |
-
-误配建议：
-
-- 若不希望中断流程，保持 `mode="notice"`（推荐默认路径）。
-- 在非交互环境启用 `mode="confirm"` 时，请显式设置 `nonInteractivePolicy`。
-- 仅在明确需要自动化/CI 硬阻断时使用 `blockMode="hard"`。
 
 示例：
 

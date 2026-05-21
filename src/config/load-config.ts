@@ -97,13 +97,10 @@ export const DEFAULT_CONVERT_CONTENT_CONFIG: ResolvedConvertContentConfig = {
 
 export const DEFAULT_GUARDS_CONFIG = {
   enabled: true,
-  mode: "notice",
-  nonInteractivePolicy: "allow",
-  blockMode: "soft",
   gitContextNotice: true,
   firstWriteReminder: true,
   verificationReminder: true,
-} as const;
+};
 
 export const DEFAULT_SUBAGENTS_CONFIG: ResolvedSubagentsConfig = {
   enabled: true,
@@ -113,8 +110,6 @@ export const DEFAULT_SUBAGENTS_CONFIG: ResolvedSubagentsConfig = {
   allowWrite: false,
   allowLspTools: true,
   allowedLspActions: DEFAULT_SUBAGENT_LSP_ACTIONS,
-  projectAgentPolicy: "confirm",
-  nonInteractivePolicy: "allow",
   injectDelegationPolicy: true,
   retry: {
     enabled: true,
@@ -343,22 +338,6 @@ function normalizeLspReadonlyActions(value: unknown): LspReadonlyAction[] {
   return [...new Set(filtered)];
 }
 
-function normalizeSubagentsProjectAgentPolicy(
-  value: unknown
-): ResolvedSubagentsConfig["projectAgentPolicy"] {
-  return value === "allow" || value === "confirm"
-    ? value
-    : DEFAULT_SUBAGENTS_CONFIG.projectAgentPolicy;
-}
-
-function normalizeSubagentsNonInteractivePolicy(
-  value: unknown
-): ResolvedSubagentsConfig["nonInteractivePolicy"] {
-  return value === "allow" || value === "deny"
-    ? value
-    : DEFAULT_SUBAGENTS_CONFIG.nonInteractivePolicy;
-}
-
 function normalizeSubagentsConfig(base: SubagentsConfig | undefined): ResolvedSubagentsConfig {
   return {
     enabled: booleanValue(base?.enabled, DEFAULT_SUBAGENTS_CONFIG.enabled),
@@ -368,8 +347,6 @@ function normalizeSubagentsConfig(base: SubagentsConfig | undefined): ResolvedSu
     allowWrite: booleanValue(base?.allowWrite, DEFAULT_SUBAGENTS_CONFIG.allowWrite),
     allowLspTools: booleanValue(base?.allowLspTools, DEFAULT_SUBAGENTS_CONFIG.allowLspTools),
     allowedLspActions: normalizeLspReadonlyActions(base?.allowedLspActions),
-    projectAgentPolicy: normalizeSubagentsProjectAgentPolicy(base?.projectAgentPolicy),
-    nonInteractivePolicy: normalizeSubagentsNonInteractivePolicy(base?.nonInteractivePolicy),
     injectDelegationPolicy: booleanValue(
       base?.injectDelegationPolicy,
       DEFAULT_SUBAGENTS_CONFIG.injectDelegationPolicy
@@ -417,30 +394,9 @@ function normalizeCommandsConfig(
   };
 }
 
-function normalizeGuardsMode(value: unknown): ResolvedToolkitConfig["guards"]["mode"] {
-  return value === "off" || value === "notice" || value === "confirm" || value === "block"
-    ? value
-    : DEFAULT_GUARDS_CONFIG.mode;
-}
-
-function normalizeGuardsNonInteractivePolicy(
-  value: unknown
-): ResolvedToolkitConfig["guards"]["nonInteractivePolicy"] {
-  return value === "allow" || value === "deny" ? value : DEFAULT_GUARDS_CONFIG.nonInteractivePolicy;
-}
-
-function normalizeGuardsBlockMode(value: unknown): ResolvedToolkitConfig["guards"]["blockMode"] {
-  return value === "preview" || value === "soft" || value === "hard"
-    ? value
-    : DEFAULT_GUARDS_CONFIG.blockMode;
-}
-
 function normalizeGuardsConfig(base: GuardsConfig | undefined): ResolvedToolkitConfig["guards"] {
   return {
     enabled: booleanValue(base?.enabled, DEFAULT_GUARDS_CONFIG.enabled),
-    mode: normalizeGuardsMode(base?.mode),
-    nonInteractivePolicy: normalizeGuardsNonInteractivePolicy(base?.nonInteractivePolicy),
-    blockMode: normalizeGuardsBlockMode(base?.blockMode),
     gitContextNotice: booleanValue(base?.gitContextNotice, DEFAULT_GUARDS_CONFIG.gitContextNotice),
     firstWriteReminder: booleanValue(
       base?.firstWriteReminder,

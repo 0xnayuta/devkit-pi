@@ -4,7 +4,6 @@ import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import { Value } from "typebox/value";
 import { mergeConfig } from "../../src/config/load-config.ts";
 import { CONVERT_ERROR_CODES, registerConvertTools } from "../../src/modules/convert/index.ts";
-import { createLogger, createMemoryLoggerSink } from "../../src/shared/logger.ts";
 import { ConvertContentParams } from "../../src/modules/convert/schemas.ts";
 import type { ResolvedConvertContentConfig } from "../../src/shared/types.ts";
 
@@ -12,8 +11,6 @@ interface RegisteredTool {
   name: string;
   label: string;
   description: string;
-  promptSnippet?: string;
-  promptGuidelines?: string[];
   parameters: unknown;
   execute: Function;
   renderCall?: Function;
@@ -22,32 +19,22 @@ interface RegisteredTool {
 
 interface MockExtensionAPI {
   registeredTools: RegisteredTool[];
-  eventHandlers: Map<string, Function[]>;
   registerTool: (tool: any) => void;
-  on: (event: string, handler: Function) => void;
 }
 
 function createMockPi(): MockExtensionAPI {
   const mock: MockExtensionAPI = {
     registeredTools: [],
-    eventHandlers: new Map(),
     registerTool(tool: any) {
       mock.registeredTools.push({
         name: tool.name,
         label: tool.label,
         description: tool.description,
-        promptSnippet: tool.promptSnippet,
-        promptGuidelines: tool.promptGuidelines,
         parameters: tool.parameters,
         execute: tool.execute,
         renderCall: tool.renderCall,
         renderResult: tool.renderResult,
       });
-    },
-    on(event: string, handler: Function) {
-      const handlers = mock.eventHandlers.get(event) ?? [];
-      handlers.push(handler);
-      mock.eventHandlers.set(event, handlers);
     },
   };
   return mock;
@@ -75,9 +62,6 @@ describe("registerConvertTools", () => {
     assert.equal(typeof tool.execute, "function");
     assert.equal(typeof tool.renderCall, "function");
     assert.equal(typeof tool.renderResult, "function");
-    assert.equal(typeof tool.promptSnippet, "string");
-    assert.ok(Array.isArray(tool.promptGuidelines));
-    assert.ok((tool.promptGuidelines?.length ?? 0) > 0);
   });
 
   it("exposes expected parameter schema fields", () => {
@@ -101,23 +85,6 @@ describe("registerConvertTools", () => {
     )) as AgentToolResult<any>;
 
     assert.equal(result.details.error.code, CONVERT_ERROR_CODES.INVALID_INPUT);
-  });
-
-  it("logs convert.error_payload when convert_content returns structured error", async () => {
-    const pi = createMockPi();
-    const sink = createMemoryLoggerSink();
-    registerConvertTools(pi as any, convertConfig, {
-      logger: createLogger({ module: "test.convert", sink }),
-    });
-
-    await pi.registeredTools[0].execute("call-1", {}, undefined);
-
-    const event = sink.events.find((item) => item.event === "convert.error_payload");
-    assert.ok(event);
-    assert.equal(event?.level, "warn");
-    const payload = event?.metadata?.payload as Record<string, unknown> | undefined;
-    assert.equal(payload?.module, "convert");
-    assert.equal(payload?.code, CONVERT_ERROR_CODES.INVALID_INPUT);
   });
 });
 

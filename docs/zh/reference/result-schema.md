@@ -243,22 +243,8 @@ child stdout 处理期间，`message_update`、`tool_execution_update` 等高频
 - `sessionFile` 目录布局
 - renderer 展示格式
 
-## Guards gate 错误码
-
-canonical source：`src/modules/guards/errors.ts` 中的 `GUARDS_ERROR_CODES`。
-
-| Code | 说明 |
-|------|------|
-| `GUARD_HARD_BLOCKED` | Guards gate 对潜在写入工具调用执行了硬阻断（`mode=confirm|block` 且 `blockMode=hard` 并产生 deny 决策）。 |
-
-说明：
-
-- 该错误码属于 guards 专用结构化错误，仅用于 gate hard-block 流程。
-- 在 `preview`/`soft` block mode 下，拒绝决策仍为非抛错路径，不返回该错误码。
-
 ## 相关 schemas
 
 - Web tools 错误码：[`web-tools-error-codes.md`](./web-tools-error-codes.md)
 - LSP tool 返回结构：[`lsp-tools.md`](./lsp-tools.md)
 - `/toolkit` command 输出语义：[`toolkit-commands.md`](./toolkit-commands.md)
-- Guards 配置与模式矩阵：[`configuration.md#guards-配置`](./configuration.md#guards-配置)

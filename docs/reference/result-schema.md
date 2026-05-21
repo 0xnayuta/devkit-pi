@@ -240,22 +240,8 @@ Not recommended for strong dependency:
 - `sessionFile` directory layout
 - Renderer display format
 
-## Guards gate error codes
-
-Canonical source: `GUARDS_ERROR_CODES` in `src/modules/guards/errors.ts`.
-
-| Code | Description |
-|------|------|
-| `GUARD_HARD_BLOCKED` | Guards gate hard-blocked a potential write tool call (`mode=confirm|block` with `blockMode=hard` and deny decision). |
-
-Notes:
-
-- This is a guards-specific structured error used by gate hard-block flow.
-- In `preview`/`soft` block modes, guard deny decisions remain non-throwing and do not return this error.
-
 ## Related schemas
 
 - Web tools error codes: [`web-tools-error-codes.md`](./web-tools-error-codes.md)
 - LSP tool return structure: [`lsp-tools.md`](./lsp-tools.md)
 - `/toolkit` command output semantics: [`toolkit-commands.md`](./toolkit-commands.md)
-- Guards configuration and mode matrix: [`configuration.md#guards-configuration`](./configuration.md#guards-configuration)

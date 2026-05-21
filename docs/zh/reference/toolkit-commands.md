@@ -147,7 +147,6 @@ commands:  enabled
 
 - `config`：配置文件是否存在、是否可解析
 - `agents`：builtin/user/project agent 发现情况
-- `subagents`：Phase 6 可见性（scope 语义、project agent 门控策略、frontmatter 校验诊断）
 - `provider`：Web search providers 的启用、API key 与 availability
 - `permissions`：结果目录是否可写
 - `web-tools`：Web tools 是否启用，以及 provider/debug 摘要

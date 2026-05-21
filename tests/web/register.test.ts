@@ -5,7 +5,6 @@ import { Value } from "typebox/value";
 import { mergeConfig } from "../../src/config/load-config.ts";
 import { resetConnectionPool } from "../../src/modules/web/http-pool.ts";
 import { registerWebTools } from "../../src/modules/web/register.ts";
-import { createLogger, createMemoryLoggerSink } from "../../src/shared/logger.ts";
 import {
 	renderFetchContentCall,
 	renderFetchContentResult,
@@ -26,8 +25,6 @@ interface RegisteredTool {
 	name: string;
 	label: string;
 	description: string;
-	promptSnippet?: string;
-	promptGuidelines?: string[];
 	parameters: unknown;
 	execute: Function;
 	renderCall: Function;
@@ -51,8 +48,6 @@ function createMockPi(): MockExtensionAPI {
 				name: tool.name,
 				label: tool.label,
 				description: tool.description,
-				promptSnippet: tool.promptSnippet,
-				promptGuidelines: tool.promptGuidelines,
 				parameters: tool.parameters,
 				execute: tool.execute,
 				renderCall: tool.renderCall,
@@ -119,9 +114,6 @@ describe("registerWebTools - tool registration", () => {
 			assert.equal(typeof tool.execute, "function");
 			assert.equal(typeof tool.renderCall, "function");
 			assert.equal(typeof tool.renderResult, "function");
-			assert.equal(typeof tool.promptSnippet, "string");
-			assert.ok(Array.isArray(tool.promptGuidelines));
-			assert.ok((tool.promptGuidelines?.length ?? 0) > 0);
 		}
 	});
 
@@ -147,12 +139,17 @@ describe("registerWebTools - lifecycle integration", () => {
 		assert.ok(pi.eventHandlers.get("session_shutdown")?.length);
 	});
 
-	it("registers session lifecycle handlers and append entry integration", () => {
+	it("does not require pi.on or appendEntry", () => {
 		const pi = createMockPi();
-		registerWebTools(pi as any, webConfig);
-		assert.ok(pi.eventHandlers.get("session_start")?.length);
-		assert.ok(pi.eventHandlers.get("session_shutdown")?.length);
-		assert.equal(typeof pi.appendEntry, "function");
+		delete (pi as any).on;
+		delete (pi as any).appendEntry;
+		assert.doesNotThrow(() => registerWebTools(pi as any, webConfig));
+		assert.ok(pi.registeredTools.length > 0);
+
+		const invalidPi = createMockPi();
+		(invalidPi as any).on = "not-a-function";
+		(invalidPi as any).appendEntry = "not-a-function";
+		assert.doesNotThrow(() => registerWebTools(invalidPi as any, webConfig));
 	});
 
 	it("session handlers tolerate missing context and restore branch data", () => {
@@ -167,28 +164,6 @@ describe("registerWebTools - lifecycle integration", () => {
 		assert.doesNotThrow(() => start({}, { sessionManager: { getBranch: () => undefined } }));
 		assert.doesNotThrow(() => start({}, { sessionManager: { getBranch: () => [] } }));
 		assert.doesNotThrow(() => shutdown());
-	});
-});
-
-describe("registerWebTools - error payload logging", () => {
-	it("logs web.error_payload when web_search returns structured error", async () => {
-		const pi = createMockPi();
-		const sink = createMemoryLoggerSink();
-		registerWebTools(pi as any, webConfig, {
-			logger: createLogger({ module: "test.web", sink }),
-		});
-
-		const webSearchTool = pi.registeredTools.find((tool) => tool.name === "web_search");
-		assert.ok(webSearchTool);
-
-		await webSearchTool!.execute("call-1", {}, undefined);
-
-		const event = sink.events.find((item) => item.event === "web.error_payload");
-		assert.ok(event);
-		assert.equal(event?.level, "warn");
-		const payload = event?.metadata?.payload as Record<string, unknown> | undefined;
-		assert.equal(payload?.module, "web");
-		assert.equal(payload?.code, "WEB_SEARCH_INVALID_QUERY");
 	});
 });
 

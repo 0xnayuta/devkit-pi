@@ -28,8 +28,6 @@ describe("Devkit Config Loading", () => {
 				"workspace-diagnostics",
 				"servers",
 			]);
-			assert.equal(DEFAULT_CONFIG.subagents.projectAgentPolicy, "confirm");
-			assert.equal(DEFAULT_CONFIG.subagents.nonInteractivePolicy, "allow");
 			assert.equal(DEFAULT_CONFIG.web.enabled, true);
 			assert.equal(DEFAULT_CONFIG.web.provider, "ddgs");
 			assert.equal(DEFAULT_CONFIG.lsp.enabled, true);
@@ -39,9 +37,6 @@ describe("Devkit Config Loading", () => {
 			assert.equal(DEFAULT_CONFIG.lsp.hook.mode, "agent_end");
 			assert.equal(DEFAULT_CONFIG.commands.enabled, true);
 			assert.equal(DEFAULT_CONFIG.guards.enabled, true);
-			assert.equal(DEFAULT_CONFIG.guards.mode, "notice");
-			assert.equal(DEFAULT_CONFIG.guards.nonInteractivePolicy, "allow");
-			assert.equal(DEFAULT_CONFIG.guards.blockMode, "soft");
 			assert.equal(DEFAULT_CONFIG.guards.gitContextNotice, true);
 			assert.equal(DEFAULT_CONFIG.guards.firstWriteReminder, true);
 			assert.equal(DEFAULT_CONFIG.guards.verificationReminder, true);
@@ -121,9 +116,6 @@ describe("Devkit Config Loading", () => {
 			const config = mergeConfig({
 				guards: {
 					enabled: false,
-					mode: "confirm",
-					nonInteractivePolicy: "deny",
-					blockMode: "hard",
 					gitContextNotice: false,
 					firstWriteReminder: false,
 					verificationReminder: false,
@@ -132,26 +124,13 @@ describe("Devkit Config Loading", () => {
 
 			assert.deepEqual(config.guards, {
 				enabled: false,
-				mode: "confirm",
-				nonInteractivePolicy: "deny",
-				blockMode: "hard",
 				gitContextNotice: false,
 				firstWriteReminder: false,
 				verificationReminder: false,
 			});
 
-			const invalid = mergeConfig({
-				guards: {
-					enabled: "no" as any,
-					mode: "warn" as any,
-					nonInteractivePolicy: "maybe" as any,
-					blockMode: "strict" as any,
-				},
-			});
+			const invalid = mergeConfig({ guards: { enabled: "no" as any } });
 			assert.equal(invalid.guards.enabled, DEFAULT_CONFIG.guards.enabled);
-			assert.equal(invalid.guards.mode, DEFAULT_CONFIG.guards.mode);
-			assert.equal(invalid.guards.nonInteractivePolicy, DEFAULT_CONFIG.guards.nonInteractivePolicy);
-			assert.equal(invalid.guards.blockMode, DEFAULT_CONFIG.guards.blockMode);
 		});
 
 		it("normalizes invalid subagent fields through mergeConfig", () => {
@@ -159,22 +138,12 @@ describe("Devkit Config Loading", () => {
 				subagents: {
 					maxDepth: -1,
 					timeoutMs: 0,
-					projectAgentPolicy: "ask" as any,
-					nonInteractivePolicy: "maybe" as any,
 					retry: { maxAttempts: 0 },
 				},
 			});
 
 			assert.equal(config.subagents.maxDepth, DEFAULT_CONFIG.subagents.maxDepth);
 			assert.equal(config.subagents.timeoutMs, DEFAULT_CONFIG.subagents.timeoutMs);
-			assert.equal(
-				config.subagents.projectAgentPolicy,
-				DEFAULT_CONFIG.subagents.projectAgentPolicy,
-			);
-			assert.equal(
-				config.subagents.nonInteractivePolicy,
-				DEFAULT_CONFIG.subagents.nonInteractivePolicy,
-			);
 			assert.equal(config.subagents.retry.maxAttempts, DEFAULT_CONFIG.subagents.retry.maxAttempts);
 		});
 	});

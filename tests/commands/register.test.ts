@@ -150,7 +150,7 @@ describe("commands module", () => {
     assert.equal(await complete?.("logs --"), null);
   });
 
-  it("toolkit modules shows module overview and tool manifest in a TUI report panel", async () => {
+  it("toolkit modules shows module overview in a TUI report panel", async () => {
     const pi = createPiMock();
     registerToolkitCommands(pi as any, mergeConfig({}));
 
@@ -162,16 +162,9 @@ describe("commands module", () => {
     await pi.commands[0].handler("modules", pi.createCtx());
 
     assert.equal(output.length, 0);
-    const report = pi.reports.join("\n");
-    assert.match(report, /devkit-pi modules/);
-    assert.match(report, /convert:/);
-    assert.match(report, /lsp:/);
-    assert.match(report, /tool manifest/);
-    assert.match(report, /subagent \(subagents, readonly\)/);
-    assert.match(report, /state model snapshot/);
-    assert.match(report, /web\.responseId: memory \+ session entry/);
-    assert.match(report, /subagent\.details: details-driven restore/);
-    assert.match(report, /subagent\.streaming: execution-only/);
+    assert.match(pi.reports.join("\n"), /devkit-pi modules/);
+    assert.match(pi.reports.join("\n"), /convert:/);
+    assert.match(pi.reports.join("\n"), /lsp:/);
   });
 
   it("toolkit help shows usage in a TUI report panel", async () => {
@@ -221,27 +214,5 @@ describe("commands module", () => {
       message: "Toolkit activity panel is not available in this pi mode",
       level: "warning",
     });
-  });
-
-  it("logs normalized payload when toolkit command handler fails", async () => {
-    const pi = createPiMock();
-    const sink = createMemoryLoggerSink();
-    registerToolkitCommands(pi as any, mergeConfig({}), {
-      logger: createLogger({ module: "test.commands", sink }),
-    });
-
-    const failingCtx = pi.createCtx({ hasUI: true });
-    failingCtx.ui.custom = async () => {
-      throw new Error("ui custom failed");
-    };
-
-    await pi.commands[0].handler("activity", failingCtx);
-
-    const event = sink.events.find((item) => item.event === "commands.error_payload");
-    assert.ok(event);
-    assert.equal(event?.level, "error");
-    const payload = event?.metadata?.payload as Record<string, unknown> | undefined;
-    assert.equal(payload?.code, "INTERNAL_ERROR");
-    assert.equal(payload?.module, "commands");
   });
 });

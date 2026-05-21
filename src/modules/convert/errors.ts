@@ -1,5 +1,3 @@
-import { createDevkitErrorPayload, type DevkitErrorPayload } from "../../shared/errors.ts";
-
 export const CONVERT_ERROR_CODES = {
   INVALID_INPUT: "INVALID_INPUT",
   FILE_NOT_FOUND: "FILE_NOT_FOUND",
@@ -29,19 +27,4 @@ export class ConvertProviderError extends Error {
 
 export function isConvertProviderError(error: unknown): error is ConvertProviderError {
   return error instanceof ConvertProviderError;
-}
-
-export function toDevkitConvertErrorPayload(
-  error: ConvertProviderError,
-  options: { provider?: string; retryable?: boolean; remediation?: string } = {}
-): DevkitErrorPayload {
-  return createDevkitErrorPayload({
-    code: error.code,
-    message: error.message,
-    module: "convert",
-    provider: options.provider,
-    causeSummary: error.causeSummary,
-    retryable: options.retryable ?? error.code === CONVERT_ERROR_CODES.CONVERT_TIMEOUT,
-    remediation: options.remediation,
-  });
 }

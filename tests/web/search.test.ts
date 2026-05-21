@@ -8,7 +8,6 @@ import {
   getErrorSummary,
   mapHttpStatusToError,
   mapNetworkErrorToWebError,
-  toDevkitWebErrorPayload,
   WEB_ERROR_CODES,
   type WebError,
 } from "../../src/modules/web/errors.ts";
@@ -605,21 +604,5 @@ describe("web structured errors", () => {
     assert.equal(summary.byCode.NETWORK_ERROR, 2);
     assert.equal(summary.byCode.PROVIDER_AUTH_FAILED, 1);
     assert.equal(summary.retryableCount, 2);
-  });
-
-  it("bridges WebError to DevkitErrorPayload without breaking current shape", () => {
-    const webError = createWebError(WEB_ERROR_CODES.CONTENT_FETCH_TIMEOUT, "timed out", {
-      provider: "ddgs",
-      originalError: new Error("socket timeout"),
-    });
-    const payload = toDevkitWebErrorPayload(webError);
-
-    assert.equal(payload.module, "web");
-    assert.equal(payload.code, WEB_ERROR_CODES.CONTENT_FETCH_TIMEOUT);
-    assert.equal(payload.message, "timed out");
-    assert.equal(payload.provider, "ddgs");
-    assert.equal(payload.retryable, true);
-    assert.match(payload.remediation ?? "", /Jina Reader fallback/);
-    assert.equal(payload.causeSummary, "socket timeout");
   });
 });

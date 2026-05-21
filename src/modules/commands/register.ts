@@ -1,8 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { AutocompleteItem } from "@earendil-works/pi-tui";
 import { DEFAULT_SUBAGENT_LSP_ACTIONS } from "../../config/load-config.ts";
-import { DEVKIT_TOOL_MANIFEST } from "../../extension/manifest.ts";
-import { toDevkitErrorPayload } from "../../shared/errors.ts";
 import { createConsoleLoggerSink, createLogger, type Logger } from "../../shared/logger.ts";
 import { PI_SUBAGENT_CHILD, type ResolvedToolkitConfig } from "../../shared/types.ts";
 import { LSP_ACTIONS } from "../lsp/tool.ts";
@@ -107,20 +105,6 @@ function formatModulesOverview(config: ResolvedToolkitConfig): string {
     }`
   );
   lines.push(`commands:  ${config.commands.enabled ? "enabled" : "disabled"}`);
-  lines.push("");
-  lines.push("state model snapshot");
-  lines.push("=");
-  lines.push("- web.responseId: memory + session entry (branch restore + TTL)");
-  lines.push("- subagent.details: details-driven restore (mode/results/error)");
-  lines.push("- subagent.streaming: execution-only, optional in final result");
-  lines.push("");
-  lines.push("tool manifest");
-  lines.push("=");
-  for (const tool of DEVKIT_TOOL_MANIFEST) {
-    lines.push(`- ${tool.name} (${tool.module}, ${tool.safety})`);
-    lines.push(`  snippet: ${tool.promptSnippet}`);
-    lines.push(`  guidelines: ${tool.promptGuidelines.length}`);
-  }
   return lines.join("\n");
 }
 
@@ -150,10 +134,6 @@ function formatHelp(): string {
     "  /toolkit lsp        Show LSP tool/hook configuration",
     "  /toolkit activity   Open activity panel",
     "  /toolkit help       Show this help",
-    "",
-    "Guards hint:",
-    "  If guards.mode is confirm/block with guards.blockMode=hard, write tool calls may be blocked (GUARD_HARD_BLOCKED).",
-    "  Run /toolkit doctor to check the effective guards gate strategy.",
   ].join("\n");
 }
 
@@ -287,10 +267,6 @@ export function registerToolkitCommands(
           logger.child("report")
         );
       } catch (error) {
-        logger.error("commands.error_payload", "Toolkit command execution failed", {
-          payload: toDevkitErrorPayload(error, { moduleHint: "commands" }),
-          subcommand,
-        });
         ctx.ui.notify(
           `Toolkit command failed: ${error instanceof Error ? error.message : error}`,
           "error"
