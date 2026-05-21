@@ -84,6 +84,48 @@ describe("fetch_content input, security, and limits", () => {
 		assert.equal(contentLimited.results[0].content, "Hello He");
 		assert.equal(contentLimited.results[0].truncated, true);
 	});
+
+	it("returns structured error when redirect chain exceeds limit", async () => {
+		globalThis.fetch = ((input: string | URL) => {
+			const url = String(input);
+			return Promise.resolve(new Response(null, { status: 302, headers: { location: `${url}?next=1` } }));
+		}) as typeof fetch;
+
+		const result = await assertFetchError({ url: "https://93.184.216.34/loop" }, "CONTENT_FETCH_FAILED");
+		assert.match(result.error.message, /Too many redirects/);
+	});
+
+	it("maps abort signals to CONTENT_FETCH_TIMEOUT", async () => {
+		const controller = new AbortController();
+		globalThis.fetch = async (_input: string | URL | Request, init?: RequestInit) => {
+			return await new Promise<Response>((_resolve, reject) => {
+				const signal = init?.signal;
+				if (!signal) {
+					reject(new Error("missing signal"));
+					return;
+				}
+				if (signal.aborted) {
+					reject(new DOMException("The operation was aborted", "AbortError"));
+					return;
+				}
+				signal.addEventListener(
+					"abort",
+					() => {
+						reject(new DOMException("The operation was aborted", "AbortError"));
+					},
+					{ once: true }
+				);
+			});
+		};
+
+		const pending = fetchContent({ url: "https://93.184.216.34/abort" }, mergeWebConfig({}), controller.signal);
+		controller.abort();
+		const result = await pending;
+		assert.equal("error" in result, true);
+		if ("error" in result) {
+			assert.equal(result.error.code, "CONTENT_FETCH_TIMEOUT");
+		}
+	});
 });
 
 describe("fetch_content Jina reader fallback", () => {

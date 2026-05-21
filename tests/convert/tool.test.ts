@@ -352,6 +352,26 @@ describe("convertContent local path", () => {
     }
   });
 
+  it("maps redirect-loop overflow to NETWORK_ERROR", async () => {
+    const provider = new MockProvider();
+    const fetchMock = mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
+      const url = String(input);
+      return new Response(null, { status: 302, headers: { location: `${url}?next=1` } });
+    });
+    const config = mergeConfig({}).convertContent;
+
+    try {
+      const result = await convertContent({ url: "https://93.184.216.34/loop.pdf" }, config, undefined, provider);
+
+      assert.equal(errorCode(result), CONVERT_ERROR_CODES.NETWORK_ERROR);
+      assert.match(errorMessage(result) ?? "", /Too many redirects/);
+      assert.equal(provider.calls.length, 0);
+      assert.equal(fetchMock.mock.callCount(), 6);
+    } finally {
+      fetchMock.mock.restore();
+    }
+  });
+
   it("cancels non-OK URL download response bodies", async () => {
     const provider = new MockProvider();
     let cancelCount = 0;
