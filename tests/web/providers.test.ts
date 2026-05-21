@@ -33,6 +33,12 @@ function webConfig(overrides: Partial<ResolvedWebConfig> = {}): ResolvedWebConfi
 	return { ...mergeConfig({}).web, ...overrides };
 }
 
+const BRAVE_CONFIG = webConfig({ brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV.brave } });
+const OPENSERP_CONFIG = webConfig({ openserp: { enabled: true, baseUrl: "http://localhost:7000", apiKeyEnv: ENV.openserp } });
+const SEARXNG_CONFIG = webConfig({ searxng: { enabled: true, baseUrl: "http://localhost:8888", defaultEngine: "google" } });
+const SERPER_CONFIG = webConfig({ serper: { enabled: true, baseUrl: "https://google.serper.dev/search", apiKeyEnv: ENV.serper } });
+const TAVILY_CONFIG = webConfig({ tavily: { enabled: true, baseUrl: "https://api.tavily.com/search", apiKeyEnv: ENV.tavily } });
+
 function setApiKey(envName: string, value = "test-key") {
 	process.env[envName] = value;
 }
@@ -244,6 +250,27 @@ describe("provider response body limits", () => {
 	});
 });
 
+describe("provider common empty/error behavior (matrix)", () => {
+	const cases: Array<{
+		name: string;
+		provider: SearchProviderAdapter;
+		config: ResolvedWebConfig;
+		setup?: () => void;
+	}> = [
+		{ name: "brave", provider: braveProvider, config: BRAVE_CONFIG, setup: () => setApiKey(ENV.brave) },
+		{ name: "openserp", provider: openserpProvider, config: OPENSERP_CONFIG, setup: () => setApiKey(ENV.openserp) },
+		{ name: "searxng", provider: searxngProvider, config: SEARXNG_CONFIG },
+		{ name: "serper", provider: serperProvider, config: SERPER_CONFIG, setup: () => setApiKey(ENV.serper) },
+		{ name: "tavily", provider: tavilyProvider, config: TAVILY_CONFIG, setup: () => setApiKey(ENV.tavily) },
+	];
+
+	for (const t of cases) {
+		it(`${t.name} handles empty response and common errors`, async () => {
+			await assertProviderEmptyAndCommonErrors(t.provider, t.config, t.setup);
+		});
+	}
+});
+
 describe("keyed provider availability", () => {
 	it("validates API keys and base URLs consistently", () => {
 		const cases = [
@@ -274,7 +301,7 @@ describe("keyed provider availability", () => {
 });
 
 describe("brave provider", () => {
-	const config = webConfig({ brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV.brave } });
+	const config = BRAVE_CONFIG;
 
 	it("sends GET request and normalizes Brave results", async () => {
 		setApiKey(ENV.brave, "my-secret-key");
@@ -299,13 +326,10 @@ describe("brave provider", () => {
 		assert.equal(results[1].title, "https://example.com/no-title");
 	});
 
-	it("handles empty response and errors", async () => {
-		await assertProviderEmptyAndCommonErrors(braveProvider, config, () => setApiKey(ENV.brave));
-	});
 });
 
 describe("openserp provider", () => {
-	const config = webConfig({ openserp: { enabled: true, baseUrl: "http://localhost:7000", apiKeyEnv: ENV.openserp } });
+	const config = OPENSERP_CONFIG;
 
 	it("sends GET request and normalizes OpenSERP organic/results payloads", async () => {
 		setApiKey(ENV.openserp, "my-key");
@@ -338,13 +362,10 @@ describe("openserp provider", () => {
 		assert.equal((await openserpProvider.search({ query: "test", numResults: 5 }, config))[0].url, "https://example.com/fallback");
 	});
 
-	it("handles empty response and errors", async () => {
-		await assertProviderEmptyAndCommonErrors(openserpProvider, config, () => setApiKey(ENV.openserp));
-	});
 });
 
 describe("searxng provider", () => {
-	const config = webConfig({ searxng: { enabled: true, baseUrl: "http://localhost:8888", defaultEngine: "google" } });
+	const config = SEARXNG_CONFIG;
 
 	it("sends GET request, preserves path semantics, and normalizes results", async () => {
 		let capturedUrl = "";
@@ -380,13 +401,10 @@ describe("searxng provider", () => {
 		assert.equal(new URL(capturedUrl).searchParams.get("engines"), "duckduckgo");
 	});
 
-	it("handles empty response and errors", async () => {
-		await assertProviderEmptyAndCommonErrors(searxngProvider, config);
-	});
 });
 
 describe("serper provider", () => {
-	const config = webConfig({ serper: { enabled: true, baseUrl: "https://google.serper.dev/search", apiKeyEnv: ENV.serper } });
+	const config = SERPER_CONFIG;
 
 	it("sends POST request and normalizes Serper organic results", async () => {
 		setApiKey(ENV.serper, "my-key");
@@ -412,13 +430,10 @@ describe("serper provider", () => {
 		assert.deepEqual(results[0], { title: "Result 1", url: "https://example.com/1", snippet: "Snippet 1", source: "serper" });
 	});
 
-	it("handles empty response and errors", async () => {
-		await assertProviderEmptyAndCommonErrors(serperProvider, config, () => setApiKey(ENV.serper));
-	});
 });
 
 describe("tavily provider", () => {
-	const config = webConfig({ tavily: { enabled: true, baseUrl: "https://api.tavily.com/search", apiKeyEnv: ENV.tavily } });
+	const config = TAVILY_CONFIG;
 
 	it("sends POST request and normalizes Tavily results", async () => {
 		setApiKey(ENV.tavily, "my-key");
@@ -442,7 +457,4 @@ describe("tavily provider", () => {
 		assert.deepEqual(results[0], { title: "Result 1", url: "https://example.com/1", snippet: "Snippet 1", source: "tavily" });
 	});
 
-	it("handles empty response and errors", async () => {
-		await assertProviderEmptyAndCommonErrors(tavilyProvider, config, () => setApiKey(ENV.tavily));
-	});
 });
