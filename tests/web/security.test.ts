@@ -1,19 +1,16 @@
 /**
  * Security Module Tests
- * Phase 1 — SSRF prevention for validatePublicHttpUrl
+ * Phase 3 — table-driven SSRF prevention coverage
  */
 
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  getWebSecurityLimits,
-  validatePublicHttpUrl,
-} from "../../src/modules/web/security.ts";
 import { DEFAULT_WEB_CONFIG } from "../../src/config/load-config.ts";
+import { getWebSecurityLimits, validatePublicHttpUrl } from "../../src/modules/web/security.ts";
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+async function expectRejects(url: string, pattern: RegExp, options?: { allowPrivateNetwork?: boolean }) {
+  await assert.rejects(() => validatePublicHttpUrl(url, options), pattern);
+}
 
 describe("security - getWebSecurityLimits", () => {
   it("extracts limit fields from config", () => {
@@ -26,367 +23,169 @@ describe("security - getWebSecurityLimits", () => {
 });
 
 describe("security - validatePublicHttpUrl: invalid URLs", () => {
-  it("rejects empty string", async () => {
-    await assert.rejects(() => validatePublicHttpUrl(""), /Invalid URL/);
-  });
+  const cases = [
+    { name: "empty string", url: "", pattern: /Invalid URL/ },
+    { name: "malformed URL", url: "not a url", pattern: /Invalid URL/ },
+    { name: "ftp protocol", url: "ftp://example.com/file", pattern: /Unsupported URL protocol: ftp:/ },
+    { name: "file protocol", url: "file:///etc/passwd", pattern: /Unsupported URL protocol: file:/ },
+    { name: "javascript pseudo protocol", url: "javascript:alert(1)", pattern: /Unsupported URL protocol: javascript:/ },
+  ] as const;
 
-  it("rejects malformed URL", async () => {
-    await assert.rejects(() => validatePublicHttpUrl("not a url"), /Invalid URL/);
-  });
-
-  it("rejects ftp:// protocol", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("ftp://example.com/file"),
-      /Unsupported URL protocol: ftp:/
-    );
-  });
-
-  it("rejects file:// protocol", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("file:///etc/passwd"),
-      /Unsupported URL protocol: file:/
-    );
-  });
-
-  it("rejects javascript: pseudo-protocol", async () => {
-    // new URL("javascript:...") parses successfully but protocol is "javascript:"
-    await assert.rejects(
-      () => validatePublicHttpUrl("javascript:alert(1)"),
-      /Unsupported URL protocol: javascript:/
-    );
-  });
+  for (const t of cases) {
+    it(`rejects ${t.name}`, async () => {
+      await expectRejects(t.url, t.pattern);
+    });
+  }
 });
 
 describe("security - validatePublicHttpUrl: blocked hostnames", () => {
-  it("rejects localhost", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://localhost:3000"),
-      /Blocked private hostname.*localhost/
-    );
-  });
+  const cases = [
+    { name: "localhost", url: "http://localhost:3000", pattern: /Blocked private hostname.*localhost/ },
+    { name: "localhost. with trailing dot", url: "http://localhost./", pattern: /Blocked private hostname/ },
+    { name: "subdomain of localhost", url: "http://app.localhost:8080", pattern: /Blocked private hostname/ },
+    { name: "*.local", url: "http://myhost.local", pattern: /Blocked private hostname/ },
+    { name: "*.internal", url: "http://service.internal", pattern: /Blocked private hostname/ },
+  ] as const;
 
-  it("rejects localhost. (trailing dot)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://localhost./"),
-      /Blocked private hostname/
-    );
-  });
-
-  it("rejects subdomain of localhost (*.localhost)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://app.localhost:8080"),
-      /Blocked private hostname/
-    );
-  });
-
-  it("rejects *.local", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://myhost.local"),
-      /Blocked private hostname/
-    );
-  });
-
-  it("rejects *.internal", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://service.internal"),
-      /Blocked private hostname/
-    );
-  });
+  for (const t of cases) {
+    it(`rejects ${t.name}`, async () => {
+      await expectRejects(t.url, t.pattern);
+    });
+  }
 });
 
 describe("security - validatePublicHttpUrl: private IPv4 addresses", () => {
-  it("rejects 0.0.0.0", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://0.0.0.0/"),
-      /Blocked private address/
-    );
-  });
+  const cases = [
+    "http://0.0.0.0/",
+    "http://10.0.0.1/",
+    "http://10.255.255.255/",
+    "http://127.0.0.1/",
+    "http://127.0.0.2/",
+    "http://169.254.169.254/metadata",
+    "http://172.16.0.1/",
+    "http://172.31.255.255/",
+    "http://192.168.1.1/",
+    "http://100.64.0.1/",
+    "http://100.127.255.255/",
+    "http://224.0.0.1/",
+    "http://255.255.255.255/",
+  ] as const;
 
-  it("rejects 10.x.x.x (class A private)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://10.0.0.1/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 10.255.255.255", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://10.255.255.255/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 127.0.0.1 (loopback)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://127.0.0.1/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 127.0.0.2", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://127.0.0.2/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 169.254.x.x (link-local)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://169.254.169.254/metadata"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 172.16.x.x (class B private lower bound)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://172.16.0.1/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 172.31.x.x (class B private upper bound)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://172.31.255.255/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 192.168.x.x (class C private)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://192.168.1.1/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 100.64.x.x (carrier-grade NAT lower bound)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://100.64.0.1/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 100.127.x.x (carrier-grade NAT upper bound)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://100.127.255.255/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 224.0.0.1 (multicast)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://224.0.0.1/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects 255.255.255.255 (broadcast)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://255.255.255.255/"),
-      /Blocked private address/
-    );
-  });
+  for (const url of cases) {
+    it(`rejects ${url}`, async () => {
+      await expectRejects(url, /Blocked private address/);
+    });
+  }
 });
 
 describe("security - validatePublicHttpUrl: public IPv4 boundary", () => {
-  // Public IPs bypass DNS lookup — just verify they are accepted.
-  it("accepts 8.8.8.8 (public DNS)", async () => {
-    const url = await validatePublicHttpUrl("http://8.8.8.8/");
-    assert.equal(url.hostname, "8.8.8.8");
-  });
+  const cases = [
+    { url: "http://8.8.8.8/", host: "8.8.8.8", protocol: "http:" },
+    { url: "http://93.184.216.34/", host: "93.184.216.34", protocol: "http:" },
+    { url: "https://1.1.1.1/", host: "1.1.1.1", protocol: "https:" },
+  ] as const;
 
-  it("accepts 93.184.216.34 (example.com)", async () => {
-    const url = await validatePublicHttpUrl("http://93.184.216.34/");
-    assert.equal(url.hostname, "93.184.216.34");
-  });
-
-  it("accepts 1.1.1.1 (Cloudflare)", async () => {
-    const url = await validatePublicHttpUrl("https://1.1.1.1/");
-    assert.equal(url.hostname, "1.1.1.1");
-    assert.equal(url.protocol, "https:");
-  });
+  for (const t of cases) {
+    it(`accepts ${t.url}`, async () => {
+      const parsed = await validatePublicHttpUrl(t.url);
+      assert.equal(parsed.hostname, t.host);
+      assert.equal(parsed.protocol, t.protocol);
+    });
+  }
 });
 
 describe("security - validatePublicHttpUrl: private IPv6 addresses", () => {
-  it("rejects [::1] (loopback)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://[::1]/"),
-      /Blocked private address/
-    );
-  });
+  const rejectCases = [
+    "http://[::1]/",
+    "http://[::]/",
+    "http://[fe80::1]/",
+    "http://[fc00::1]/",
+    "http://[fd00::1]/",
+    "http://[::ffff:127.0.0.1]/",
+    "http://[::ffff:10.0.0.1]/",
+    "http://[::ffff:192.168.1.1]/",
+    "http://[::ffff:169.254.169.254]/",
+  ] as const;
 
-  it("rejects [::] (unspecified)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://[::]/"),
-      /Blocked private address/
-    );
-  });
+  for (const url of rejectCases) {
+    it(`rejects ${url}`, async () => {
+      await expectRejects(url, /Blocked private address/);
+    });
+  }
 
-  it("rejects [fe80::1] (link-local)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://[fe80::1]/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects [fc00::1] (unique local fc)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://[fc00::1]/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects [fd00::1] (unique local fd)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://[fd00::1]/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects [::ffff:127.0.0.1] (IPv4-mapped loopback)", async () => {
-    // Node.js normalizes ::ffff:127.0.0.1 → ::ffff:7f00:1 in the URL hostname.
-    // The hex groups 0x7f00:0x0001 encode 127.0.0.1 — must be detected.
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://[::ffff:127.0.0.1]/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects [::ffff:10.0.0.1] (IPv4-mapped class A private)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://[::ffff:10.0.0.1]/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects [::ffff:192.168.1.1] (IPv4-mapped class C private)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://[::ffff:192.168.1.1]/"),
-      /Blocked private address/
-    );
-  });
-
-  it("rejects [::ffff:a9fe:a9fe] (hex form of 169.254.169.254)", async () => {
-    // 169=0xa9, 254=0xfe → 0xa9fe:0xa9fe
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://[::ffff:169.254.169.254]/"),
-      /Blocked private address/
-    );
-  });
-
-  it("accepts [::ffff:93.184.216.34] (IPv4-mapped public address)", async () => {
-    const url = await validatePublicHttpUrl("http://[::ffff:93.184.216.34]/");
-    assert.ok(url.hostname.includes("::ffff:"));
+  it("accepts IPv4-mapped public address", async () => {
+    const parsed = await validatePublicHttpUrl("http://[::ffff:93.184.216.34]/");
+    assert.ok(parsed.hostname.includes("::ffff:"));
   });
 });
 
 describe("security - validatePublicHttpUrl: valid public URLs", () => {
-  it("accepts public IP address directly", async () => {
-    const url = await validatePublicHttpUrl("http://93.184.216.34/");
-    assert.equal(url.hostname, "93.184.216.34");
-    assert.equal(url.protocol, "http:");
+  it("accepts public IPv4 over http and https", async () => {
+    const http = await validatePublicHttpUrl("http://93.184.216.34/");
+    const https = await validatePublicHttpUrl("https://93.184.216.34/");
+    assert.equal(http.hostname, "93.184.216.34");
+    assert.equal(http.protocol, "http:");
+    assert.equal(https.protocol, "https:");
   });
 
-  it("accepts https:// public IP", async () => {
-    const url = await validatePublicHttpUrl("https://93.184.216.34/");
-    assert.equal(url.protocol, "https:");
-  });
-
-  it("returns a URL object with correct path, query, and hash", async () => {
-    const url = await validatePublicHttpUrl("http://93.184.216.34:8080/path?q=1#hash");
-    assert.equal(url.hostname, "93.184.216.34");
-    assert.equal(url.port, "8080");
-    assert.equal(url.pathname, "/path");
-    assert.equal(url.search, "?q=1");
-    assert.equal(url.hash, "#hash");
+  it("returns URL object with path/query/hash", async () => {
+    const parsed = await validatePublicHttpUrl("http://93.184.216.34:8080/path?q=1#hash");
+    assert.equal(parsed.hostname, "93.184.216.34");
+    assert.equal(parsed.port, "8080");
+    assert.equal(parsed.pathname, "/path");
+    assert.equal(parsed.search, "?q=1");
+    assert.equal(parsed.hash, "#hash");
   });
 });
 
 describe("security - validatePublicHttpUrl: hostname DNS resolution", () => {
-  // These tests use real DNS resolution for public hostnames.
-  // They verify the happy path (public hostname → public IP) works end-to-end.
-  it("accepts example.com (resolves to public IP)", async () => {
-    const url = await validatePublicHttpUrl("http://example.com/");
-    assert.equal(url.hostname, "example.com");
-  });
+  const cases = [
+    { url: "http://example.com/", host: "example.com", protocol: "http:" },
+    { url: "https://example.com/", host: "example.com", protocol: "https:" },
+  ] as const;
 
-  it("accepts https://example.com", async () => {
-    const url = await validatePublicHttpUrl("https://example.com/");
-    assert.equal(url.protocol, "https:");
-    assert.equal(url.hostname, "example.com");
-  });
+  for (const t of cases) {
+    it(`accepts ${t.url}`, async () => {
+      const parsed = await validatePublicHttpUrl(t.url);
+      assert.equal(parsed.hostname, t.host);
+      assert.equal(parsed.protocol, t.protocol);
+    });
+  }
 });
 
 describe("security - validatePublicHttpUrl: allowPrivateNetwork", () => {
-  it("allows localhost when enabled", async () => {
-    const url = await validatePublicHttpUrl("http://localhost:3000", {
-      allowPrivateNetwork: true,
+  const allowCases = [
+    { url: "http://localhost:3000", host: "localhost" },
+    { url: "http://127.0.0.1:8080/api", host: "127.0.0.1" },
+    { url: "http://10.0.0.1/", host: "10.0.0.1" },
+    { url: "http://192.168.1.100:3000", host: "192.168.1.100" },
+    { url: "http://myhost.local:8080", host: "myhost.local" },
+  ] as const;
+
+  for (const t of allowCases) {
+    it(`allows ${t.url} when enabled`, async () => {
+      const parsed = await validatePublicHttpUrl(t.url, { allowPrivateNetwork: true });
+      assert.equal(parsed.hostname, t.host);
     });
-    assert.equal(url.hostname, "localhost");
-    assert.equal(url.port, "3000");
-  });
+  }
 
-  it("allows 127.0.0.1 when enabled", async () => {
-    const url = await validatePublicHttpUrl("http://127.0.0.1:8080/api", {
-      allowPrivateNetwork: true,
+  const stillRejectCases = [
+    { name: "invalid URL", url: "not a url", pattern: /Invalid URL/ },
+    { name: "unsupported ftp protocol", url: "ftp://localhost/file", pattern: /Unsupported URL protocol: ftp:/ },
+    { name: "unsupported file protocol", url: "file:///etc/passwd", pattern: /Unsupported URL protocol: file:/ },
+  ] as const;
+
+  for (const t of stillRejectCases) {
+    it(`still rejects ${t.name} when enabled`, async () => {
+      await expectRejects(t.url, t.pattern, { allowPrivateNetwork: true });
     });
-    assert.equal(url.hostname, "127.0.0.1");
-  });
+  }
 
-  it("allows private 10.x.x.x when enabled", async () => {
-    const url = await validatePublicHttpUrl("http://10.0.0.1/", {
-      allowPrivateNetwork: true,
+  it("blocks localhost by default and when explicitly false", async () => {
+    await expectRejects("http://localhost:3000", /Blocked private hostname/);
+    await expectRejects("http://localhost:3000", /Blocked private hostname/, {
+      allowPrivateNetwork: false,
     });
-    assert.equal(url.hostname, "10.0.0.1");
-  });
-
-  it("allows 192.168.x.x when enabled", async () => {
-    const url = await validatePublicHttpUrl("http://192.168.1.100:3000", {
-      allowPrivateNetwork: true,
-    });
-    assert.equal(url.hostname, "192.168.1.100");
-  });
-
-  it("allows .local hostname when enabled", async () => {
-    const url = await validatePublicHttpUrl("http://myhost.local:8080", {
-      allowPrivateNetwork: true,
-    });
-    assert.equal(url.hostname, "myhost.local");
-  });
-
-  it("still rejects invalid URL format even when enabled", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("not a url", { allowPrivateNetwork: true }),
-      /Invalid URL/
-    );
-  });
-
-  it("still rejects unsupported protocol even when enabled", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("ftp://localhost/file", { allowPrivateNetwork: true }),
-      /Unsupported URL protocol: ftp:/
-    );
-  });
-
-  it("still rejects file:// protocol even when enabled", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("file:///etc/passwd", { allowPrivateNetwork: true }),
-      /Unsupported URL protocol: file:/
-    );
-  });
-
-  it("blocks localhost by default (allowPrivateNetwork not set)", async () => {
-    await assert.rejects(
-      () => validatePublicHttpUrl("http://localhost:3000"),
-      /Blocked private hostname/
-    );
-  });
-
-  it("blocks localhost when explicitly false", async () => {
-    await assert.rejects(
-      () =>
-        validatePublicHttpUrl("http://localhost:3000", { allowPrivateNetwork: false }),
-      /Blocked private hostname/
-    );
   });
 });
 
