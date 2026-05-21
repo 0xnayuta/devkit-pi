@@ -161,6 +161,7 @@ Check categories are based on source code, currently including:
 
 - `config`: Config file existence and parseability
 - `agents`: Builtin/user/project agent discovery results
+- `subagents`: Phase 6 visibility (scope semantics, project-agent gate strategy, frontmatter validation diagnostics)
 - `provider`: Web search providers' enablement, API key, and availability
 - `permissions`: Results directory writability
 - `web-tools`: Web tools enablement, and provider/debug summary

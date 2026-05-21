@@ -91,10 +91,10 @@ project > user > builtin
 
 | 字段 | 必填 | 行为 |
 |---|---:|---|
-| `name` | 是 | agent 名称；缺失则该文件不会被加载 |
+| `name` | 是 | agent 名称；必须非空；缺失/空值会跳过并记录结构化诊断 |
 | `description` | 否 | 描述；缺失时为空字符串 |
-| `readonly` | 否 | 只有字符串 `true` 或 `1` 会解析为 true；否则 false |
-| `tools` | 否 | 逗号分隔工具名列表 |
+| `readonly` | 否 | 合法值：`true`、`false`、`1`、`0`；非法值会被拒绝并记录结构化诊断 |
+| `tools` | 否 | 逗号分隔工具名列表；若提供但解析后为空列表，会被拒绝并记录结构化诊断 |
 | `model` | 否 | 传给 child pi 的 `--model` |
 
 Prompt 正文作为 `systemPrompt`。若正文为空，使用 description；再为空则 child prompt 会回退到默认角色文本。
@@ -302,6 +302,8 @@ Focus only on the delegated task. Do not call other subagents.
       "definition", "references", "hover", "signature",
       "symbols", "diagnostics", "workspace-diagnostics", "servers"
     ],
+    "projectAgentPolicy": "confirm",
+    "nonInteractivePolicy": "allow",
     "injectDelegationPolicy": true,
     "retry": {
       "enabled": true,
@@ -319,6 +321,8 @@ Focus only on the delegated task. Do not call other subagents.
 - `subagents.idleTimeoutMs`：子代理自最后一次有效活动后的最大空闲时间。有效活动指结构化 JSONL 运行事件（如 `message_end`、`tool_result_end`、`turn_end`）；普通 stdout 文本和 `message_update` 等 transient streaming events 不会重置该计时器。超过上限但子代理仍有活跃输出则不会被终止。默认 180000ms。
 - `subagents.allowWrite`：实验性/高级/不安全开关；只影响非 readonly 自定义 agent 的工具过滤，不改变内置 agents 的 readonly 定义，也不提供完整权限沙箱、审计日志、自动回滚或稳定写入能力契约。
 - `subagents.allowLspTools` / `allowedLspActions`：控制子代理是否可用 readonly LSP actions。
+- `subagents.projectAgentPolicy`：`allow|confirm`。`confirm` 表示 project-local agent 执行前需要确认。
+- `subagents.nonInteractivePolicy`：当 `projectAgentPolicy=confirm` 且无交互确认能力时的回退策略，`allow|deny`。
 - `subagents.injectDelegationPolicy`：控制是否向主代理 prompt 注入 delegation policy。
 - `subagents.retry.*`：对子代理 transient failure 做有限重试。
 
@@ -346,7 +350,7 @@ Custom agents discovery 路径当前不是配置项，固定为 user/project 目
 - child 进程非 0 exit 会形成 failure summary，包含 exit code、error、partial output 和 session file。
 - child stdout JSONL 处理不会持久化 `message_update`、`tool_execution_update` 等高频 streaming events；最终输出从 `message_end`、`turn_end` 以及 tool/error completion events 等生命周期/最终事件中收集。持久化 JSONL 和 transient/drop JSONL lines 使用分离的 hard limits。
 - 当安装的 child pi runtime 支持未来的 compact JSON stream profile 时，devkit-pi 可能优先将其用于 subagent transport；若 child pi 拒绝 `--json-stream compact`，devkit-pi 会回退到 full JSON mode，并保留本地 stdout event filter 作为兼容层。
-- agent definition 解析失败或缺少 `name` 的文件会被静默跳过；`/toolkit doctor` 可能报告 user agents skipped。
+- agent definition 校验失败（如缺少 name、readonly 非法、声明了 tools 但为空）会被跳过，并通过结构化诊断输出；`/toolkit doctor` 会在 `subagents` 分类中报告该类问题。
 
 ## 稳定性说明
 
