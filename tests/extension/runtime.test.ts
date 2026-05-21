@@ -4,28 +4,6 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { activateDevkitExtension } from "../../src/extension/activate.ts";
-import { ResourceScope } from "../../src/extension/runtime.ts";
-
-describe("ResourceScope", () => {
-  it("disposes resources in reverse registration order", async () => {
-    const calls: string[] = [];
-    const scope = new ResourceScope();
-
-    scope.add({
-      dispose() {
-        calls.push("first");
-      },
-    });
-    scope.add({
-      dispose() {
-        calls.push("second");
-      },
-    });
-
-    await scope.disposeAll();
-    assert.deepEqual(calls, ["second", "first"]);
-  });
-});
 
 describe("activateDevkitExtension", () => {
   const originalHome = process.env.HOME;

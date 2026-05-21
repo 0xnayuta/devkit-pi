@@ -42,11 +42,6 @@ function renderText(component: { render(width: number): string[] }): string {
 }
 
 describe("phase3 state model - subagent details restoration", () => {
-	it("defines the details restoration test matrix", () => {
-		const dimensions = ["minimal-shape", "error-shape", "legacy-compat", "streaming-boundary"] as const;
-		assert.equal(dimensions.length, 4);
-	});
-
 	it("details minimal shape includes stable mode/results and error fields", async () => {
 		const pi = createPiMock();
 		registerSubagentsModule(pi as any, mergeConfig({}).subagents);

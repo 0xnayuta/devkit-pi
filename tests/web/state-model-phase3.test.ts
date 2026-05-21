@@ -37,11 +37,6 @@ describe("phase3 state model - web responseId layers", () => {
 		clearResults();
 	});
 
-	it("defines the responseId three-layer audit matrix", () => {
-		const layers = ["memory", "session-entry", "provider-cache"] as const;
-		assert.equal(layers.length, 3);
-	});
-
 	it("memory: session shutdown clears in-memory responseId map", () => {
 		const pi = createMockPi();
 		registerWebTools(pi as any, mergeConfig({}).web);
