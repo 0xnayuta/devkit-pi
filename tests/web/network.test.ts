@@ -169,6 +169,33 @@ describe("web/network createPinnedLookup", () => {
     ]);
   });
 
+  it("returns pinned address arrays for all:true lookup calls", () => {
+    const lookup = createPinnedLookup(new URL("https://example.com/path"), [
+      { address: "93.184.216.34", family: 4 },
+      { address: "2606:2800:220:1:248:1893:25c8:1946", family: 6 },
+    ]);
+
+    lookup("example.com", { all: true }, (error, addresses) => {
+      assert.equal(error, null);
+      assert.deepEqual(addresses, [
+        { address: "93.184.216.34", family: 4 },
+        { address: "2606:2800:220:1:248:1893:25c8:1946", family: 6 },
+      ]);
+    });
+  });
+
+  it("filters pinned address arrays by family for all:true lookup calls", () => {
+    const lookup = createPinnedLookup(new URL("https://example.com/path"), [
+      { address: "93.184.216.34", family: 4 },
+      { address: "2606:2800:220:1:248:1893:25c8:1946", family: 6 },
+    ]);
+
+    lookup("example.com", { all: true, family: 6 }, (error, addresses) => {
+      assert.equal(error, null);
+      assert.deepEqual(addresses, [{ address: "2606:2800:220:1:248:1893:25c8:1946", family: 6 }]);
+    });
+  });
+
   it("rejects hostname mismatch", () => {
     const lookup = createPinnedLookup(new URL("https://example.com/path"), [
       { address: "93.184.216.34", family: 4 },

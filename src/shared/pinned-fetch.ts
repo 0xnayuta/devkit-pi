@@ -24,7 +24,17 @@ export interface PinnedFetchDependencies {
 	createDispatcher?: (context: { url: URL; addresses: DnsResolvedAddress[]; timeoutMs: number }) => unknown;
 }
 
-type LookupCallback = (error: Error | null, address: string, family: number) => void;
+type LookupSingleCallback = (error: Error | null, address: string, family: number) => void;
+type LookupAllCallback = (error: Error | null, addresses: DnsResolvedAddress[]) => void;
+type LookupCallback = LookupSingleCallback | LookupAllCallback;
+type LookupSingleOptions = number | (LookupOptions & { all?: false }) | undefined;
+type LookupAllOptions = LookupOptions & { all: true };
+
+interface PinnedLookup {
+	(lookupHostname: string, options: LookupSingleOptions, callback: LookupSingleCallback): void;
+	(lookupHostname: string, options: LookupAllOptions, callback: LookupAllCallback): void;
+	(lookupHostname: string, options: number | LookupOptions | undefined, callback: LookupCallback): void;
+}
 
 type DisposableDispatcher = {
 	close?: () => Promise<void> | void;
@@ -37,6 +47,7 @@ type LookupFamilyPreference = number | "IPv4" | "IPv6" | undefined;
 
 interface LookupOptions {
 	family?: LookupFamilyPreference;
+	all?: boolean;
 }
 
 function normalizeFamilyPreference(family: LookupFamilyPreference): 4 | 6 | undefined {
@@ -158,24 +169,49 @@ function defaultFetchImpl(): typeof fetch {
 	return globalThis.fetch === initialGlobalFetch ? (undiciFetch as typeof fetch) : globalThis.fetch;
 }
 
-export function createPinnedLookup(url: URL, addresses: DnsResolvedAddress[]) {
+export function createPinnedLookup(url: URL, addresses: DnsResolvedAddress[]): PinnedLookup {
 	const hostname = normalizeLookupHostname(url.hostname);
 	const cursor = { value: 0 };
 
 	return (lookupHostname: string, options: number | LookupOptions | undefined, callback: LookupCallback): void => {
+		const useAll = typeof options === "object" && options?.all === true;
 		if (normalizeLookupHostname(lookupHostname) !== hostname) {
-			callback(new Error(`Pinned lookup hostname mismatch: ${lookupHostname} != ${url.hostname}`), "", 0);
+			const error = new Error(`Pinned lookup hostname mismatch: ${lookupHostname} != ${url.hostname}`);
+			if (useAll) {
+				(callback as LookupAllCallback)(error, []);
+				return;
+			}
+			(callback as LookupSingleCallback)(error, "", 0);
 			return;
 		}
 
 		const familyPreference = typeof options === "number" ? options : options?.family;
-		const selected = selectAddress(addresses, familyPreference, cursor);
-		if (!selected) {
-			callback(new Error(`No pinned address available for family=${String(familyPreference)}`), "", 0);
+		const normalizedFamily = normalizeFamilyPreference(familyPreference);
+		const candidates = normalizedFamily ? addresses.filter((item) => item.family === normalizedFamily) : addresses;
+
+		if (useAll) {
+			if (candidates.length === 0) {
+				(callback as LookupAllCallback)(
+					new Error(`No pinned address available for family=${String(familyPreference)}`),
+					[]
+				);
+				return;
+			}
+			(callback as LookupAllCallback)(null, candidates);
 			return;
 		}
 
-		callback(null, selected.address, selected.family);
+		const selected = selectAddress(addresses, familyPreference, cursor);
+		if (!selected) {
+			(callback as LookupSingleCallback)(
+				new Error(`No pinned address available for family=${String(familyPreference)}`),
+				"",
+				0
+			);
+			return;
+		}
+
+		(callback as LookupSingleCallback)(null, selected.address, selected.family);
 	};
 }
 
