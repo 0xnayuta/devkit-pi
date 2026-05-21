@@ -141,9 +141,6 @@ describe("lsp module", () => {
       pi.tools.map((tool) => tool.name),
       ["lsp"]
     );
-    assert.equal(typeof pi.tools[0]?.promptSnippet, "string");
-    assert.ok(Array.isArray(pi.tools[0]?.promptGuidelines));
-    assert.ok((pi.tools[0]?.promptGuidelines?.length ?? 0) > 0);
     assert.equal(pi.listeners.agent_end?.length, 1);
     assert.equal(pi.listeners.tool_result?.length, 1);
     assert.equal(pi.listeners.session_shutdown?.length, 1);

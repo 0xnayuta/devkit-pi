@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../../src/config/load-config.ts";
 import { registerConvertTools } from "../../../src/modules/convert/index.ts";
+import { registerLspModule } from "../../../src/modules/lsp/register.ts";
 import { registerSubagentsModule } from "../../../src/modules/subagents/register.ts";
 import { registerWebTools } from "../../../src/modules/web/register.ts";
 import { PI_SUBAGENT_CHILD } from "../../../src/shared/types.ts";
@@ -28,6 +29,8 @@ function createPiMock() {
 		},
 		appendEntry() {},
 		registerCommand() {},
+		registerMessageRenderer() {},
+		sendMessage() {},
 	};
 }
 
@@ -74,6 +77,7 @@ describe("module registration contract", () => {
 		registerWebTools(pi as any, config.web);
 		registerConvertTools(pi as any, config.convertContent);
 		registerSubagentsModule(pi as any, config.subagents);
+		registerLspModule(pi as any, config.lsp);
 
 		for (const tool of pi.tools) {
 			assert.equal(typeof tool.promptSnippet, "string", `${tool.name} promptSnippet should be a string`);
