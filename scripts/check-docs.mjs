@@ -105,6 +105,16 @@ function ruleFor(file, key) {
   return key === "status" ? DOC_META_RULES.defaultStatus : DOC_META_RULES.defaultAudience;
 }
 
+function matchedRuleFor(file, key) {
+  const matches = matchingRulesFor(file, key);
+  return matches[0] ?? null;
+}
+
+function scopeNameFor(file, key) {
+  const matchedRule = matchedRuleFor(file, key);
+  return matchedRule ? matchedRule.pattern.toString() : key === "status" ? "defaultStatus" : "defaultAudience";
+}
+
 function checkDocMetaRuleConflicts() {
   for (const file of markdownFilesUnder("docs", "internal-docs")) {
     for (const key of ["status", "audience"]) {
@@ -155,16 +165,26 @@ function checkDocFrontmatter() {
       errors.push(`${file}: missing required field 'language'`);
     }
     // Value validation
-    if (fm.status && !allowedStatusFor(file).has(fm.status)) {
-      errors.push(`${file}: invalid status '${fm.status}'`);
-    }
-    if (fm.audience && !allowedAudience.has(fm.audience)) {
-      errors.push(`${file}: invalid audience '${fm.audience}'`);
-    }
-    if (fm.audience && !allowedAudienceFor(file).has(fm.audience)) {
+    const allowedStatus = allowedStatusFor(file);
+    const statusScope = scopeNameFor(file, "status");
+    if (fm.status && !allowedStatus.has(fm.status)) {
       errors.push(
-        `${file}: audience '${fm.audience}' not allowed for this doc scope (allowed: ${[
-          ...allowedAudienceFor(file),
+        `${file}: invalid status '${fm.status}' for scope '${statusScope}' (allowed: ${[...allowedStatus].join(", ")})`
+      );
+    }
+    const audienceScope = scopeNameFor(file, "audience");
+    const scopedAllowedAudience = allowedAudienceFor(file);
+    if (fm.audience && !allowedAudience.has(fm.audience)) {
+      errors.push(
+        `${file}: invalid audience '${fm.audience}' (allowed: ${[...allowedAudience].join(", ")}; scope '${audienceScope}' allows: ${[
+          ...scopedAllowedAudience,
+        ].join(", ")})`
+      );
+    }
+    if (fm.audience && !scopedAllowedAudience.has(fm.audience)) {
+      errors.push(
+        `${file}: audience '${fm.audience}' not allowed for scope '${audienceScope}' (allowed: ${[
+          ...scopedAllowedAudience,
         ].join(", ")})`
       );
     }
