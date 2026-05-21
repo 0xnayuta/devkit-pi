@@ -41,7 +41,7 @@ function renderText(component: { render(width: number): string[] }): string {
 		.join("\n");
 }
 
-describe("phase3 state model - subagent details restoration", () => {
+describe("state model - subagent details restoration", () => {
 	it("details minimal shape includes stable mode/results and error fields", async () => {
 		const pi = createPiMock();
 		registerSubagentsModule(pi as any, mergeConfig({}).subagents);

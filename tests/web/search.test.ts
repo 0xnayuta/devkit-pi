@@ -15,6 +15,7 @@ import {
 import { webSearch } from "../../src/modules/web/search.ts";
 import type { QueryResultData } from "../../src/modules/web/types.ts";
 import { clearResults, getSearchContent } from "../../src/modules/web/storage.ts";
+import { createAbortRejectingFetch } from "../shared/async-fetch-helpers.ts";
 
 const mergeWebConfig = (config: Parameters<typeof mergeConfig>[0]) => mergeConfig(config).web;
 
@@ -346,9 +347,10 @@ describe("web_search", () => {
   });
 
   it("maps an already-aborted signal to WEB_SEARCH_TIMEOUT with stable guidance", async () => {
-    globalThis.fetch = ((_input: string | URL, init?: RequestInit) => {
-      if (init?.signal?.aborted) {
-        return Promise.reject(new DOMException("The operation was aborted", "AbortError"));
+    const abortFetch = createAbortRejectingFetch();
+    globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+      if (String(input).startsWith("https://api.search.brave.com/")) {
+        return abortFetch(input, init);
       }
       return Promise.resolve(braveResponse());
     }) as typeof fetch;
@@ -370,15 +372,13 @@ describe("web_search", () => {
   });
 
   it("keeps successful search results when includeContent fetches are aborted", async () => {
-    globalThis.fetch = ((input: string | URL, init?: RequestInit) => {
+    const abortFetch = createAbortRejectingFetch();
+    globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       if (url.startsWith("https://api.search.brave.com/")) {
         return Promise.resolve(braveResponse(["https://93.184.216.34/a"]));
       }
-      if (init?.signal?.aborted) {
-        return Promise.reject(new DOMException("The operation was aborted", "AbortError"));
-      }
-      return Promise.reject(new DOMException("The operation was aborted", "AbortError"));
+      return abortFetch(input, init);
     }) as typeof fetch;
 
     const result = await webSearch(

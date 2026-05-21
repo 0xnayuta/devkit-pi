@@ -10,6 +10,7 @@ import { clearActivityLog, getActivityLog } from "../../src/modules/web/observab
 import { CONVERT_ERROR_CODES, ConvertProviderError } from "../../src/modules/convert/index.ts";
 import type { ConvertProvider, ConvertResult } from "../../src/modules/convert/provider.ts";
 import { convertContent } from "../../src/modules/convert/tool.ts";
+import { createAbortRejectingFetch, createRedirectLoopFetch } from "../shared/async-fetch-helpers.ts";
 
 class MockProvider implements ConvertProvider {
   readonly name = "markitdown";
@@ -328,13 +329,11 @@ describe("convertContent local path", () => {
 
   it("maps URL download timeout to CONVERT_TIMEOUT", async () => {
     const provider = new MockProvider();
-    const fetchMock = mock.method(globalThis, "fetch", async (_input: string | URL | Request, init?: RequestInit) => {
-      return await new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => {
-          reject(new DOMException("The operation timed out.", "TimeoutError"));
-        });
-      });
-    });
+    const fetchMock = mock.method(
+      globalThis,
+      "fetch",
+      createAbortRejectingFetch({ name: "TimeoutError", message: "The operation timed out." }) as typeof fetch
+    );
     const config = mergeConfig({}).convertContent;
 
     try {
@@ -354,10 +353,7 @@ describe("convertContent local path", () => {
 
   it("maps redirect-loop overflow to NETWORK_ERROR", async () => {
     const provider = new MockProvider();
-    const fetchMock = mock.method(globalThis, "fetch", async (input: string | URL | Request) => {
-      const url = String(input);
-      return new Response(null, { status: 302, headers: { location: `${url}?next=1` } });
-    });
+    const fetchMock = mock.method(globalThis, "fetch", createRedirectLoopFetch() as typeof fetch);
     const config = mergeConfig({}).convertContent;
 
     try {

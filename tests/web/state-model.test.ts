@@ -27,7 +27,7 @@ function createMockPi() {
 	};
 }
 
-describe("phase3 state model - web responseId layers", () => {
+describe("state model - web responseId layers", () => {
 	beforeEach(() => {
 		clearResults();
 		setStorageLimits({ maxStoredResults: 100, maxStoredContentChars: 200000 });
