@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { beforeEach, describe, it } from "node:test";
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import { Value } from "typebox/value";
 import { mergeConfig } from "../../src/config/load-config.ts";
-import { resetConnectionPool } from "../../src/modules/web/http-pool.ts";
 import { clearActivityLog, getActivityLog, recordSearchActivity } from "../../src/modules/web/observability.ts";
 import { registerWebTools } from "../../src/modules/web/register.ts";
-import { createLogger, createMemoryLoggerSink } from "../../src/shared/logger.ts";
 import {
 	renderFetchContentCall,
 	renderFetchContentResult,
@@ -18,6 +16,7 @@ import {
 	truncateText,
 } from "../../src/modules/web/renderers.ts";
 import { FetchContentParams, GetSearchContentParams, WebSearchParams } from "../../src/modules/web/schemas.ts";
+import { createLogger, createMemoryLoggerSink } from "../../src/shared/logger.ts";
 
 const webConfig = mergeConfig({}).web;
 const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
@@ -77,10 +76,6 @@ function renderText(component: { render(width: number): string[] }): string {
 	return component.render(240).join("\n");
 }
 
-afterEach(() => {
-	resetConnectionPool();
-});
-
 describe("registerWebTools - tool registration", () => {
 	let pi: MockExtensionAPI;
 
@@ -109,7 +104,8 @@ describe("registerWebTools - tool registration", () => {
 
 	it("exposes expected tool parameter schema fields", () => {
 		const webSearch = pi.registeredTools.find((tool) => tool.name === "web_search")!.parameters as any;
-		for (const field of ["query", "queries", "numResults", "includeContent"]) assert.ok(field in webSearch.properties);
+		for (const field of ["query", "queries", "numResults", "includeContent"])
+			assert.ok(field in webSearch.properties);
 
 		const fetchContent = pi.registeredTools.find((tool) => tool.name === "fetch_content")!.parameters as any;
 		assert.ok("url" in fetchContent.properties);
@@ -209,7 +205,10 @@ describe("web tool schemas", () => {
 	it("validates web_search params", () => {
 		assert.equal(Value.Check(WebSearchParams, { query: "hello" }), true);
 		assert.equal(Value.Check(WebSearchParams, { queries: ["hello", "world"] }), true);
-		assert.equal(Value.Check(WebSearchParams, { query: "hello", queries: ["a", "b"], numResults: 5, includeContent: true }), true);
+		assert.equal(
+			Value.Check(WebSearchParams, { query: "hello", queries: ["a", "b"], numResults: 5, includeContent: true }),
+			true
+		);
 		assert.equal(Value.Check(WebSearchParams, {}), true);
 		assert.equal(Value.Check(WebSearchParams, { query: 123 }), false);
 		assert.equal(Value.Check(WebSearchParams, { queries: "single" }), false);
@@ -219,7 +218,16 @@ describe("web tool schemas", () => {
 
 	it("validates get_search_content params", () => {
 		assert.equal(Value.Check(GetSearchContentParams, { responseId: "abc-123" }), true);
-		assert.equal(Value.Check(GetSearchContentParams, { responseId: "abc-123", query: "test", queryIndex: 0, url: "https://example.com", urlIndex: 1 }), true);
+		assert.equal(
+			Value.Check(GetSearchContentParams, {
+				responseId: "abc-123",
+				query: "test",
+				queryIndex: 0,
+				url: "https://example.com",
+				urlIndex: 1,
+			}),
+			true
+		);
 		assert.equal(Value.Check(GetSearchContentParams, {}), false);
 		assert.equal(Value.Check(GetSearchContentParams, { responseId: 123 }), false);
 		assert.equal(Value.Check(GetSearchContentParams, { responseId: "x", queryIndex: "0" }), false);
@@ -229,17 +237,31 @@ describe("web tool schemas", () => {
 
 describe("web tool renderers", () => {
 	it("renders web_search call and compact/expanded results", () => {
-		const call = renderText(renderWebSearchCall({ query: "pi tool rendering", queries: ["subagents"], numResults: 5 }, theme));
+		const call = renderText(
+			renderWebSearchCall({ query: "pi tool rendering", queries: ["subagents"], numResults: 5 }, theme)
+		);
 		assert.match(call, /web_search/);
 		assert.match(call, /pi tool rendering/);
 		assert.match(call, /\+1 queries/);
 
 		const compact = renderText(
 			renderWebSearchResult(
-				result({ responseId: "search-1", queries: [{ query: "pi tool rendering", results: ["A", "B", "C", "D"].map((title) => ({ title: `Result ${title}`, url: `https://example.com/${title.toLowerCase()}`, snippet: title.toLowerCase() })) }] }),
+				result({
+					responseId: "search-1",
+					queries: [
+						{
+							query: "pi tool rendering",
+							results: ["A", "B", "C", "D"].map((title) => ({
+								title: `Result ${title}`,
+								url: `https://example.com/${title.toLowerCase()}`,
+								snippet: title.toLowerCase(),
+							})),
+						},
+					],
+				}),
 				{ expanded: false, isPartial: false },
-				theme,
-			),
+				theme
+			)
 		);
 		assert.match(compact, /responseId: search-1/);
 		assert.match(compact, /queries: 1, results: 4/);
@@ -248,7 +270,16 @@ describe("web tool renderers", () => {
 		assert.match(compact, /to expand/);
 		assert.doesNotMatch(compact, /chars/);
 
-		const expanded = renderText(renderWebSearchResult(result({ responseId: "search-1", queries: [{ query: "q", results: [{ title: "Only", url: "https://example.com" }] }] }), { expanded: true, isPartial: false }, theme));
+		const expanded = renderText(
+			renderWebSearchResult(
+				result({
+					responseId: "search-1",
+					queries: [{ query: "q", results: [{ title: "Only", url: "https://example.com" }] }],
+				}),
+				{ expanded: true, isPartial: false },
+				theme
+			)
+		);
 		assert.match(expanded, /"responseId": "search-1"/);
 		assert.match(expanded, /"title": "Only"/);
 		assert.doesNotMatch(expanded, /to expand/);
@@ -260,7 +291,24 @@ describe("web tool renderers", () => {
 		assert.match(fetchCall, /fetch_content/);
 		assert.match(fetchCall, /example.com\/docs\/page/);
 
-		const fetchCompact = renderText(renderFetchContentResult(result({ responseId: "fetch-1", results: [{ url: "https://example.com/docs/page", title: "Docs Page", content: longContent, truncated: false, contentType: "text/html" }] }), { expanded: false, isPartial: false }, theme));
+		const fetchCompact = renderText(
+			renderFetchContentResult(
+				result({
+					responseId: "fetch-1",
+					results: [
+						{
+							url: "https://example.com/docs/page",
+							title: "Docs Page",
+							content: longContent,
+							truncated: false,
+							contentType: "text/html",
+						},
+					],
+				}),
+				{ expanded: false, isPartial: false },
+				theme
+			)
+		);
 		assert.match(fetchCompact, /responseId: fetch-1/);
 		assert.match(fetchCompact, /urls: 1/);
 		assert.match(fetchCompact, /Docs Page/);
@@ -272,7 +320,16 @@ describe("web tool renderers", () => {
 		assert.match(getCall, /get_search_content/);
 		assert.match(getCall, /urlIndex=0/);
 
-		const getCompact = renderText(renderGetSearchContentResult(result({ responseId: "fetch-1", result: { url: "https://example.com/a", title: "A", content: "selected content", truncated: false } }), { expanded: false, isPartial: false }, theme));
+		const getCompact = renderText(
+			renderGetSearchContentResult(
+				result({
+					responseId: "fetch-1",
+					result: { url: "https://example.com/a", title: "A", content: "selected content", truncated: false },
+				}),
+				{ expanded: false, isPartial: false },
+				theme
+			)
+		);
 		assert.match(getCompact, /responseId: fetch-1/);
 		assert.match(getCompact, /selected content/);
 		assert.match(getCompact, /details hidden/);
@@ -280,11 +337,26 @@ describe("web tool renderers", () => {
 	});
 
 	it("renders partial/error states and safe helper output", () => {
-		assert.match(renderText(renderWebSearchResult(result({}), { expanded: false, isPartial: true }, theme)), /Searching/);
-		assert.match(renderText(renderFetchContentResult(result({}), { expanded: false, isPartial: true }, theme)), /Fetching/);
-		assert.match(renderText(renderGetSearchContentResult(result({}), { expanded: false, isPartial: true }, theme)), /Loading stored content/);
+		assert.match(
+			renderText(renderWebSearchResult(result({}), { expanded: false, isPartial: true }, theme)),
+			/Searching/
+		);
+		assert.match(
+			renderText(renderFetchContentResult(result({}), { expanded: false, isPartial: true }, theme)),
+			/Fetching/
+		);
+		assert.match(
+			renderText(renderGetSearchContentResult(result({}), { expanded: false, isPartial: true }, theme)),
+			/Loading stored content/
+		);
 
-		const error = renderText(renderFetchContentResult(result({ error: { code: "CONTENT_FETCH_TIMEOUT", message: "timed out", recovery: { action: "retry" } } }), { expanded: false, isPartial: false }, theme));
+		const error = renderText(
+			renderFetchContentResult(
+				result({ error: { code: "CONTENT_FETCH_TIMEOUT", message: "timed out", recovery: { action: "retry" } } }),
+				{ expanded: false, isPartial: false },
+				theme
+			)
+		);
 		assert.match(error, /CONTENT_FETCH_TIMEOUT/);
 		assert.match(error, /timed out/);
 		assert.match(error, /Recovery/);

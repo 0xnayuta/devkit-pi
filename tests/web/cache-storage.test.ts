@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { getSearchCache, initializeSearchCache, resetSearchCache, SearchResultCache } from "../../src/modules/web/cache.ts";
+import {
+	getSearchCache,
+	initializeSearchCache,
+	resetSearchCache,
+	SearchResultCache,
+} from "../../src/modules/web/cache.ts";
 import {
 	clearResults,
 	getSearchContent,
@@ -16,8 +21,20 @@ import type { ExtractedContent, QueryResultData } from "../../src/modules/web/ty
 const fetchResult = {
 	type: "fetch" as const,
 	urls: [
-		{ url: "https://example.com/a", title: "A", content: "alpha content", truncated: false, contentType: "text/html" },
-		{ url: "https://example.com/b", title: "B", content: "beta content", truncated: false, contentType: "text/plain" },
+		{
+			url: "https://example.com/a",
+			title: "A",
+			content: "alpha content",
+			truncated: false,
+			contentType: "text/html",
+		},
+		{
+			url: "https://example.com/b",
+			title: "B",
+			content: "beta content",
+			truncated: false,
+			contentType: "text/plain",
+		},
 	],
 };
 
@@ -26,7 +43,15 @@ const searchResult = {
 	queries: [
 		{
 			query: "alpha",
-			results: [{ title: "Alpha", url: "https://example.com/a", snippet: "snippet", source: "test", content: fetchResult.urls[0] }],
+			results: [
+				{
+					title: "Alpha",
+					url: "https://example.com/a",
+					snippet: "snippet",
+					source: "test",
+					content: fetchResult.urls[0],
+				},
+			],
 		},
 	],
 };
@@ -68,8 +93,12 @@ describe("web search result cache", () => {
 
 	it("keys entries by provider/result count, normalizes query case, and evicts LRU", () => {
 		cache.set("test", "ddgs", 5, [{ query: "test", results: [{ title: "DDGS", url: "https://example.com/ddgs" }] }]);
-		cache.set("test", "tavily", 5, [{ query: "test", results: [{ title: "Tavily", url: "https://example.com/tavily" }] }]);
-		cache.set("test", "ddgs", 10, [{ query: "test", results: [{ title: "10 results", url: "https://example.com/10" }] }]);
+		cache.set("test", "tavily", 5, [
+			{ query: "test", results: [{ title: "Tavily", url: "https://example.com/tavily" }] },
+		]);
+		cache.set("test", "ddgs", 10, [
+			{ query: "test", results: [{ title: "10 results", url: "https://example.com/10" }] },
+		]);
 		assert.equal(cache.get("test", "ddgs", 5)?.[0].results[0].title, "DDGS");
 		assert.equal(cache.get("test", "tavily", 5)?.[0].results[0].title, "Tavily");
 		assert.equal(cache.get("test", "ddgs", 10)?.[0].results[0].title, "10 results");
@@ -178,9 +207,18 @@ describe("web storage get_search_content", () => {
 
 	it("enforces storage max entries and stored/returned content truncation", () => {
 		setStorageLimits({ maxStoredResults: 2, maxStoredContentChars: 5 });
-		const firstId = storeResult({ type: "fetch", urls: [{ url: "https://example.com/1", content: "111111", truncated: false }] });
-		const secondId = storeResult({ type: "fetch", urls: [{ url: "https://example.com/2", content: "222222", truncated: false }] });
-		const thirdId = storeResult({ type: "fetch", urls: [{ url: "https://example.com/3", content: "333333", truncated: false }] });
+		const firstId = storeResult({
+			type: "fetch",
+			urls: [{ url: "https://example.com/1", content: "111111", truncated: false }],
+		});
+		const secondId = storeResult({
+			type: "fetch",
+			urls: [{ url: "https://example.com/2", content: "222222", truncated: false }],
+		});
+		const thirdId = storeResult({
+			type: "fetch",
+			urls: [{ url: "https://example.com/3", content: "333333", truncated: false }],
+		});
 
 		assert.equal("error" in getSearchContent({ responseId: firstId, urlIndex: 0 }, 30_000), true);
 		const second = getSearchContent({ responseId: secondId, urlIndex: 0 }, 30_000);
@@ -192,7 +230,10 @@ describe("web storage get_search_content", () => {
 		}
 
 		setStorageLimits({ maxStoredResults: 100, maxStoredContentChars: 200000 });
-		const responseId = storeResult({ type: "fetch", urls: [{ url: "https://example.com", content: "0123456789", truncated: false }] });
+		const responseId = storeResult({
+			type: "fetch",
+			urls: [{ url: "https://example.com", content: "0123456789", truncated: false }],
+		});
 		const truncated = getSearchContent({ responseId, urlIndex: 0 }, 5);
 		const full = getSearchContent({ responseId, urlIndex: 0 }, 30_000);
 		assert.equal("result" in truncated, true);

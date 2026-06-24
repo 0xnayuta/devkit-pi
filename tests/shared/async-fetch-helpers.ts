@@ -33,9 +33,7 @@ export function createAbortRejectingFetch(
 	};
 }
 
-export function createRedirectLoopFetch(
-	status = 302
-): (_input: string | URL | Request) => Promise<Response> {
+export function createRedirectLoopFetch(status = 302): (_input: string | URL | Request) => Promise<Response> {
 	return async (input: string | URL | Request) => {
 		const url = String(input);
 		return new Response(null, { status, headers: { location: `${url}?next=1` } });

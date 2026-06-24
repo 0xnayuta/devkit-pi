@@ -5,7 +5,7 @@ import { registerConvertTools } from "../modules/convert/index.ts";
 import { registerGuardsModule } from "../modules/guards/index.ts";
 import { registerLspModule } from "../modules/lsp/register.ts";
 import { registerSubagentsModule } from "../modules/subagents/register.ts";
-import { registerWebTools, resetConnectionPool } from "../modules/web/register.ts";
+import { registerWebTools } from "../modules/web/register.ts";
 import { createConsoleLoggerSink, createLogger, type Logger, type LoggerSink } from "../shared/logger.ts";
 import type { ResolvedToolkitConfig } from "../shared/types.ts";
 
@@ -60,11 +60,6 @@ export function createDevkitRuntime(pi: ExtensionAPI, options: CreateDevkitRunti
 
 	const registerModules = () => {
 		registerWebTools(pi, effectiveConfig.web);
-		resources.add({
-			async dispose() {
-				resetConnectionPool();
-			},
-		});
 
 		registerLspModule(pi, effectiveConfig.lsp, { resources });
 

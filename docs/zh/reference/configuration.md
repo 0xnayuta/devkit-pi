@@ -75,11 +75,6 @@ devkit-pi 使用 namespace 化配置，不支持旧的扁平配置字段。配�
       "maxConcurrent": 3,
       "maxQueueSize": 10
     },
-    "connectionPool": {
-      "maxSockets": 10,
-      "maxFreeSockets": 5,
-      "timeout": 60000
-    },
     "openserp": {
       "enabled": false,
       "baseUrl": "https://api.openserp.com/search",
@@ -457,29 +452,6 @@ selection availability 由 provider `enabled` gate 和 adapter 层技术检查�
 }
 ```
 
-## Web connection pool 配置
-
-对应源码：`src/modules/web/http-pool.ts`、`src/modules/web/register.ts`。
-
-| Key | 类型 | 默认值 | 必填 | 作用 | 相关源码 |
-|---|---|---:|---|---|---|
-| `web.connectionPool.maxSockets` | number | `10` | 否 | HTTP/HTTPS agent 最大 socket 数 | `src/modules/web/http-pool.ts` |
-| `web.connectionPool.maxFreeSockets` | number | `5` | 否 | keep-alive 空闲 socket 上限 | `src/modules/web/http-pool.ts` |
-| `web.connectionPool.timeout` | number | `60000` | 否 | socket timeout，单位 ms | `src/modules/web/http-pool.ts` |
-
-示例：
-
-```json
-{
-  "web": {
-    "connectionPool": {
-      "maxSockets": 20,
-      "maxFreeSockets": 10,
-      "timeout": 60000
-    }
-  }
-}
-```
 
 ## Jina Reader 配置
 

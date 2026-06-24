@@ -5,26 +5,9 @@ import {
 	type ToolkitActivityEntry,
 } from "../../shared/activity.ts";
 import { createConsoleLoggerSink, createLogger, type Logger, type LoggerSink } from "../../shared/logger.ts";
-import type { DebugLevel } from "../../shared/types.ts";
+import type { DebugLevel, ProviderStats, WebToolStats } from "../../shared/types.ts";
 
 export type ActivityEntry = ToolkitActivityEntry;
-
-export interface ProviderStats {
-	requests: number;
-	errors: number;
-	rateLimited: number;
-	totalLatencyMs: number;
-	successRate: number;
-}
-
-export interface WebToolStats {
-	totalRequests: number;
-	successCount: number;
-	errorCount: number;
-	rateLimitedCount: number;
-	averageLatencyMs: number;
-	providerStats: Record<string, ProviderStats>;
-}
 
 interface RawProviderStats {
 	calls: number;

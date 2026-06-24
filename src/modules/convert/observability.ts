@@ -1,5 +1,5 @@
 import { addToolkitActivityEntry } from "../../shared/activity.ts";
-import type { ProviderStats, WebToolStats } from "../web/observability.ts";
+import type { ProviderStats, WebToolStats } from "../../shared/types.ts";
 
 interface ConvertStats {
 	calls: number;

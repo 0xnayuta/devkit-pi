@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -13,7 +13,7 @@ function collectTsFiles(dir: string): string[] {
 	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
 		const entryPath = path.join(dir, entry.name);
 		if (entry.isDirectory()) {
-			collectTsFiles(entryPath).forEach((file) => files.push(file));
+			files.push(...collectTsFiles(entryPath));
 		} else if (entry.name.endsWith(".ts")) {
 			files.push(entryPath);
 		}
@@ -29,7 +29,10 @@ test("direct @earendil-works runtime imports are declared for CI installs", () =
 	]);
 	const imported = new Set<string>();
 
-	for (const file of [...collectTsFiles(path.join(projectRoot, "src")), ...collectTsFiles(path.join(projectRoot, "tests"))]) {
+	for (const file of [
+		...collectTsFiles(path.join(projectRoot, "src")),
+		...collectTsFiles(path.join(projectRoot, "tests")),
+	]) {
 		const source = fs.readFileSync(file, "utf-8");
 		for (const match of source.matchAll(sourceImportPattern)) {
 			imported.add(match[1] ?? match[2]!);

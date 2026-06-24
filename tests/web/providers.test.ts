@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/load-config.ts";
-import { resetConnectionPool } from "../../src/modules/web/http-pool.ts";
 import { braveProvider } from "../../src/modules/web/providers/brave.ts";
 import { ddgsProvider } from "../../src/modules/web/providers/ddgs.ts";
 import {
@@ -34,11 +33,19 @@ function webConfig(overrides: Partial<ResolvedWebConfig> = {}): ResolvedWebConfi
 }
 
 const PUBLIC_TEST_HOST = "https://93.184.216.34";
-const BRAVE_CONFIG = webConfig({ brave: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/brave`, apiKeyEnv: ENV.brave } });
-const OPENSERP_CONFIG = webConfig({ openserp: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/openserp`, apiKeyEnv: ENV.openserp } });
+const BRAVE_CONFIG = webConfig({
+	brave: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/brave`, apiKeyEnv: ENV.brave },
+});
+const OPENSERP_CONFIG = webConfig({
+	openserp: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/openserp`, apiKeyEnv: ENV.openserp },
+});
 const SEARXNG_CONFIG = webConfig({ searxng: { enabled: true, baseUrl: PUBLIC_TEST_HOST, defaultEngine: "google" } });
-const SERPER_CONFIG = webConfig({ serper: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/serper`, apiKeyEnv: ENV.serper } });
-const TAVILY_CONFIG = webConfig({ tavily: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/tavily`, apiKeyEnv: ENV.tavily } });
+const SERPER_CONFIG = webConfig({
+	serper: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/serper`, apiKeyEnv: ENV.serper },
+});
+const TAVILY_CONFIG = webConfig({
+	tavily: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/tavily`, apiKeyEnv: ENV.tavily },
+});
 
 function setApiKey(envName: string, value = "test-key") {
 	process.env[envName] = value;
@@ -55,18 +62,22 @@ function jsonResponse(value: unknown, status = 200): Response {
 
 function mockDdgHtml(results: { title: string; url: string }[]): string {
 	return results
-		.map(({ title, url }) => `<a href="https://duckduckgo.com/l/?uddg=${encodeURIComponent(url)}&amp;rut=abc123">${title}</a>`)
+		.map(
+			({ title, url }) =>
+				`<a href="https://duckduckgo.com/l/?uddg=${encodeURIComponent(url)}&amp;rut=abc123">${title}</a>`
+		)
 		.join("\n");
 }
 
 async function assertProviderHttpError(provider: SearchProviderAdapter, config: ResolvedWebConfig) {
-	globalThis.fetch = (() => Promise.resolve(new Response("Rate limited", { status: 429, statusText: "Too Many Requests" }))) as typeof fetch;
+	globalThis.fetch = (() =>
+		Promise.resolve(new Response("Rate limited", { status: 429, statusText: "Too Many Requests" }))) as typeof fetch;
 	await assert.rejects(
 		() => provider.search({ query: "test", numResults: 1 }, config),
 		(error: any) => {
 			assert.ok(error.message.includes("429") || error.status === 429);
 			return true;
-		},
+		}
 	);
 }
 
@@ -89,13 +100,19 @@ async function assertProviderEmptyAndCommonErrors(
 
 afterEach(() => {
 	globalThis.fetch = originalFetch;
-	resetConnectionPool();
 	clearApiKeys();
 });
 
 describe("search provider metadata and registry", () => {
 	it("contains every supported provider exactly once and exposes registry entries", () => {
-		assert.deepEqual([...SEARCH_PROVIDER_NAMES].sort(), ["brave", "ddgs", "openserp", "searxng", "serper", "tavily"] satisfies WebSearchProviderName[]);
+		assert.deepEqual([...SEARCH_PROVIDER_NAMES].sort(), [
+			"brave",
+			"ddgs",
+			"openserp",
+			"searxng",
+			"serper",
+			"tavily",
+		] satisfies WebSearchProviderName[]);
 		for (const name of SEARCH_PROVIDER_NAMES) {
 			assert.equal(SEARCH_PROVIDER_METADATA[name].name, name);
 			const provider = getSearchProvider(name);
@@ -139,16 +156,29 @@ describe("search provider selection", () => {
 		if (!unsupported.ok) assert.equal(unsupported.error.error.code, "INVALID_INPUT");
 
 		for (const provider of ["openserp", "searxng", "tavily", "serper"] as const) {
-			const disabled = await selectSearchProvider(webConfig({ provider, [provider]: { ...((webConfig() as any)[provider] ?? {}), enabled: false } } as any));
+			const disabled = await selectSearchProvider(
+				webConfig({ provider, [provider]: { ...((webConfig() as any)[provider] ?? {}), enabled: false } } as any)
+			);
 			assert.equal(disabled.ok, false);
 			if (!disabled.ok) assert.equal(disabled.error.error.code, "INVALID_INPUT");
 		}
 
-		const missingBaseUrl = await selectSearchProvider(webConfig({ provider: "searxng", searxng: { enabled: true, baseUrl: "", defaultEngine: "google" } }));
+		const missingBaseUrl = await selectSearchProvider(
+			webConfig({ provider: "searxng", searxng: { enabled: true, baseUrl: "", defaultEngine: "google" } })
+		);
 		assert.equal(missingBaseUrl.ok, false);
 		if (!missingBaseUrl.ok) assert.match(missingBaseUrl.error.error.message, /baseUrl/);
 
-		const missingKey = await selectSearchProvider(webConfig({ provider: "brave", brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: "SELECT_PROVIDER_TEST_KEY" } }));
+		const missingKey = await selectSearchProvider(
+			webConfig({
+				provider: "brave",
+				brave: {
+					enabled: true,
+					baseUrl: "https://api.search.brave.com/res/v1/web/search",
+					apiKeyEnv: "SELECT_PROVIDER_TEST_KEY",
+				},
+			})
+		);
 		assert.equal(missingKey.ok, false);
 		if (!missingKey.ok) assert.equal(missingKey.error.error.code, "PROVIDER_AUTH_FAILED");
 	});
@@ -162,12 +192,21 @@ describe("search provider selection", () => {
 			assert.equal(explicit.providers.length, 1);
 		}
 
-		const auto = await selectSearchProvider(webConfig({ provider: "auto", providerPriority: ["searxng", "ddgs"], searxng: { enabled: false, baseUrl: "http://localhost:8888", defaultEngine: "google" } }));
+		const auto = await selectSearchProvider(
+			webConfig({
+				provider: "auto",
+				providerPriority: ["searxng", "ddgs"],
+				searxng: { enabled: false, baseUrl: "http://localhost:8888", defaultEngine: "google" },
+			})
+		);
 		assert.equal(auto.ok, true);
 		if (auto.ok) {
 			assert.equal(auto.mode, "auto");
 			assert.equal(auto.provider.name, "ddgs");
-			assert.deepEqual(auto.providers.map((provider) => provider.name), ["ddgs"]);
+			assert.deepEqual(
+				auto.providers.map((provider) => provider.name),
+				["ddgs"]
+			);
 		}
 	});
 });
@@ -204,7 +243,12 @@ describe("ddgs provider", () => {
 			capturedUrl = String(url);
 			capturedMethod = opts?.method;
 			capturedAccept = opts?.headers?.accept;
-			return Promise.resolve(new Response(mockDdgHtml(Array.from({ length: 10 }, (_, i) => ({ title: `R${i}`, url: `https://example.com/${i}` }))), { status: 200 }));
+			return Promise.resolve(
+				new Response(
+					mockDdgHtml(Array.from({ length: 10 }, (_, i) => ({ title: `R${i}`, url: `https://example.com/${i}` }))),
+					{ status: 200 }
+				)
+			);
 		}) as typeof fetch;
 
 		const results = await ddgsProvider.search({ query: "hello world", numResults: 10 }, webConfig());
@@ -221,31 +265,73 @@ describe("ddgs provider", () => {
 
 describe("provider response body limits", () => {
 	it("rejects oversized ddgs HTML before parsing", async () => {
-		globalThis.fetch = (() => Promise.resolve(new Response(`${"x".repeat(128)}${mockDdgHtml([{ title: "Late", url: "https://example.com/late" }])}`, { status: 200 }))) as typeof fetch;
+		globalThis.fetch = (() =>
+			Promise.resolve(
+				new Response(`${"x".repeat(128)}${mockDdgHtml([{ title: "Late", url: "https://example.com/late" }])}`, {
+					status: 200,
+				})
+			)) as typeof fetch;
 
 		await assert.rejects(
 			() => ddgsProvider.search({ query: "test", numResults: 1 }, webConfig({ maxResponseBytes: 32 })),
-			/response body exceeded the configured maxResponseBytes limit \(32 bytes\)/,
+			/response body exceeded the configured maxResponseBytes limit \(32 bytes\)/
 		);
 	});
 
 	it("rejects oversized JSON provider responses before parsing", async () => {
 		const providers = [
-			{ provider: braveProvider, env: ENV.brave, config: webConfig({ brave: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/brave`, apiKeyEnv: ENV.brave }, maxResponseBytes: 8 }) },
-			{ provider: openserpProvider, env: ENV.openserp, config: webConfig({ openserp: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/openserp`, apiKeyEnv: ENV.openserp }, maxResponseBytes: 8 }) },
-			{ provider: searxngProvider, config: webConfig({ searxng: { enabled: true, baseUrl: PUBLIC_TEST_HOST, defaultEngine: "google" }, maxResponseBytes: 8 }) },
-			{ provider: serperProvider, env: ENV.serper, config: webConfig({ serper: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/serper`, apiKeyEnv: ENV.serper }, maxResponseBytes: 8 }) },
-			{ provider: tavilyProvider, env: ENV.tavily, config: webConfig({ tavily: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/tavily`, apiKeyEnv: ENV.tavily }, maxResponseBytes: 8 }) },
+			{
+				provider: braveProvider,
+				env: ENV.brave,
+				config: webConfig({
+					brave: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/brave`, apiKeyEnv: ENV.brave },
+					maxResponseBytes: 8,
+				}),
+			},
+			{
+				provider: openserpProvider,
+				env: ENV.openserp,
+				config: webConfig({
+					openserp: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/openserp`, apiKeyEnv: ENV.openserp },
+					maxResponseBytes: 8,
+				}),
+			},
+			{
+				provider: searxngProvider,
+				config: webConfig({
+					searxng: { enabled: true, baseUrl: PUBLIC_TEST_HOST, defaultEngine: "google" },
+					maxResponseBytes: 8,
+				}),
+			},
+			{
+				provider: serperProvider,
+				env: ENV.serper,
+				config: webConfig({
+					serper: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/serper`, apiKeyEnv: ENV.serper },
+					maxResponseBytes: 8,
+				}),
+			},
+			{
+				provider: tavilyProvider,
+				env: ENV.tavily,
+				config: webConfig({
+					tavily: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/tavily`, apiKeyEnv: ENV.tavily },
+					maxResponseBytes: 8,
+				}),
+			},
 		];
 
 		for (const item of providers) {
 			clearApiKeys();
 			if (item.env) setApiKey(item.env);
-			globalThis.fetch = (() => Promise.resolve(jsonResponse({ results: [], web: { results: [] }, organic: [], organic_results: [] }))) as typeof fetch;
+			globalThis.fetch = (() =>
+				Promise.resolve(
+					jsonResponse({ results: [], web: { results: [] }, organic: [], organic_results: [] })
+				)) as typeof fetch;
 			await assert.rejects(
 				() => item.provider.search({ query: "test", numResults: 1 }, item.config),
 				/response body exceeded the configured maxResponseBytes limit \(8 bytes\)/,
-				`${item.provider.name} should reject oversized responses`,
+				`${item.provider.name} should reject oversized responses`
 			);
 		}
 	});
@@ -258,11 +344,40 @@ describe("provider private network safety", () => {
 			config: ResolvedWebConfig;
 			env?: string;
 		}> = [
-			{ provider: braveProvider, env: ENV.brave, config: webConfig({ brave: { enabled: true, baseUrl: "http://127.0.0.1:7001/brave", apiKeyEnv: ENV.brave } }) },
-			{ provider: openserpProvider, env: ENV.openserp, config: webConfig({ openserp: { enabled: true, baseUrl: "http://127.0.0.1:7002/openserp", apiKeyEnv: ENV.openserp } }) },
-			{ provider: searxngProvider, config: webConfig({ searxng: { enabled: true, baseUrl: "http://127.0.0.1:7003", defaultEngine: "google" } }) },
-			{ provider: serperProvider, env: ENV.serper, config: webConfig({ serper: { enabled: true, baseUrl: "http://127.0.0.1:7004/serper", apiKeyEnv: ENV.serper } }) },
-			{ provider: tavilyProvider, env: ENV.tavily, config: webConfig({ tavily: { enabled: true, baseUrl: "http://127.0.0.1:7005/tavily", apiKeyEnv: ENV.tavily } }) },
+			{
+				provider: braveProvider,
+				env: ENV.brave,
+				config: webConfig({
+					brave: { enabled: true, baseUrl: "http://127.0.0.1:7001/brave", apiKeyEnv: ENV.brave },
+				}),
+			},
+			{
+				provider: openserpProvider,
+				env: ENV.openserp,
+				config: webConfig({
+					openserp: { enabled: true, baseUrl: "http://127.0.0.1:7002/openserp", apiKeyEnv: ENV.openserp },
+				}),
+			},
+			{
+				provider: searxngProvider,
+				config: webConfig({
+					searxng: { enabled: true, baseUrl: "http://127.0.0.1:7003", defaultEngine: "google" },
+				}),
+			},
+			{
+				provider: serperProvider,
+				env: ENV.serper,
+				config: webConfig({
+					serper: { enabled: true, baseUrl: "http://127.0.0.1:7004/serper", apiKeyEnv: ENV.serper },
+				}),
+			},
+			{
+				provider: tavilyProvider,
+				env: ENV.tavily,
+				config: webConfig({
+					tavily: { enabled: true, baseUrl: "http://127.0.0.1:7005/tavily", apiKeyEnv: ENV.tavily },
+				}),
+			},
 		];
 
 		for (const item of cases) {
@@ -308,29 +423,88 @@ describe("provider common empty/error behavior (matrix)", () => {
 describe("keyed provider availability", () => {
 	it("validates API keys and base URLs consistently", () => {
 		const cases = [
-			{ name: "brave", provider: braveProvider, env: ENV.brave, config: { brave: { enabled: true, baseUrl: "https://api.search.brave.com/res/v1/web/search", apiKeyEnv: ENV.brave } } },
-			{ name: "openserp", provider: openserpProvider, env: ENV.openserp, config: { openserp: { enabled: true, baseUrl: "https://api.openserp.com", apiKeyEnv: ENV.openserp } } },
-			{ name: "serper", provider: serperProvider, env: ENV.serper, config: { serper: { enabled: true, baseUrl: "https://google.serper.dev/search", apiKeyEnv: ENV.serper } } },
-			{ name: "tavily", provider: tavilyProvider, env: ENV.tavily, config: { tavily: { enabled: true, baseUrl: "https://api.tavily.com/search", apiKeyEnv: ENV.tavily } } },
+			{
+				name: "brave",
+				provider: braveProvider,
+				env: ENV.brave,
+				config: {
+					brave: {
+						enabled: true,
+						baseUrl: "https://api.search.brave.com/res/v1/web/search",
+						apiKeyEnv: ENV.brave,
+					},
+				},
+			},
+			{
+				name: "openserp",
+				provider: openserpProvider,
+				env: ENV.openserp,
+				config: { openserp: { enabled: true, baseUrl: "https://api.openserp.com", apiKeyEnv: ENV.openserp } },
+			},
+			{
+				name: "serper",
+				provider: serperProvider,
+				env: ENV.serper,
+				config: { serper: { enabled: true, baseUrl: "https://google.serper.dev/search", apiKeyEnv: ENV.serper } },
+			},
+			{
+				name: "tavily",
+				provider: tavilyProvider,
+				env: ENV.tavily,
+				config: { tavily: { enabled: true, baseUrl: "https://api.tavily.com/search", apiKeyEnv: ENV.tavily } },
+			},
 		] as const;
 
 		for (const item of cases) {
 			clearApiKeys();
 			assert.equal(item.provider.name, item.name);
-			assert.equal(item.provider.isAvailable?.(webConfig(item.config as any)), false, `${item.name} should require API key`);
+			assert.equal(
+				item.provider.isAvailable?.(webConfig(item.config as any)),
+				false,
+				`${item.name} should require API key`
+			);
 			setApiKey(item.env);
-			assert.equal(item.provider.isAvailable?.(webConfig(item.config as any)), true, `${item.name} should accept valid config`);
+			assert.equal(
+				item.provider.isAvailable?.(webConfig(item.config as any)),
+				true,
+				`${item.name} should accept valid config`
+			);
 			const providerKey = item.name as "brave" | "openserp" | "serper" | "tavily";
-			assert.equal(item.provider.isAvailable?.(webConfig({ [providerKey]: { ...((item.config as any)[providerKey]), baseUrl: "not-a-url" } } as any)), false);
-			assert.equal(item.provider.isAvailable?.(webConfig({ [providerKey]: { ...((item.config as any)[providerKey]), baseUrl: "ftp://example.com" } } as any)), false);
+			assert.equal(
+				item.provider.isAvailable?.(
+					webConfig({ [providerKey]: { ...(item.config as any)[providerKey], baseUrl: "not-a-url" } } as any)
+				),
+				false
+			);
+			assert.equal(
+				item.provider.isAvailable?.(
+					webConfig({
+						[providerKey]: { ...(item.config as any)[providerKey], baseUrl: "ftp://example.com" },
+					} as any)
+				),
+				false
+			);
 		}
 	});
 
 	it("validates searxng availability without API keys", () => {
 		assert.equal(searxngProvider.name, "searxng");
-		assert.equal(searxngProvider.isAvailable?.(webConfig({ searxng: { enabled: true, baseUrl: "http://localhost:8888", defaultEngine: "google" } })), true);
-		assert.equal(searxngProvider.isAvailable?.(webConfig({ searxng: { enabled: true, baseUrl: "", defaultEngine: "google" } })), false);
-		assert.equal(searxngProvider.isAvailable?.(webConfig({ searxng: { enabled: true, baseUrl: "ftp://example.com", defaultEngine: "google" } })), false);
+		assert.equal(
+			searxngProvider.isAvailable?.(
+				webConfig({ searxng: { enabled: true, baseUrl: "http://localhost:8888", defaultEngine: "google" } })
+			),
+			true
+		);
+		assert.equal(
+			searxngProvider.isAvailable?.(webConfig({ searxng: { enabled: true, baseUrl: "", defaultEngine: "google" } })),
+			false
+		);
+		assert.equal(
+			searxngProvider.isAvailable?.(
+				webConfig({ searxng: { enabled: true, baseUrl: "ftp://example.com", defaultEngine: "google" } })
+			),
+			false
+		);
 	});
 });
 
@@ -344,11 +518,17 @@ describe("brave provider", () => {
 		globalThis.fetch = ((url: string, opts?: any) => {
 			capturedUrl = String(url);
 			capturedHeaders = opts?.headers ?? {};
-			return Promise.resolve(jsonResponse({ web: { results: [
-				{ title: "Result 1", url: "https://example.com/1", description: "Snippet 1" },
-				{ url: "https://example.com/no-title", description: "Snippet 2" },
-				{ title: "No URL" },
-			] } }));
+			return Promise.resolve(
+				jsonResponse({
+					web: {
+						results: [
+							{ title: "Result 1", url: "https://example.com/1", description: "Snippet 1" },
+							{ url: "https://example.com/no-title", description: "Snippet 2" },
+							{ title: "No URL" },
+						],
+					},
+				})
+			);
 		}) as typeof fetch;
 
 		const results = await braveProvider.search({ query: "hello", numResults: 3 }, config);
@@ -356,10 +536,14 @@ describe("brave provider", () => {
 		assert.equal(new URL(capturedUrl).searchParams.get("count"), "3");
 		assert.equal(capturedHeaders["x-subscription-token"], "my-secret-key");
 		assert.equal(results.length, 2);
-		assert.deepEqual(results[0], { title: "Result 1", url: "https://example.com/1", snippet: "Snippet 1", source: "brave" });
+		assert.deepEqual(results[0], {
+			title: "Result 1",
+			url: "https://example.com/1",
+			snippet: "Snippet 1",
+			source: "brave",
+		});
 		assert.equal(results[1].title, "https://example.com/no-title");
 	});
-
 });
 
 describe("openserp provider", () => {
@@ -372,11 +556,21 @@ describe("openserp provider", () => {
 		globalThis.fetch = ((url: string | URL, opts?: any) => {
 			capturedUrl = String(url);
 			capturedHeaders = opts?.headers ?? {};
-			return Promise.resolve(jsonResponse({ organic_results: [
-				{ title: "A", url: "https://example.com/url-field", link: "https://example.com/link-field", snippet: "Snip", description: "Desc" },
-				{ title: "B", link: "https://example.com/link-only", description: "Desc only" },
-				{ title: "No URL" },
-			] }));
+			return Promise.resolve(
+				jsonResponse({
+					organic_results: [
+						{
+							title: "A",
+							url: "https://example.com/url-field",
+							link: "https://example.com/link-field",
+							snippet: "Snip",
+							description: "Desc",
+						},
+						{ title: "B", link: "https://example.com/link-only", description: "Desc only" },
+						{ title: "No URL" },
+					],
+				})
+			);
 		}) as typeof fetch;
 
 		const results = await openserpProvider.search({ query: "hello world", numResults: 5 }, config);
@@ -392,10 +586,17 @@ describe("openserp provider", () => {
 		assert.equal(results[1].url, "https://example.com/link-only");
 		assert.equal(results[1].snippet, "Desc only");
 
-		globalThis.fetch = (() => Promise.resolve(jsonResponse({ results: [{ title: "Fallback", link: "https://example.com/fallback", description: "Desc" }] }))) as typeof fetch;
-		assert.equal((await openserpProvider.search({ query: "test", numResults: 5 }, config))[0].url, "https://example.com/fallback");
+		globalThis.fetch = (() =>
+			Promise.resolve(
+				jsonResponse({
+					results: [{ title: "Fallback", link: "https://example.com/fallback", description: "Desc" }],
+				})
+			)) as typeof fetch;
+		assert.equal(
+			(await openserpProvider.search({ query: "test", numResults: 5 }, config))[0].url,
+			"https://example.com/fallback"
+		);
 	});
-
 });
 
 describe("searxng provider", () => {
@@ -405,11 +606,15 @@ describe("searxng provider", () => {
 		let capturedUrl = "";
 		globalThis.fetch = ((url: string | URL) => {
 			capturedUrl = String(url);
-			return Promise.resolve(jsonResponse({ results: [
-				{ title: "Result 1", url: "https://example.com/1", content: "Snippet 1", engine: "google" },
-				{ title: "Result 2", url: "https://example.com/2", content: "Snippet 2" },
-				{ title: "No URL" },
-			] }));
+			return Promise.resolve(
+				jsonResponse({
+					results: [
+						{ title: "Result 1", url: "https://example.com/1", content: "Snippet 1", engine: "google" },
+						{ title: "Result 2", url: "https://example.com/2", content: "Snippet 2" },
+						{ title: "No URL" },
+					],
+				})
+			);
 		}) as typeof fetch;
 
 		const results = await searxngProvider.search({ query: "hello world", numResults: 5 }, config);
@@ -424,7 +629,9 @@ describe("searxng provider", () => {
 		assert.equal(results[1].source, "searxng");
 		assert.equal(results[0].snippet, "Snippet 1");
 
-		const customConfig = webConfig({ searxng: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/custom`, defaultEngine: "duckduckgo" } });
+		const customConfig = webConfig({
+			searxng: { enabled: true, baseUrl: `${PUBLIC_TEST_HOST}/custom`, defaultEngine: "duckduckgo" },
+		});
 		globalThis.fetch = ((url: string | URL) => {
 			capturedUrl = String(url);
 			return Promise.resolve(jsonResponse({ results: [] }));
@@ -434,7 +641,6 @@ describe("searxng provider", () => {
 		assert.ok(!capturedUrl.includes("/search"));
 		assert.equal(new URL(capturedUrl).searchParams.get("engines"), "duckduckgo");
 	});
-
 });
 
 describe("serper provider", () => {
@@ -449,10 +655,14 @@ describe("serper provider", () => {
 			capturedMethod = opts?.method;
 			capturedBody = JSON.parse(opts?.body ?? "{}");
 			capturedHeaders = opts?.headers ?? {};
-			return Promise.resolve(jsonResponse({ organic: [
-				{ title: "Result 1", link: "https://example.com/1", snippet: "Snippet 1" },
-				{ title: "No Link" },
-			] }));
+			return Promise.resolve(
+				jsonResponse({
+					organic: [
+						{ title: "Result 1", link: "https://example.com/1", snippet: "Snippet 1" },
+						{ title: "No Link" },
+					],
+				})
+			);
 		}) as typeof fetch;
 
 		const results = await serperProvider.search({ query: "hello", numResults: 3 }, config);
@@ -461,9 +671,13 @@ describe("serper provider", () => {
 		assert.equal(capturedBody.num, 3);
 		assert.equal(capturedHeaders["x-api-key"], "my-key");
 		assert.equal(results.length, 1);
-		assert.deepEqual(results[0], { title: "Result 1", url: "https://example.com/1", snippet: "Snippet 1", source: "serper" });
+		assert.deepEqual(results[0], {
+			title: "Result 1",
+			url: "https://example.com/1",
+			snippet: "Snippet 1",
+			source: "serper",
+		});
 	});
-
 });
 
 describe("tavily provider", () => {
@@ -476,10 +690,14 @@ describe("tavily provider", () => {
 		globalThis.fetch = ((_url: string, opts?: any) => {
 			capturedMethod = opts?.method;
 			capturedBody = JSON.parse(opts?.body ?? "{}");
-			return Promise.resolve(jsonResponse({ results: [
-				{ title: "Result 1", url: "https://example.com/1", content: "Snippet 1" },
-				{ title: "No URL" },
-			] }));
+			return Promise.resolve(
+				jsonResponse({
+					results: [
+						{ title: "Result 1", url: "https://example.com/1", content: "Snippet 1" },
+						{ title: "No URL" },
+					],
+				})
+			);
 		}) as typeof fetch;
 
 		const results = await tavilyProvider.search({ query: "hello", numResults: 3 }, config);
@@ -488,7 +706,11 @@ describe("tavily provider", () => {
 		assert.equal(capturedBody.query, "hello");
 		assert.equal(capturedBody.max_results, 3);
 		assert.equal(results.length, 1);
-		assert.deepEqual(results[0], { title: "Result 1", url: "https://example.com/1", snippet: "Snippet 1", source: "tavily" });
+		assert.deepEqual(results[0], {
+			title: "Result 1",
+			url: "https://example.com/1",
+			snippet: "Snippet 1",
+			source: "tavily",
+		});
 	});
-
 });

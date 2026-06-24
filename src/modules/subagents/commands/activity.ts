@@ -5,10 +5,9 @@
 
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { getConvertToolStats, resetConvertToolStats } from "../../convert/observability.ts";
-import type { ActivityEntry, WebToolStats } from "../../web/observability.ts";
-import { clearActivityLog, getActivityLog, getWebToolStats, resetWebToolStats } from "../../web/observability.ts";
 import { formatTimestamp } from "./logs.ts";
+import type { ActivityEntry, WebToolStats } from "./toolkit-stats.ts";
+import { clearActivityLog, getActivityLog, getToolkitStats, resetToolkitStats } from "./toolkit-stats.ts";
 
 // Re-export for external use
 export type { LogsOptions } from "./logs.ts";
@@ -22,28 +21,6 @@ export interface ActivityPanelOptions {
 	showStats?: boolean;
 	autoRefresh?: boolean;
 	theme?: Theme;
-}
-
-function combineStats(web: WebToolStats, convert: WebToolStats): WebToolStats {
-	const totalRequests = web.totalRequests + convert.totalRequests;
-	const weightedLatency = web.averageLatencyMs * web.totalRequests + convert.averageLatencyMs * convert.totalRequests;
-	return {
-		totalRequests,
-		successCount: web.successCount + convert.successCount,
-		errorCount: web.errorCount + convert.errorCount,
-		rateLimitedCount: web.rateLimitedCount + convert.rateLimitedCount,
-		averageLatencyMs: totalRequests > 0 ? Math.round(weightedLatency / totalRequests) : 0,
-		providerStats: { ...web.providerStats, ...convert.providerStats },
-	};
-}
-
-function getToolkitStats(): WebToolStats {
-	return combineStats(getWebToolStats(), getConvertToolStats());
-}
-
-function resetToolkitStats(): void {
-	resetWebToolStats();
-	resetConvertToolStats();
 }
 
 interface ActivityPanelState {

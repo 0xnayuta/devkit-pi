@@ -5,8 +5,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { DEFAULT_CONFIG, mergeConfig } from "../../src/config/load-config.ts";
-import { SUBAGENT_ERROR_CODES } from "../../src/shared/types.ts";
 import { SubagentParams } from "../../src/modules/subagents/schemas.ts";
+import { SUBAGENT_ERROR_CODES } from "../../src/shared/types.ts";
 
 describe("Devkit Config Loading", () => {
 	describe("Default Configuration", () => {
@@ -49,7 +49,12 @@ describe("Devkit Config Loading", () => {
 
 		it("has correct web providerPriority", () => {
 			assert.deepEqual(DEFAULT_CONFIG.web.providerPriority, [
-				"tavily", "serper", "brave", "openserp", "searxng", "ddgs",
+				"tavily",
+				"serper",
+				"brave",
+				"openserp",
+				"searxng",
+				"ddgs",
 			]);
 		});
 	});
@@ -167,14 +172,8 @@ describe("Devkit Config Loading", () => {
 
 			assert.equal(config.subagents.maxDepth, DEFAULT_CONFIG.subagents.maxDepth);
 			assert.equal(config.subagents.timeoutMs, DEFAULT_CONFIG.subagents.timeoutMs);
-			assert.equal(
-				config.subagents.projectAgentPolicy,
-				DEFAULT_CONFIG.subagents.projectAgentPolicy,
-			);
-			assert.equal(
-				config.subagents.nonInteractivePolicy,
-				DEFAULT_CONFIG.subagents.nonInteractivePolicy,
-			);
+			assert.equal(config.subagents.projectAgentPolicy, DEFAULT_CONFIG.subagents.projectAgentPolicy);
+			assert.equal(config.subagents.nonInteractivePolicy, DEFAULT_CONFIG.subagents.nonInteractivePolicy);
 			assert.equal(config.subagents.retry.maxAttempts, DEFAULT_CONFIG.subagents.retry.maxAttempts);
 		});
 	});
@@ -201,7 +200,19 @@ describe("Devkit Config Loading", () => {
 			assert.equal(SubagentParams.properties.agent.type, "string");
 			assert.equal(SubagentParams.properties.task.type, "string");
 
-			const legacy = ["chain", "tasks", "async", "share", "worktree", "action", "id", "sessionDir", "control", "model", "skills"];
+			const legacy = [
+				"chain",
+				"tasks",
+				"async",
+				"share",
+				"worktree",
+				"action",
+				"id",
+				"sessionDir",
+				"control",
+				"model",
+				"skills",
+			];
 			for (const key of legacy) {
 				assert.equal(SubagentParams.properties[key as keyof typeof SubagentParams.properties], undefined);
 			}

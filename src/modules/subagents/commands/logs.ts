@@ -2,9 +2,8 @@
  * /subagents logs - Show recent tool activity logs
  */
 
-import { getConvertToolStats } from "../../convert/observability.ts";
-import type { ActivityEntry, WebToolStats } from "../../web/observability.ts";
-import { getActivityLog, getWebToolStats } from "../../web/observability.ts";
+import type { ActivityEntry, WebToolStats } from "./toolkit-stats.ts";
+import { getActivityLog, getToolkitStats } from "./toolkit-stats.ts";
 
 // ============================================================================
 // Types
@@ -19,19 +18,6 @@ export interface LogsOptions {
 // ============================================================================
 // Main Functions
 // ============================================================================
-
-function combineStats(web: WebToolStats, convert: WebToolStats): WebToolStats {
-	const totalRequests = web.totalRequests + convert.totalRequests;
-	const weightedLatency = web.averageLatencyMs * web.totalRequests + convert.averageLatencyMs * convert.totalRequests;
-	return {
-		totalRequests,
-		successCount: web.successCount + convert.successCount,
-		errorCount: web.errorCount + convert.errorCount,
-		rateLimitedCount: web.rateLimitedCount + convert.rateLimitedCount,
-		averageLatencyMs: totalRequests > 0 ? Math.round(weightedLatency / totalRequests) : 0,
-		providerStats: { ...web.providerStats, ...convert.providerStats },
-	};
-}
 
 export function getRecentLogs(options: LogsOptions = {}): {
 	entries: ActivityEntry[];
@@ -48,7 +34,7 @@ export function getRecentLogs(options: LogsOptions = {}): {
 
 	return {
 		entries,
-		stats: combineStats(getWebToolStats(), getConvertToolStats()),
+		stats: getToolkitStats(),
 	};
 }
 

@@ -42,11 +42,6 @@ export const DEFAULT_WEB_CONFIG: ResolvedWebConfig = {
 		maxConcurrent: 3,
 		maxQueueSize: 10,
 	},
-	connectionPool: {
-		maxSockets: 10,
-		maxFreeSockets: 5,
-		timeout: 60000,
-	},
 	openserp: {
 		enabled: false,
 		baseUrl: "https://api.openserp.com/search",
@@ -260,14 +255,6 @@ function normalizeWebConfig(base: WebConfig | undefined): ResolvedWebConfig {
 		concurrency: {
 			maxConcurrent: positiveInteger(base?.concurrency?.maxConcurrent, DEFAULT_WEB_CONFIG.concurrency.maxConcurrent),
 			maxQueueSize: positiveInteger(base?.concurrency?.maxQueueSize, DEFAULT_WEB_CONFIG.concurrency.maxQueueSize),
-		},
-		connectionPool: {
-			maxSockets: positiveInteger(base?.connectionPool?.maxSockets, DEFAULT_WEB_CONFIG.connectionPool.maxSockets),
-			maxFreeSockets: positiveInteger(
-				base?.connectionPool?.maxFreeSockets,
-				DEFAULT_WEB_CONFIG.connectionPool.maxFreeSockets
-			),
-			timeout: positiveInteger(base?.connectionPool?.timeout, DEFAULT_WEB_CONFIG.connectionPool.timeout),
 		},
 		openserp: {
 			enabled: booleanValue(base?.openserp?.enabled, DEFAULT_WEB_CONFIG.openserp.enabled),

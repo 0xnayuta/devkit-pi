@@ -441,7 +441,6 @@ Complete configuration: [`configuration.md`](./configuration.md):
 - Provider sub-configs: `web.brave`, `web.openserp`, `web.searxng`, `web.tavily`, `web.serper`
 - `web.cache.*`: search cache
 - `web.concurrency.*`: request concurrency and queue
-- `web.connectionPool.*`: HTTP/HTTPS keep-alive pool
 - `web.enableJinaFallback`, `web.jinaTimeoutMs`, `web.jinaTriggers`: Jina Reader fallback
 
 Provider-specific details: [`web-providers.md`](./web-providers.md).

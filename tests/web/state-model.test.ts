@@ -116,10 +116,31 @@ describe("state model - web responseId layers", () => {
 			{},
 			{ type: "tool_result", customType: WEB_RESULTS_CUSTOM_TYPE, data: {} },
 			{ type: "custom", customType: WEB_RESULTS_CUSTOM_TYPE, data: null },
-			{ type: "custom", customType: WEB_RESULTS_CUSTOM_TYPE, data: { id: "x", type: "fetch", timestamp: Number.NaN, urls: [] } },
-			{ type: "custom", customType: WEB_RESULTS_CUSTOM_TYPE, data: { id: "x", type: "fetch", timestamp: now, urls: "not-array" } },
-			{ type: "custom", customType: WEB_RESULTS_CUSTOM_TYPE, data: { id: "x", type: "search", timestamp: now, queries: "not-array" } },
-			{ type: "custom", customType: WEB_RESULTS_CUSTOM_TYPE, data: { id: "ok", type: "fetch", timestamp: now, urls: [{ url: "https://example.com", content: "ok", truncated: false }] } },
+			{
+				type: "custom",
+				customType: WEB_RESULTS_CUSTOM_TYPE,
+				data: { id: "x", type: "fetch", timestamp: Number.NaN, urls: [] },
+			},
+			{
+				type: "custom",
+				customType: WEB_RESULTS_CUSTOM_TYPE,
+				data: { id: "x", type: "fetch", timestamp: now, urls: "not-array" },
+			},
+			{
+				type: "custom",
+				customType: WEB_RESULTS_CUSTOM_TYPE,
+				data: { id: "x", type: "search", timestamp: now, queries: "not-array" },
+			},
+			{
+				type: "custom",
+				customType: WEB_RESULTS_CUSTOM_TYPE,
+				data: {
+					id: "ok",
+					type: "fetch",
+					timestamp: now,
+					urls: [{ url: "https://example.com", content: "ok", truncated: false }],
+				},
+			},
 		];
 
 		assert.doesNotThrow(() => restoreResultsFromSession(branch as unknown[]));

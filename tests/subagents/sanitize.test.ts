@@ -15,10 +15,9 @@ describe("subagent output sanitizer", () => {
 	it("redacts AWS and common provider env secrets without replacement backreferences leaking", () => {
 		const awsSecret = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456";
 		const openAiSecret = "abcdefghijklmnopqrstuvwxyz123456";
-		const output = sanitizeOutput([
-			`AWS_SECRET_ACCESS_KEY=${awsSecret}`,
-			`OPENAI_API_KEY=${openAiSecret}`,
-		].join("\n"));
+		const output = sanitizeOutput(
+			[`AWS_SECRET_ACCESS_KEY=${awsSecret}`, `OPENAI_API_KEY=${openAiSecret}`].join("\n")
+		);
 
 		assert.doesNotMatch(output, new RegExp(awsSecret));
 		assert.doesNotMatch(output, new RegExp(openAiSecret));
@@ -28,14 +27,19 @@ describe("subagent output sanitizer", () => {
 	});
 
 	it("redacts authorization headers, bearer tokens, GitHub tokens, and secret URL params", () => {
-		const output = sanitizeOutput([
-			"Authorization: secret-token-value",
-			"Bearer abc.def.ghi",
-			"ghp_abcdefghijklmnopqrstuvwxyzABCDEFGHIJ123456",
-			"https://example.com?a=1&token=abcdefghijklmnopqrstuvwxyz",
-		].join("\n"));
+		const output = sanitizeOutput(
+			[
+				"Authorization: secret-token-value",
+				"Bearer abc.def.ghi",
+				"ghp_abcdefghijklmnopqrstuvwxyzABCDEFGHIJ123456",
+				"https://example.com?a=1&token=abcdefghijklmnopqrstuvwxyz",
+			].join("\n")
+		);
 
-		assert.doesNotMatch(output, /secret-token-value|abc\.def\.ghi|ghp_abcdefghijklmnopqrstuvwxyzABCDEFGHIJ123456|abcdefghijklmnopqrstuvwxyz/);
+		assert.doesNotMatch(
+			output,
+			/secret-token-value|abc\.def\.ghi|ghp_abcdefghijklmnopqrstuvwxyzABCDEFGHIJ123456|abcdefghijklmnopqrstuvwxyz/
+		);
 		assert.match(output, /Authorization: \[REDACTED\]/);
 		assert.match(output, /Bearer \[REDACTED\]/);
 		assert.match(output, /\[GITHUB_TOKEN_REDACTED\]/);

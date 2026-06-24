@@ -184,10 +184,21 @@ export interface ConcurrencyConfig {
 	maxQueueSize?: number;
 }
 
-export interface ConnectionPoolConfig {
-	maxSockets?: number;
-	maxFreeSockets?: number;
-	timeout?: number;
+export interface ProviderStats {
+	requests: number;
+	errors: number;
+	rateLimited: number;
+	totalLatencyMs: number;
+	successRate: number;
+}
+
+export interface WebToolStats {
+	totalRequests: number;
+	successCount: number;
+	errorCount: number;
+	rateLimitedCount: number;
+	averageLatencyMs: number;
+	providerStats: Record<string, ProviderStats>;
 }
 
 export interface WebConfig {
@@ -209,7 +220,6 @@ export interface WebConfig {
 	debug?: DebugLevel;
 	cache?: CacheConfig;
 	concurrency?: ConcurrencyConfig;
-	connectionPool?: ConnectionPoolConfig;
 	openserp?: OpenSerpProviderConfig;
 	searxng?: SearxngProviderConfig;
 	brave?: ApiKeyProviderConfig;
@@ -327,7 +337,7 @@ export type ResolvedSubagentsConfig = Required<Omit<SubagentsConfig, "retry">> &
 };
 
 export type ResolvedWebConfig = Required<
-	Omit<WebConfig, "openserp" | "searxng" | "brave" | "tavily" | "serper" | "cache" | "concurrency" | "connectionPool">
+	Omit<WebConfig, "openserp" | "searxng" | "brave" | "tavily" | "serper" | "cache" | "concurrency">
 > & {
 	openserp: Required<OpenSerpProviderConfig>;
 	searxng: Required<SearxngProviderConfig>;
@@ -336,7 +346,6 @@ export type ResolvedWebConfig = Required<
 	serper: Required<ApiKeyProviderConfig>;
 	cache: Required<CacheConfig>;
 	concurrency: Required<ConcurrencyConfig>;
-	connectionPool: Required<ConnectionPoolConfig>;
 };
 
 export type RequiredLspHookConfig = Required<LspHookConfig>;

@@ -75,11 +75,6 @@ Source: `DEFAULT_CONFIG`, `DEFAULT_SUBAGENTS_CONFIG`, `DEFAULT_WEB_CONFIG`, `DEF
       "maxConcurrent": 3,
       "maxQueueSize": 10
     },
-    "connectionPool": {
-      "maxSockets": 10,
-      "maxFreeSockets": 5,
-      "timeout": 60000
-    },
     "openserp": {
       "enabled": false,
       "baseUrl": "https://api.openserp.com/search",
@@ -457,29 +452,6 @@ Example:
 }
 ```
 
-## Web connection pool configuration
-
-Source: `src/modules/web/http-pool.ts`, `src/modules/web/register.ts`.
-
-| Key | Type | Default | Required | Purpose | Related source |
-|---|---|---:|---|---|---|
-| `web.connectionPool.maxSockets` | number | `10` | No | HTTP/HTTPS agent max sockets | `src/modules/web/http-pool.ts` |
-| `web.connectionPool.maxFreeSockets` | number | `5` | No | Keep-alive idle socket limit | `src/modules/web/http-pool.ts` |
-| `web.connectionPool.timeout` | number | `60000` | No | Socket timeout in ms | `src/modules/web/http-pool.ts` |
-
-Example:
-
-```json
-{
-  "web": {
-    "connectionPool": {
-      "maxSockets": 20,
-      "maxFreeSockets": 10,
-      "timeout": 60000
-    }
-  }
-}
-```
 
 ## Jina Reader configuration
 

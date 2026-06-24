@@ -2,16 +2,17 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { mergeConfig } from "../../src/config/load-config.ts";
-import { addToolkitActivityEntry } from "../../src/shared/activity.ts";
-import { resetConvertToolStats } from "../../src/modules/convert/observability.ts";
 import { ActivityPanel, createActivityPanel } from "../../src/modules/subagents/commands/activity.ts";
-import { formatDoctorReport, runDoctorChecks, type DoctorReport } from "../../src/modules/subagents/commands/doctor.ts";
+import { type DoctorReport, formatDoctorReport, runDoctorChecks } from "../../src/modules/subagents/commands/doctor.ts";
 import { formatAgentList, formatAgentListJson, getAgentList } from "../../src/modules/subagents/commands/list.ts";
 import { formatLogs, formatLogsJson, getRecentLogs } from "../../src/modules/subagents/commands/logs.ts";
-import { clearActivityLog, recordFetchActivity, recordSearchActivity, resetWebToolStats } from "../../src/modules/web/observability.ts";
+import { clearActivityLog, resetToolkitStats } from "../../src/modules/subagents/commands/toolkit-stats.ts";
+import { recordFetchActivity, recordSearchActivity } from "../../src/modules/web/observability.ts";
 import { SEARCH_PROVIDER_NAMES } from "../../src/modules/web/providers/metadata.ts";
+import { addToolkitActivityEntry } from "../../src/shared/activity.ts";
 
 function stripAnsi(value: string): string {
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI escape stripping needs raw ESC char
 	return value.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
@@ -21,8 +22,21 @@ describe("subagent commands - doctor", () => {
 
 		assert.ok(Array.isArray(report.items));
 		assert.ok(report.summary);
-		for (const category of ["config", "agents", "subagents", "permissions", "web-tools", "lsp", "guards", "tool-metadata", "state-model"]) {
-			assert.ok(report.items.find((item) => item.category === category), `missing ${category}`);
+		for (const category of [
+			"config",
+			"agents",
+			"subagents",
+			"permissions",
+			"web-tools",
+			"lsp",
+			"guards",
+			"tool-metadata",
+			"state-model",
+		]) {
+			assert.ok(
+				report.items.find((item) => item.category === category),
+				`missing ${category}`
+			);
 		}
 		assert.ok(report.items.some((item) => item.category === "provider"));
 		assert.ok(report.items.some((item) => item.message?.includes("DuckDuckGo")));
@@ -63,12 +77,15 @@ describe("subagent commands - doctor", () => {
 	});
 
 	it("reports subagents phase6 strategy visibility in doctor output", async () => {
-		const report = await runDoctorChecks(process.cwd(), mergeConfig({
-			subagents: {
-				projectAgentPolicy: "confirm",
-				nonInteractivePolicy: "deny",
-			},
-		}));
+		const report = await runDoctorChecks(
+			process.cwd(),
+			mergeConfig({
+				subagents: {
+					projectAgentPolicy: "confirm",
+					nonInteractivePolicy: "deny",
+				},
+			})
+		);
 
 		const strategyItem = report.items.find(
 			(item) => item.category === "subagents" && item.message.includes("requires confirmation")
@@ -85,13 +102,16 @@ describe("subagent commands - doctor", () => {
 	});
 
 	it("reports guards gate effective strategy in doctor output", async () => {
-		const report = await runDoctorChecks(process.cwd(), mergeConfig({
-			guards: {
-				mode: "confirm",
-				nonInteractivePolicy: "deny",
-				blockMode: "hard",
-			},
-		}));
+		const report = await runDoctorChecks(
+			process.cwd(),
+			mergeConfig({
+				guards: {
+					mode: "confirm",
+					nonInteractivePolicy: "deny",
+					blockMode: "hard",
+				},
+			})
+		);
 
 		const guardsItem = report.items.find((item) => item.category === "guards");
 		assert.ok(guardsItem);
@@ -114,7 +134,9 @@ describe("subagent commands - doctor", () => {
 		assert.ok(["pass", "warn"].includes(ddgsItem.status));
 
 		for (const provider of SEARCH_PROVIDER_NAMES.filter((name) => name !== "ddgs")) {
-			const item = report.items.find((candidate) => candidate.message?.toLowerCase().includes(provider.toLowerCase()));
+			const item = report.items.find((candidate) =>
+				candidate.message?.toLowerCase().includes(provider.toLowerCase())
+			);
 			if (item) assert.ok(["pass", "warn", "info"].includes(item.status));
 		}
 	});
@@ -163,14 +185,12 @@ describe("subagent commands - list", () => {
 
 describe("subagent commands - logs", () => {
 	beforeEach(() => {
-		resetWebToolStats();
-		resetConvertToolStats();
+		resetToolkitStats();
 		clearActivityLog();
 	});
 
 	afterEach(() => {
-		resetWebToolStats();
-		resetConvertToolStats();
+		resetToolkitStats();
 		clearActivityLog();
 	});
 
@@ -223,18 +243,15 @@ describe("subagent commands - activity panel", () => {
 
 	beforeEach(() => {
 		clearActivityLog();
-		resetWebToolStats();
-		resetConvertToolStats();
+		resetToolkitStats();
 		panel = new ActivityPanel({ maxEntries: 10 });
 	});
 
 	afterEach(() => {
 		panel.dispose();
 		clearActivityLog();
-		resetWebToolStats();
-		resetConvertToolStats();
+		resetToolkitStats();
 	});
-
 	it("renders header, stats, help, empty state, and activity entries", () => {
 		let lines = panel.render(80);
 		assert.equal(visibleWidth(lines[0]!), 80);

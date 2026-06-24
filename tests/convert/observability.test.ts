@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/load-config.ts";
-import { registerConvertTools } from "../../src/modules/convert/index.ts";
-import { recordConvertActivity, resetConvertToolStats } from "../../src/modules/convert/observability.ts";
+import { recordConvertActivity, registerConvertTools, resetConvertToolStats } from "../../src/modules/convert/index.ts";
 import { clearToolkitActivityLog, getToolkitActivityLog } from "../../src/shared/activity.ts";
 
 const convertConfig = mergeConfig({}).convertContent;
@@ -48,13 +47,18 @@ describe("convert observability - activity log", () => {
 		registerConvertTools(pi as unknown as Parameters<typeof registerConvertTools>[0], convertConfig);
 
 		await assert.doesNotReject(async () => {
-			await emit(pi, "session_start", {}, {
-				sessionManager: {
-					getBranch: () => {
-						throw new Error("should not be called");
+			await emit(
+				pi,
+				"session_start",
+				{},
+				{
+					sessionManager: {
+						getBranch: () => {
+							throw new Error("should not be called");
+						},
 					},
-				},
-			});
+				}
+			);
 		});
 
 		assert.equal(getToolkitActivityLog().length, 0);

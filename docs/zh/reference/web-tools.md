@@ -441,7 +441,6 @@ Web tools 的错误结果统一为：
 - provider 子配置：`web.brave`、`web.openserp`、`web.searxng`、`web.tavily`、`web.serper`
 - `web.cache.*`：search cache
 - `web.concurrency.*`：请求并发与队列
-- `web.connectionPool.*`：HTTP/HTTPS keep-alive pool
 - `web.enableJinaFallback`、`web.jinaTimeoutMs`、`web.jinaTriggers`：Jina Reader fallback
 
 Provider 专项说明见 [`web-providers.md`](./web-providers.md)。

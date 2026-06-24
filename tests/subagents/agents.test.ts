@@ -6,12 +6,12 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { afterEach, describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
 	AGENT_DISCOVERY_DIAGNOSTIC_CODES,
-	discoverAgents,
 	type AgentConfig,
+	discoverAgents,
 	isAgentScope,
 	normalizeAgentScope,
 } from "../../src/modules/subagents/agents.ts";
@@ -86,7 +86,11 @@ describe("subagent builtin agents", () => {
 	it("legacy builtin agents are not present", () => {
 		const builtin = getBuiltinAgents();
 		for (const name of LEGACY_AGENTS) {
-			assert.equal(builtin.find((a) => a.name === name), undefined, `${name} should not exist`);
+			assert.equal(
+				builtin.find((a) => a.name === name),
+				undefined,
+				`${name} should not exist`
+			);
 		}
 	});
 });
@@ -110,12 +114,7 @@ describe("subagent agent scope model", () => {
 	it("applies user/project/both discovery scope semantics", () => {
 		const projectDir = tempAgent(
 			"scope-project",
-			[
-				"name: scope-project",
-				"description: Project scope agent",
-				"readonly: true",
-				"tools: read",
-			].join("\n"),
+			["name: scope-project", "description: Project scope agent", "readonly: true", "tools: read"].join("\n")
 		);
 
 		const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-mvp-home-scope-"));
@@ -127,7 +126,7 @@ describe("subagent agent scope model", () => {
 		fs.writeFileSync(
 			path.join(userAgentsDir, "scope-user.md"),
 			`---\nname: scope-user\ndescription: User scope agent\nreadonly: true\ntools: read\n---\n\nUser scope prompt.`,
-			"utf-8",
+			"utf-8"
 		);
 
 		try {
@@ -136,11 +135,17 @@ describe("subagent agent scope model", () => {
 
 			const userOnly = discoverAgents(projectDir, "user").agents;
 			assert.ok(userOnly.some((a) => a.name === "scope-user"));
-			assert.equal(userOnly.some((a) => a.name === "scope-project"), false);
+			assert.equal(
+				userOnly.some((a) => a.name === "scope-project"),
+				false
+			);
 
 			const projectOnly = discoverAgents(projectDir, "project").agents;
 			assert.ok(projectOnly.some((a) => a.name === "scope-project"));
-			assert.equal(projectOnly.some((a) => a.name === "scope-user"), false);
+			assert.equal(
+				projectOnly.some((a) => a.name === "scope-user"),
+				false
+			);
 
 			const both = discoverAgents(projectDir, "both").agents;
 			assert.ok(both.some((a) => a.name === "scope-user"));
@@ -158,50 +163,37 @@ describe("subagent frontmatter diagnostics", () => {
 	it("returns structured diagnostics for invalid frontmatter matrix", () => {
 		const dirMissingName = tempAgent(
 			"invalid-missing-name",
-			["description: Missing name", "readonly: true", "tools: read"].join("\n"),
+			["description: Missing name", "readonly: true", "tools: read"].join("\n")
 		);
 		const dirInvalidReadonly = tempAgent(
 			"invalid-readonly",
-			[
-				"name: invalid-readonly",
-				"description: bad readonly",
-				"readonly: maybe",
-				"tools: read",
-			].join("\n"),
+			["name: invalid-readonly", "description: bad readonly", "readonly: maybe", "tools: read"].join("\n")
 		);
 		const dirInvalidTools = tempAgent(
 			"invalid-tools",
-			[
-				"name: invalid-tools",
-				"description: bad tools",
-				"readonly: true",
-				"tools: , ,",
-			].join("\n"),
+			["name: invalid-tools", "description: bad tools", "readonly: true", "tools: , ,"].join("\n")
 		);
 
 		const r1 = discoverAgents(dirMissingName, "project");
-		assert.equal(r1.agents.some((a) => a.name === "invalid-missing-name"), false);
-		assert.ok(
-			r1.diagnostics.some(
-				(d) => d.code === AGENT_DISCOVERY_DIAGNOSTIC_CODES.FRONTMATTER_NAME_MISSING,
-			),
+		assert.equal(
+			r1.agents.some((a) => a.name === "invalid-missing-name"),
+			false
 		);
+		assert.ok(r1.diagnostics.some((d) => d.code === AGENT_DISCOVERY_DIAGNOSTIC_CODES.FRONTMATTER_NAME_MISSING));
 
 		const r2 = discoverAgents(dirInvalidReadonly, "project");
-		assert.equal(r2.agents.some((a) => a.name === "invalid-readonly"), false);
-		assert.ok(
-			r2.diagnostics.some(
-				(d) => d.code === AGENT_DISCOVERY_DIAGNOSTIC_CODES.FRONTMATTER_READONLY_INVALID,
-			),
+		assert.equal(
+			r2.agents.some((a) => a.name === "invalid-readonly"),
+			false
 		);
+		assert.ok(r2.diagnostics.some((d) => d.code === AGENT_DISCOVERY_DIAGNOSTIC_CODES.FRONTMATTER_READONLY_INVALID));
 
 		const r3 = discoverAgents(dirInvalidTools, "project");
-		assert.equal(r3.agents.some((a) => a.name === "invalid-tools"), false);
-		assert.ok(
-			r3.diagnostics.some(
-				(d) => d.code === AGENT_DISCOVERY_DIAGNOSTIC_CODES.FRONTMATTER_TOOLS_INVALID,
-			),
+		assert.equal(
+			r3.agents.some((a) => a.name === "invalid-tools"),
+			false
 		);
+		assert.ok(r3.diagnostics.some((d) => d.code === AGENT_DISCOVERY_DIAGNOSTIC_CODES.FRONTMATTER_TOOLS_INVALID));
 	});
 });
 
@@ -209,7 +201,12 @@ describe("subagent project and user agent discovery", () => {
 	it("parses simple frontmatter for project agents", () => {
 		const dir = tempAgent(
 			"custom",
-			["name: custom-reviewer", "description: Project-specific reviewer", "readonly: true", "tools: read, grep, find, ls"].join("\n"),
+			[
+				"name: custom-reviewer",
+				"description: Project-specific reviewer",
+				"readonly: true",
+				"tools: read, grep, find, ls",
+			].join("\n")
 		);
 
 		const result = discoverAgents(dir, "project");
@@ -224,13 +221,22 @@ describe("subagent project and user agent discovery", () => {
 
 	it("does not restore removed frontmatter features", () => {
 		const pkgDir = tempAgent("pkg-agent", "name: pkg-agent\npackage: code-analysis\ndescription: Fast recon");
-		assert.equal(discoverAgents(pkgDir, "project").agents.find((a) => a.name === "code-analysis.pkg-agent"), undefined);
+		assert.equal(
+			discoverAgents(pkgDir, "project").agents.find((a) => a.name === "code-analysis.pkg-agent"),
+			undefined
+		);
 
 		const skillDir = tempAgent("skill-agent", "name: skill-agent\ndescription: Worker\ninheritSkills: true");
-		assert.equal((discoverAgents(skillDir, "project").agents.find((a) => a.name === "skill-agent") as any)?.inheritSkills, undefined);
+		assert.equal(
+			(discoverAgents(skillDir, "project").agents.find((a) => a.name === "skill-agent") as any)?.inheritSkills,
+			undefined
+		);
 
 		const ctxDir = tempAgent("ctx-agent", "name: ctx-agent\ndescription: Delegate\ndefaultContext: fork");
-		assert.equal((discoverAgents(ctxDir, "project").agents.find((a) => a.name === "ctx-agent") as any)?.defaultContext, undefined);
+		assert.equal(
+			(discoverAgents(ctxDir, "project").agents.find((a) => a.name === "ctx-agent") as any)?.defaultContext,
+			undefined
+		);
 	});
 
 	it("discovers user agents from ~/.pi/agent/agents", () => {
@@ -245,7 +251,7 @@ describe("subagent project and user agent discovery", () => {
 		fs.writeFileSync(
 			path.join(userAgentsDir, "my-agent.md"),
 			`---\nname: my-agent\ndescription: My custom agent\nreadonly: true\ntools: read, grep\n---\n\nMy agent prompt.`,
-			"utf-8",
+			"utf-8"
 		);
 		try {
 			process.env.HOME = homeDir;

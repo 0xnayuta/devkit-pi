@@ -3,11 +3,10 @@ import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { getDevkitToolMetadata } from "../../extension/manifest.ts";
 import { createDevkitErrorPayload } from "../../shared/errors.ts";
 import { createLogger, type Logger } from "../../shared/logger.ts";
-import type { ResolvedWebConfig } from "../../shared/types.ts";
+import type { ProviderStats, ResolvedWebConfig, WebToolStats } from "../../shared/types.ts";
 import { initializeSearchCache } from "./cache.ts";
 import { initializeRequestThrottler } from "./concurrency.ts";
 import { fetchContent } from "./fetch.ts";
-import { initializeConnectionPool } from "./http-pool.ts";
 import { configureWebObservability, recordGetContentActivity, resetWebToolStats } from "./observability.ts";
 import {
 	renderFetchContentCall,
@@ -60,27 +59,18 @@ export {
 	type WebError,
 	type WebErrorCode,
 } from "./errors.ts";
-export {
-	type ConnectionPoolConfig,
-	getConnectionPool,
-	HttpConnectionPool,
-	initializeConnectionPool,
-	type PoolStats,
-	pooledFetch,
-	resetConnectionPool,
-} from "./http-pool.ts";
+export type { ActivityEntry } from "./observability.ts";
 // Re-export observability and error APIs for external access
 export {
-	type ActivityEntry,
 	getActivityLog,
 	getDebugLevel,
 	getWebToolStats,
-	type ProviderStats,
 	recordFetchActivity,
 	recordGetContentActivity,
 	recordSearchActivity,
-	type WebToolStats,
+	resetWebToolStats,
 } from "./observability.ts";
+export type { ProviderStats, WebToolStats };
 
 type WebRenderTheme = Parameters<typeof renderWebSearchCall>[1];
 
@@ -101,7 +91,6 @@ export function registerWebTools(pi: ExtensionAPI, config: ResolvedWebConfig, op
 	// Initialize performance optimization modules
 	initializeSearchCache(config.cache);
 	initializeRequestThrottler(config.concurrency);
-	initializeConnectionPool(config.connectionPool);
 
 	configureWebObservability(config.debug);
 	setStorageLimits({
