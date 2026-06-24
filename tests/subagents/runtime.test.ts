@@ -6,8 +6,15 @@ import { mergeConfig } from "../../src/config/load-config.ts";
 import type { AgentConfig } from "../../src/modules/subagents/agents.ts";
 import { classifyChildJsonlEvent } from "../../src/modules/subagents/child-event-filter.ts";
 import { ChildStdoutCollector } from "../../src/modules/subagents/child-output-buffer.ts";
-import { collectOutput, extractFinalOutput, extractProviderError, extractUsage, parseJsonLines } from "../../src/modules/subagents/collect-output.ts";
+import {
+	collectOutput,
+	extractFinalOutput,
+	extractProviderError,
+	extractUsage,
+	parseJsonLines,
+} from "../../src/modules/subagents/collect-output.ts";
 import { filterToolsForReadonly } from "../../src/modules/subagents/executor.ts";
+import { buildPiCommand } from "../../src/modules/subagents/pi-args.ts";
 import {
 	getPreferredPiJsonStreamProfiles,
 	notePiJsonStreamProfileSuccess,
@@ -20,11 +27,14 @@ import {
 	compactAssistantMessageEvent,
 	serializePiJsonStreamEvent,
 } from "../../src/modules/subagents/pi-json-stream-serializer.ts";
-import { buildPiCommand } from "../../src/modules/subagents/pi-args.ts";
-import { getPiSpawnCommand, resolveWindowsPiCliScript, type PiSpawnDeps } from "../../src/modules/subagents/pi-spawn.ts";
+import {
+	getPiSpawnCommand,
+	type PiSpawnDeps,
+	resolveWindowsPiCliScript,
+} from "../../src/modules/subagents/pi-spawn.ts";
 import registerSubagentPromptRuntime, {
-	CHILD_SUBAGENT_BOUNDARY_INSTRUCTIONS,
 	buildChildPrompt,
+	CHILD_SUBAGENT_BOUNDARY_INSTRUCTIONS,
 	rewriteSubagentPrompt,
 	stripInheritedSkills,
 	stripParentOnlySubagentMessages,
@@ -40,7 +50,8 @@ const envSnapshot = {
 	PI_SUBAGENT_INHERIT_SKILLS: process.env.PI_SUBAGENT_INHERIT_SKILLS,
 };
 
-const SKILLS_SECTION = "\n\nThe following skills provide specialized instructions for specific tasks.\nUse the read tool to load a skill's file when the task matches its description.\nWhen a skill file references a relative path, resolve it against the skill directory (parent of SKILL.md / dirname of the path) and use that absolute path in tool commands.\n\n<available_skills>\n  <skill>\n    <name>safe-bash</name>\n    <description>desc</description>\n    <location>/tmp/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>devkit-pi</name>\n    <description>delegate to subagents</description>\n    <location>/tmp/devkit-pi/SKILL.md</location>\n  </skill>\n</available_skills>";
+const SKILLS_SECTION =
+	"\n\nThe following skills provide specialized instructions for specific tasks.\nUse the read tool to load a skill's file when the task matches its description.\nWhen a skill file references a relative path, resolve it against the skill directory (parent of SKILL.md / dirname of the path) and use that absolute path in tool commands.\n\n<available_skills>\n  <skill>\n    <name>safe-bash</name>\n    <description>desc</description>\n    <location>/tmp/SKILL.md</location>\n  </skill>\n  <skill>\n    <name>devkit-pi</name>\n    <description>delegate to subagents</description>\n    <location>/tmp/devkit-pi/SKILL.md</location>\n  </skill>\n</available_skills>";
 
 const BASE_PROMPT = [
 	"You are a subagent.",
@@ -51,7 +62,7 @@ const BASE_PROMPT = [
 ].join("");
 
 const PROMPT_WITH_EXPLICIT_SKILL = [
-	"You are a subagent.\n\n<skill name=\"explicit\">\nKeep this section\n</skill>",
+	'You are a subagent.\n\n<skill name="explicit">\nKeep this section\n</skill>',
 	"\n\n# Project Context\n\nProject-specific instructions and guidelines:\n\n## /repo/AGENTS.md\n\nProject rules\n\n",
 	SKILLS_SECTION,
 	"\nCurrent date: 2026-04-16",
@@ -87,7 +98,8 @@ function makeDeps(input: {
 }
 
 afterEach(() => {
-	if (envSnapshot.PI_SUBAGENT_INHERIT_PROJECT_CONTEXT === undefined) delete process.env.PI_SUBAGENT_INHERIT_PROJECT_CONTEXT;
+	if (envSnapshot.PI_SUBAGENT_INHERIT_PROJECT_CONTEXT === undefined)
+		delete process.env.PI_SUBAGENT_INHERIT_PROJECT_CONTEXT;
 	else process.env.PI_SUBAGENT_INHERIT_PROJECT_CONTEXT = envSnapshot.PI_SUBAGENT_INHERIT_PROJECT_CONTEXT;
 	if (envSnapshot.PI_SUBAGENT_INHERIT_SKILLS === undefined) delete process.env.PI_SUBAGENT_INHERIT_SKILLS;
 	else process.env.PI_SUBAGENT_INHERIT_SKILLS = envSnapshot.PI_SUBAGENT_INHERIT_SKILLS;
@@ -125,7 +137,10 @@ describe("subagent runtime output collection", () => {
 	it("returns a diagnostic instead of raw JSONL when no final text exists", () => {
 		const raw = [
 			line({ type: "session", id: "abc" }),
-			line({ type: "turn_end", message: { role: "assistant", content: [{ type: "toolCall", name: "grep" }], stopReason: "toolUse" } }),
+			line({
+				type: "turn_end",
+				message: { role: "assistant", content: [{ type: "toolCall", name: "grep" }], stopReason: "toolUse" },
+			}),
 		].join("");
 
 		const result = collectOutput(raw);
@@ -136,8 +151,21 @@ describe("subagent runtime output collection", () => {
 
 	it("extracts provider errors and preserves partial assistant output", () => {
 		const raw = [
-			line({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "Let me check the docs first." }], stopReason: "toolUse" } }),
-			line({ type: "message", message: { role: "assistant", content: [{ type: "text", text: "Error Code internal_server_error: stream error: INTERNAL_ERROR" }] } }),
+			line({
+				type: "message_end",
+				message: {
+					role: "assistant",
+					content: [{ type: "text", text: "Let me check the docs first." }],
+					stopReason: "toolUse",
+				},
+			}),
+			line({
+				type: "message",
+				message: {
+					role: "assistant",
+					content: [{ type: "text", text: "Error Code internal_server_error: stream error: INTERNAL_ERROR" }],
+				},
+			}),
 		].join("");
 
 		const messages = parseJsonLines(raw);
@@ -158,12 +186,28 @@ describe("subagent runtime output collection", () => {
 	it("extracts usage from the last usage-bearing message", () => {
 		const messages = parseJsonLines(
 			[
-				line({ type: "message_end", message: { role: "assistant", usage: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4, cost: 5 } } }),
-				line({ type: "turn_end", message: { role: "assistant", usage: { input: 6, output: 7, cacheRead: 8, cacheWrite: 9, cost: { total: 10 } } } }),
-			].join(""),
+				line({
+					type: "message_end",
+					message: { role: "assistant", usage: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4, cost: 5 } },
+				}),
+				line({
+					type: "turn_end",
+					message: {
+						role: "assistant",
+						usage: { input: 6, output: 7, cacheRead: 8, cacheWrite: 9, cost: { total: 10 } },
+					},
+				}),
+			].join("")
 		);
 
-		assert.deepEqual(extractUsage(messages), { input: 6, output: 7, cacheRead: 8, cacheWrite: 9, cost: 10, turns: 1 });
+		assert.deepEqual(extractUsage(messages), {
+			input: 6,
+			output: 7,
+			cacheRead: 8,
+			cacheWrite: 9,
+			cost: 10,
+			turns: 1,
+		});
 	});
 });
 
@@ -200,16 +244,25 @@ describe("subagent child stdout collector", () => {
 		const events = collector.push(
 			Buffer.from(
 				[
-					line({ type: "message_update", message: { role: "assistant", content: [{ type: "text", text: "partial" }] } }),
-					line({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "final" }] } }),
-				].join(""),
-			),
+					line({
+						type: "message_update",
+						message: { role: "assistant", content: [{ type: "text", text: "partial" }] },
+					}),
+					line({
+						type: "message_end",
+						message: { role: "assistant", content: [{ type: "text", text: "final" }] },
+					}),
+				].join("")
+			)
 		);
 
 		assert.equal(collector.limitExceeded, undefined);
 		assert.deepEqual(collector.counts, { persistedJsonlLines: 1, transientJsonlLines: 1 });
 		assert.equal(events.length, 2);
-		assert.equal(collector.decode(), line({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "final" }] } }));
+		assert.equal(
+			collector.decode(),
+			line({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "final" }] } })
+		);
 	});
 
 	it("enforces transient JSONL limits independently from persisted JSONL limits", () => {
@@ -226,8 +279,8 @@ describe("subagent child stdout collector", () => {
 					line({ type: "message_update", message: { role: "assistant" } }),
 					line({ type: "message_update", message: { role: "assistant" } }),
 					line({ type: "message_update", message: { role: "assistant" } }),
-				].join(""),
-			),
+				].join("")
+			)
 		);
 
 		assert.equal(collector.limitExceeded, "transientJsonlLines");
@@ -287,7 +340,10 @@ describe("subagent prompt runtime", () => {
 	});
 
 	it("keeps explicit skills and strips devkit-pi orchestration skill", () => {
-		const rewritten = rewriteSubagentPrompt(PROMPT_WITH_EXPLICIT_SKILL, { inheritProjectContext: false, inheritSkills: false });
+		const rewritten = rewriteSubagentPrompt(PROMPT_WITH_EXPLICIT_SKILL, {
+			inheritProjectContext: false,
+			inheritSkills: false,
+		});
 		assert.ok(rewritten.includes('<skill name="explicit">'));
 		assert.ok(!rewritten.includes("<available_skills>"));
 
@@ -305,14 +361,26 @@ describe("subagent prompt runtime", () => {
 
 		const readResult = { role: "toolResult", toolName: "read", content: "file" };
 		const subagentResult = { role: "toolResult", toolName: "subagent", content: "results" };
-		const mixedAssistant = { role: "assistant", content: [{ type: "toolCall", name: "subagent", input: {} }, { type: "toolCall", name: "read", input: {} }] };
+		const mixedAssistant = {
+			role: "assistant",
+			content: [
+				{ type: "toolCall", name: "subagent", input: {} },
+				{ type: "toolCall", name: "read", input: {} },
+			],
+		};
 
 		const filtered = stripParentOnlySubagentMessages([user, subagentResult, readResult, mixedAssistant]);
-		assert.deepEqual(filtered, [user, readResult, { role: "assistant", content: [{ type: "toolCall", name: "read", input: {} }] }]);
+		assert.deepEqual(filtered, [
+			user,
+			readResult,
+			{ role: "assistant", content: [{ type: "toolCall", name: "read", input: {} }] },
+		]);
 	});
 
 	it("rewrites prompt and filters context via runtime hooks", async () => {
-		let beforeAgentStart: ((event: { systemPrompt: string }) => Promise<{ systemPrompt: string } | undefined>) | undefined;
+		let beforeAgentStart:
+			| ((event: { systemPrompt: string }) => Promise<{ systemPrompt: string } | undefined>)
+			| undefined;
 		let contextHandler: ((event: { messages: unknown[] }) => { messages: unknown[] } | undefined) | undefined;
 		registerSubagentPromptRuntime({
 			on(event: string, handler: unknown) {
@@ -334,7 +402,10 @@ describe("subagent prompt runtime", () => {
 		const instruction = { role: "custom", customType: "subagent-orchestration-instructions", content: "enabled" };
 		assert.deepEqual(contextHandler?.({ messages: [msg, instruction] }), { messages: [msg] });
 
-		const clean = [{ role: "user", content: "Task" }, { role: "toolResult", toolName: "read", content: "file" }];
+		const clean = [
+			{ role: "user", content: "Task" },
+			{ role: "toolResult", toolName: "read", content: "file" },
+		];
 		assert.equal(contextHandler?.({ messages: clean }), undefined);
 	});
 });
@@ -377,9 +448,12 @@ describe("subagent compact json stream serializer", () => {
 	it("drops tool_execution_update in compact mode and preserves lifecycle events", () => {
 		assert.equal(
 			compactAgentSessionEvent({ type: "tool_execution_update", toolCallId: "1", partialResult: "huge" }),
-			undefined,
+			undefined
 		);
-		const lifecycle = { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "final" }] } };
+		const lifecycle = {
+			type: "message_end",
+			message: { role: "assistant", content: [{ type: "text", text: "final" }] },
+		};
 		assert.equal(compactAgentSessionEvent(lifecycle), lifecycle);
 	});
 
@@ -402,7 +476,7 @@ describe("subagent compact json stream serializer", () => {
 				api: "messages",
 				timestamp: 123,
 			}),
-			{ type: "done", reason: "stop" },
+			{ type: "done", reason: "stop" }
 		);
 	});
 });
@@ -434,7 +508,7 @@ describe("subagent pi json stream compatibility", () => {
 				error: "error: unknown option '--json-stream'",
 				output: "",
 			}),
-			true,
+			true
 		);
 		assert.equal(
 			shouldFallbackFromCompactJsonStreamFailure({
@@ -442,7 +516,7 @@ describe("subagent pi json stream compatibility", () => {
 				error: "provider timeout while using json-stream transport",
 				output: "",
 			}),
-			false,
+			false
 		);
 	});
 });
@@ -483,7 +557,10 @@ describe("subagent spawn command", () => {
 
 	it("falls back to pi when Windows CLI script cannot be resolved", () => {
 		const args = ["-p", "Task: hello"];
-		const result = getPiSpawnCommand(args, makeDeps({ platform: "win32", argv1: "/opt/pi/subagent-runner.ts", existing: [] }));
+		const result = getPiSpawnCommand(
+			args,
+			makeDeps({ platform: "win32", argv1: "/opt/pi/subagent-runner.ts", existing: [] })
+		);
 		assert.deepEqual(result, { command: "pi", args });
 	});
 
@@ -533,7 +610,16 @@ describe("subagent readonly tool policy", () => {
 	});
 
 	it("removes lsp when disabled or no readonly LSP actions are allowed", () => {
-		assert.equal(filterToolsForReadonly(agent, mergeConfig({ subagents: { allowLspTools: false } }).subagents).includes("lsp"), false);
-		assert.equal(filterToolsForReadonly(agent, mergeConfig({ subagents: { allowedLspActions: ["rename" as any] } }).subagents).includes("lsp"), false);
+		assert.equal(
+			filterToolsForReadonly(agent, mergeConfig({ subagents: { allowLspTools: false } }).subagents).includes("lsp"),
+			false
+		);
+		assert.equal(
+			filterToolsForReadonly(
+				agent,
+				mergeConfig({ subagents: { allowedLspActions: ["rename" as any] } }).subagents
+			).includes("lsp"),
+			false
+		);
 	});
 });
