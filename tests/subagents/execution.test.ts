@@ -352,12 +352,12 @@ while (true) { await new Promise(r => setTimeout(r, 50)); }
 
 	it("idle timeout fires when no valid JSONL activity events are emitted", async () => {
 		const { dir, scriptPath } = makeTempPiNodeScript(`
-setInterval(() => process.stderr.write("still running...\n"), 100);
-await new Promise(() => {});
+process.on("SIGTERM", () => process.exit(0));
+while (true) { await new Promise(r => setTimeout(r, 50)); }
 `);
 		const started = performance.now();
 		const result = await runSync(dir, [], {
-			timeoutMs: 3000,
+			timeoutMs: 500,
 			idleTimeoutMs: 75,
 			spawnCommand: { command: process.execPath, args: [scriptPath] },
 		});
