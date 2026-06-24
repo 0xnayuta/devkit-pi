@@ -1,7 +1,7 @@
 ---
 status: current
 audience: maintainer
-last_verified: 2026-05-21
+last_verified: 2026-06-24
 language: chinese
 ---
 
@@ -26,7 +26,7 @@ language: chinese
 | 审计日期 | `2026-05-21` |
 | 审计基线 | `main` / `6d5cea645273c7e7d2bf33beb84069253c845eac` |
 | 审计人 | pi coding agent |
-| 复审状态 | `Initial` |
+| 复审状态 | `Closed` |
 
 ### 0.2 风险与状态汇总
 
@@ -34,17 +34,17 @@ language: chinese
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | P0 | 2 | 0 | 0 | 0 | 0 | 2 |
 | P1 | 2 | 0 | 0 | 0 | 0 | 2 |
-| P2 | 5 | 4 | 0 | 0 | 0 | 1 |
+| P2 | 5 | 0 | 0 | 0 | 0 | 5 |
 | P3 | 0 | 0 | 0 | 0 | 0 | 0 |
-| **合计** | 9 | 4 | 0 | 0 | 0 | 5 |
+| **合计** | 9 | 0 | 0 | 0 | 0 | 9 |
 
 ### 0.3 关键结论
 
 - 总体评级：`B`
-- 当前是否适合继续新增功能：`Conditional`
-- 当前是否建议优先重构：`Conditional`，P0/P1 已关闭；继续处理 P2 架构、资源与工程门禁问题。
-- 最大风险：剩余风险集中在 HTTP connection pool 语义、跨模块 observability 读取、skipped tests 与工程门禁覆盖范围。
-- 下一步最高优先级：处理 `RES-001` 与 `ENG-001`，并评估 skipped tests 跨平台化。
+- 当前是否适合继续新增功能：`Yes`
+- 当前是否建议优先重构：`No`，所有审计问题已关闭。
+- 最大风险：无剩余审计风险。
+- 下一步最高优先级：无。
 
 ### 0.4 Top Findings
 
@@ -132,9 +132,9 @@ language: chinese
 | 语言 | TypeScript / ESM | `module: NodeNext`，允许 `.ts` 扩展导入。 |
 | 运行时 | Node.js `>=22.19.0` | CI 使用 Node 24。 |
 | 包管理 | pnpm `11.1.2` | `packageManager` 已声明。 |
-| 测试框架 | `node:test` + `--experimental-strip-types` | 单元测试 473 个，其中 11 skipped。 |
-| Lint/Format | Biome `2.4.x` | 当前 `lint` 仅覆盖 `src`。 |
-| CI | GitHub Actions | `ci.yml` 运行 docs check、test、coverage；未显式运行 `pnpm typecheck` / `pnpm lint`。 |
+| 测试框架 | `node:test` + `--experimental-strip-types` | 单元测试 471 个，0 skip。 |
+| Lint/Format | Biome `2.4.x` | 已扩展为 `src tests scripts docs/.vitepress/config.ts`。 |
+| CI | GitHub Actions | 已增加 `pnpm typecheck` 和 `pnpm lint` 步骤。 |
 
 ### 2.3 目录与模块边界
 
@@ -208,7 +208,7 @@ devkit-pi/
 
 ### 3.6 测试体系
 
-- 单元测试：覆盖广，`pnpm test` 结果为 473 tests / 462 pass / 11 skipped / 0 fail。
+- 单元测试：覆盖广，`pnpm test` 结果为 471 tests / 471 pass / 0 skip / 0 fail。
 - 集成 / 回归测试：web security、pinned DNS、convert URL 下载、LSP lifecycle、subagent child 输出等均有回归测试。
 - coverage 可见性：`pnpm test:coverage` 通过，V8 coverage 当前为 99.15% line / 99.01% function。
 - 关联问题：`TEST-001`、`ENG-001`。
@@ -235,9 +235,9 @@ devkit-pi/
 
 | 命令 | 结果 | 说明 |
 | --- | --- | --- |
-| `pnpm lint` | `Pass` | 本地通过；当前脚本为 `biome check src`，未覆盖 tests/scripts/docs config。 |
+| `pnpm lint` | `Pass` | 本地通过；脚本已扩展为 `biome check src tests scripts docs/.vitepress/config.ts`。 |
 | `pnpm typecheck` | `Pass` | 本地通过；`tsconfig` include 为 `src/**/*` 与 `tests/**/*`。 |
-| `pnpm test` | `Pass` | 473 tests / 462 pass / 11 skipped / 0 fail。 |
+| `pnpm test` | `Pass` | 471 tests / 471 pass / 0 skip / 0 fail。 |
 | `pnpm test:coverage` | `Pass` | 生成 `.coverage/summary.json` 与 `.coverage/hotspots.md`。 |
 | `pnpm docs:check` | `Pass` | 文档检查通过。 |
 
@@ -288,11 +288,11 @@ devkit-pi/
 
 ### 5.3 近期排期（P2）
 
-- [ ] `RES-001`：重构或移除当前 `HttpConnectionPool`；如保留连接池，改用 undici `Agent` / `Dispatcher` 并与 pinned DNS 兼容，统计改为真实值或删去误导性字段。
+- [x] `RES-001`：移除废弃的 `HttpConnectionPool`（dead code，未被任何生产代码使用）；已删除整个 `http-pool.ts`、配置项、类型、导入/导出及测试。文档同步更新。
 - [x] `DOC-001`：已同步 security-model/web-providers/web-tools 文档，明确 `web_search` provider baseUrl 的私网策略。
-- [ ] `TEST-001`：清理或正式记录 11 个 skipped 测试的风险接受理由；能跨平台化的改为正常运行。
-- [ ] `ENG-001`：CI 增加 `pnpm typecheck` 和 `pnpm lint`；lint 范围评估扩展到 `tests`、`scripts`、`docs/.vitepress/config.ts`。
-- [ ] `ARCH-001`：收敛 `/toolkit`/subagent commands 对 web/convert observability 的跨模块读取，提供 shared facade 或迁移到 commands 模块。
+- [x] `TEST-001`：11 个 POSIX-only skipped 测试已全部转换为跨平台 Node.js 脚本（`makeTempPiNodeScript` + `spawnCommand` 模式），现正常运行。
+- [x] `ENG-001`：CI 增加 `pnpm typecheck` 和 `pnpm lint`；lint 范围评估扩展到 `tests`、`scripts`、`docs/.vitepress/config.ts`。
+- [x] `ARCH-001`：收敛 `/toolkit`/subagent commands 对 web/convert observability 的跨模块读取。创建 `src/modules/subagents/commands/toolkit-stats.ts` 作为唯一的跨模块观测数据读取入口；`ProviderStats`/`WebToolStats` 类型提升至 `shared/types.ts`；所有生产代码的跨模块导入均收敛至此入口。
 
 ### 5.4 后续优化（P3）
 
@@ -304,23 +304,23 @@ devkit-pi/
 
 ### 6.1 当前判断
 
-`devkit-pi` 已具备较成熟的模块化结构、测试覆盖率和文档体系；本轮发现的 P0/P1 安全问题已关闭。剩余风险集中在 HTTP pool 真实连接限制、跨模块 observability 读取、skipped tests 与工程门禁范围。
+`devkit-pi` 已具备较成熟的模块化结构、测试覆盖率和文档体系；本轮（2026-05-21 → 2026-06-24）审计发现的所有 9 项问题（2 × P0、2 × P1、5 × P2）已全部关闭。无剩余审计风险。
 
 ### 6.2 是否建议继续新增功能
 
-`Conditional`：P0/P1 已关闭；建议处理 `RES-001` / `ENG-001` 后再扩大用户可见网络或外部命令能力。
+`Yes`：所有审计问题已关闭，功能新增不受限。
 
 ### 6.3 是否建议先重构 / 补测试 / 补文档
 
-- 重构：`Conditional`：优先处理 http pool 与 observability 边界；避免大规模顶层重排。
-- 补测试：`Yes`：P0/P1 已补 security regression tests；继续处理 skipped tests 口径。
-- 补文档：`Conditional`：P0/P1 文档已同步；后续用户可见行为变化继续同步文档。
+- 重构：`No`。所有架构问题已处理（HttpConnectionPool 已删除，observability 读取已收敛至单一 facade）。
+- 补测试：`No`。11 个 POSIX-only skipped 测试已跨平台化；471 测试全部通过、零 skip。
+- 补文档：`No`。所有配置、安全、web-tools 文档已同步。
 
 ### 6.4 下一步三件事
 
-1. 处理 `RES-001`：校正 HTTP connection pool 语义与统计。
-2. 处理 `ENG-001`：CI 增加 `pnpm typecheck` 与 `pnpm lint`，并评估 lint/test glob 覆盖范围。
-3. 处理 `TEST-001`：为 skipped tests 增加书面理由或跨平台替代覆盖。
+1. 继续监控测试与工程门禁稳定性。
+2. 维持当前 lint/typecheck/test CI 门禁覆盖率。
+3. 新增跨模块读取 observability 时必须通过 `toolkit-stats.ts`。
 
 ---
 
@@ -337,6 +337,15 @@ devkit-pi/
 - 验证命令：`pnpm typecheck`、`pnpm lint`、`pnpm test`、`pnpm docs:check`、`pnpm test:coverage` 均通过。
 - 复审结论：质量基线高，P0/P1 已关闭；按路线图继续关闭 P2。
 
+### 7.2 复审（2026-06-24）
+
+- 复审基线：`main`
+- 已关闭问题：`RES-001`、`ARCH-001`、`TEST-001`、`ENG-001`。
+- 状态变化：`RES-001 Open -> Closed`、`ARCH-001 Open -> Closed`、`TEST-001 Open -> Closed`、`ENG-001 Open -> Closed`。
+- P2 全部关闭，审计看板总计 9/9 Closed。
+- 验证命令：`pnpm format`、`pnpm lint`、`pnpm typecheck`、`pnpm test`（471 tests、471 pass、0 skip）、`pnpm docs:check` 均通过。
+- 复审结论：所有审计问题已关闭，项目审计状态清理完成。
+
 ---
 
 ## 8. 附录：问题总表（Finding Registry）
@@ -349,11 +358,11 @@ devkit-pi/
 | SEC-002 | 安全 | `sanitizeOutput()` 敏感值替换表达式反向保留 secret | P0 | Closed | 原审计 → 本轮修复 | 子代理输出 sanitizer 已修复捕获组，不再把敏感值作为 replacement 输出。 | 代码：`src/modules/subagents/sanitize.ts`；测试：`tests/subagents/sanitize.test.ts` 覆盖 API key、access token、AWS、OPENAI、Authorization、Bearer、GitHub token、URL secret query；命令：`pnpm test`。 | - | sanitizer 对任何 secret 模式仍输出原值，或新增模式缺少测试。 | 维持 secret redaction 矩阵测试；新增敏感模式必须先补测试。 |
 | SEC-003 | 安全 | `convert_content` 直接暴露外部 CLI stderr 摘要 | P1 | Closed | 原审计 → 本轮修复 | MarkItDown stderr summary 已在进入 error message/causeSummary 前复用 shared output redaction。 | 代码：`src/modules/convert/provider.ts` 的 `summarizeStderr()` 调用 `sanitizeOutput()`；测试：`tests/convert/provider.test.ts` 覆盖 API key 与 URL token query redaction；共享实现：`src/shared/output-sanitize.ts`。 | - | MarkItDown 或其他 provider stderr 未做 redaction 即用户可见。 | 维持 stderr redaction 回归测试；新增 converter provider 必须复用 shared redaction。 |
 | SEC-004 | 安全 | `convert_content` 本地路径边界使用 `process.cwd()` 而非工具上下文 cwd | P1 | Closed | 原审计 → 本轮修复 | `convert_content` 工具执行链路已把工具上下文 `ctx.cwd` 作为 workspace root 传入本地路径校验。 | 代码：`src/modules/convert/index.ts` execute 传入 `{ workspaceRoot: ctx.cwd }`；`src/modules/convert/tool.ts` 将 runtime workspaceRoot 传给 `validateLocalFilePath()`；测试：`tests/convert/tool.test.ts` 覆盖 process cwd 与 workspace root 分离场景。 | - | 工具上下文 cwd 与 `process.cwd()` 不一致场景未被正确处理。 | 维持 cwd/workspace 分离测试；未来文件系统工具必须显式传入 workspace root。 |
-| RES-001 | 资源 | HTTP connection pool 对 global fetch 的连接限制可能无效且统计不可信 | P2 | Open | 原审计 | `web.connectionPool` 配置可能无法真正限制连接数，诊断 stats 误导维护者。 | 代码：`src/modules/web/http-pool.ts` 将 `http.Agent/https.Agent` 通过 `agent` 传给 `fetch()` 并 `@ts-expect-error`；`activeSockets` 用取模近似，`pendingRequests` 固定 0。 | - | 连接池仍通过非 undici dispatcher 实现或 stats 仍为近似值但对用户展示为真实值。 | 使用 undici dispatcher/Agent 或删除连接池承诺；修正 stats 与文档。 |
-| ARCH-001 | 架构 | `/toolkit` 与 subagent commands 跨模块读取 web/convert observability | P2 | Open | 原审计 | 聚合命令职责可接受，但观测数据读取路径分散，后续模块扩展易形成边界漂移。 | 代码：`src/modules/commands/register.ts`、`src/modules/subagents/commands/{activity,logs,doctor}.ts` 读取 web/convert/lsp/guards 状态。 | - | 新增观测命令继续深度导入功能模块私有实现。 | 提供 shared observability facade，或将活动/日志命令集中到 `modules/commands`。 |
-| TEST-001 | 测试 | 当前测试集中仍有 11 个 skipped tests | P2 | Open | 原审计 | 与项目“严禁跳过测试”规范存在张力，可能掩盖 subagent timeout/output hard limit 旧路径回归。 | 命令：`pnpm test` / `pnpm test:coverage` 显示 473 tests、462 pass、11 skipped；代码：`tests/subagents/execution.test.ts` 使用 `itPosix = process.platform === "win32" ? it.skip : it`。 | - | skipped tests 无明确维护者接受记录，或对应行为缺少跨平台替代测试。 | 为 skipped tests 增加书面理由并确认替代覆盖；优先跨平台化可迁移用例。 |
+| RES-001 | 资源 | HTTP connection pool 对 global fetch 的连接限制可能无效且统计不可信 | P2 | Closed | 原审计 → 本轮修复 | 废弃的 `HttpConnectionPool` 类已整体删除；所有配置、类型、导入/导出、测试及文档均同步清理。 | 代码：`src/modules/web/http-pool.ts` 已删除；`src/shared/types.ts`、`src/config/load-config.ts`、`src/extension/runtime.ts`、`src/modules/web/register.ts` 移除相关引用；文档：`docs/reference/configuration.md`、`docs/reference/web-tools.md` 及 zh 对应页同步删除。验证：`pnpm typecheck`、`pnpm test` 通过。 | — | 无。dead code，未被任何生产代码使用。 | 已删除，无后续动作。 |
+| ARCH-001 | 架构 | `/toolkit` 与 subagent commands 跨模块读取 web/convert observability | P2 | Closed | 原审计 → 本轮修复 | 创建 `toolkit-stats.ts` 作为唯一跨模块观测数据读取入口；`ProviderStats`/`WebToolStats` 类型提升至 `shared/types.ts`。 | 代码：`src/modules/subagents/commands/toolkit-stats.ts`（新建）、`src/modules/subagents/commands/activity.ts`、`src/modules/subagents/commands/logs.ts`、`src/modules/web/observability.ts`、`src/modules/web/register.ts`、`src/modules/convert/observability.ts`、`src/shared/types.ts`。验证：`pnpm lint`、`pnpm typecheck`、`pnpm test` 通过。 | — | 新增观测命令绕过 facade 深度导入模块私有实现。 | 新增跨模块观测读取必须通过 `toolkit-stats.ts`。 |
+| TEST-001 | 测试 | 当前测试集中仍有 11 个 skipped tests | P2 | Closed | 原审计 → 本轮修复 | 11 个 POSIX-only `itPosix` 测试已全部转换为跨平台 Node.js 脚本（`makeTempPiNodeScript` + `spawnCommand` 模式）。 | 代码：`tests/subagents/execution.test.ts`、`tests/subagents/runtime.test.ts`；验证：`pnpm test` 显示 471 tests、471 pass、0 skip。 | — | 新增 POSIX-only 测试且未提供跨平台替代。 | 新增测试应优先使用跨平台模式；仅当无法跨平台时显式 `it.skip` 并记录理由。 |
 | DOC-001 | 文档契约 | web 安全文档与 `web_search` provider 行为不一致 | P2 | Closed | 原审计 → 本轮修复 | 文档已与 provider pinned DNS / private network blocking 行为对齐。 | 文档：`docs/guides/security-model.md`、`docs/zh/guides/security-model.md`、`docs/reference/web-tools.md`、`docs/zh/reference/web-tools.md`、`docs/reference/web-providers.md`、`docs/zh/reference/web-providers.md`；验证：`pnpm docs:check`。 | - | provider 网络安全行为变化但文档未同步。 | 新增 provider 或网络策略变化时同步 web tools/providers/security docs。 |
-| ENG-001 | 工程化 | 质量门禁覆盖范围不足 | P2 | Open | 原审计 | CI 未显式运行 typecheck/lint；lint 仅覆盖 `src`；新增嵌套 tests 可能被 test glob 漏跑。 | 配置：`.github/workflows/ci.yml` 运行 docs/test/coverage 但无 typecheck/lint；`package.json` 的 `lint` 为 `biome check src`；`test:unit` 仅匹配 `tests/shared/*.test.ts`，嵌套测试依赖桥接文件。 | - | CI 或本地质量脚本继续漏掉可执行代码/配置/嵌套测试。 | CI 增加 typecheck/lint；评估扩展 lint/test glob 到 tests/scripts/docs config。 |
+| ENG-001 | 工程化 | 质量门禁覆盖范围不足 | P2 | Closed | 原审计 → 本轮修复 | CI 已增加 `pnpm typecheck` 和 `pnpm lint` 步骤；lint 范围从 `src` 扩展到 `src tests scripts docs/.vitepress/config.ts`。 | 配置：`.github/workflows/ci.yml` 增加 typecheck 和 lint 步骤；`package.json` 的 lint/lint:fix/format 脚本覆盖 `src tests scripts docs/.vitepress/config.ts`。验证：`pnpm lint`、`pnpm typecheck`、`pnpm test` 均通过。 | — | CI 移除 typecheck/lint 步骤，或 lint 范围回退到仅 src。 | 维持当前 CI 门禁；新增目录时应同步扩展 lint 范围。 |
 
 ### ID 命名建议
 
